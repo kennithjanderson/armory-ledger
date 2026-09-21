@@ -792,3 +792,762 @@ body {
         border-bottom: 0;
     }
 }
+
+/* =========================================================
+   Record forms
+   ========================================================= */
+
+.record-form {
+    max-width: 720px;
+    margin-top: 2.5rem;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.form-field label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gunmetal);
+}
+
+.form-field input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: rgba(241, 237, 227, 0.78);
+    color: var(--text);
+    font: inherit;
+}
+
+.form-field input[type="text"]:focus {
+    outline: 2px solid rgba(28, 48, 77, 0.18);
+    border-color: var(--navy-muted);
+}
+
+.lookup-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-top: 0.35rem;
+}
+
+.lookup-status,
+.lookup-prompt,
+.lookup-or {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.lookup-prompt {
+    margin-top: 0.35rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.lookup-or {
+    padding: 0.35rem 0;
+    text-align: center;
+}
+
+.lookup-option,
+.lookup-add {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: rgba(241, 237, 227, 0.72);
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.lookup-option {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.lookup-option:hover,
+.lookup-option:focus-visible {
+    border-color: var(--navy-muted);
+    background: var(--surface);
+}
+
+.lookup-add {
+    border-style: dashed;
+    color: var(--navy);
+    font-weight: 700;
+}
+
+.lookup-add:hover,
+.lookup-add:focus-visible {
+    border-color: var(--navy);
+    background: var(--surface);
+}
+
+.lookup-label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.lookup-selected {
+    padding: 0.85rem 1rem;
+    border-left: 3px solid var(--navy);
+    background: rgba(241, 237, 227, 0.58);
+}
+
+.lookup-error {
+    color: var(--crimson);
+}
+
+/* =========================================================
+   Modals
+   ========================================================= */
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 1.5rem;
+
+    background: rgba(21, 23, 25, 0.62);
+    backdrop-filter: blur(3px);
+}
+
+.modal-backdrop[hidden] {
+    display: none;
+}
+
+.modal-panel {
+    width: min(100%, 560px);
+    padding: 2rem;
+
+    border: 1px solid var(--border);
+    border-top: 4px solid var(--navy);
+
+    background: var(--surface);
+
+    box-shadow:
+        0 24px 70px rgba(21, 23, 25, 0.28);
+}
+
+.modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.modal-header h2 {
+    margin: 0.35rem 0 0;
+
+    color: var(--gunmetal);
+
+    font-size: 2rem;
+    line-height: 1;
+    letter-spacing: -0.035em;
+}
+
+.modal-close {
+    border: 0;
+    background: transparent;
+
+    color: var(--text-muted);
+
+    font-size: 1.8rem;
+    line-height: 1;
+
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    color: var(--crimson);
+}
+
+.modal-description {
+    margin: 1.25rem 0 1.5rem;
+
+    color: var(--text-muted);
+    line-height: 1.55;
+}
+
+.modal-error {
+    min-height: 1.25rem;
+    margin-top: 0.75rem;
+
+    color: var(--crimson);
+
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+
+    margin-top: 1.5rem;
+}
+
+.button-primary,
+.button-secondary {
+    padding: 0.75rem 1rem;
+
+    border: 1px solid var(--navy);
+
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+.button-primary {
+    background: var(--navy);
+    color: var(--surface);
+}
+
+.button-primary:hover {
+    background: var(--navy-muted);
+}
+
+.button-primary:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.button-secondary {
+    background: transparent;
+    color: var(--navy);
+}
+
+.button-secondary:hover {
+    background: rgba(28, 48, 77, 0.06);
+}
+
+@media (max-width: 600px) {
+    .modal-panel {
+        padding: 1.5rem;
+    }
+
+    .modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .button-primary,
+    .button-secondary {
+        width: 100%;
+    }
+}
+
+/* =========================================================
+   Firearm form fields
+   ========================================================= */
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.75rem;
+}
+
+.form-field-wide {
+    grid-column: 1 / -1;
+}
+
+.form-field select {
+    width: 100%;
+    box-sizing: border-box;
+
+    padding: 0.9rem 1rem;
+
+    border: 1px solid var(--border);
+    border-radius: 3px;
+
+    background: rgba(241, 237, 227, 0.78);
+    color: var(--text);
+
+    font: inherit;
+}
+
+.form-field select:focus {
+    outline: 2px solid rgba(28, 48, 77, 0.18);
+    border-color: var(--navy-muted);
+}
+
+@media (max-width: 700px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-field-wide {
+        grid-column: auto;
+    }
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+
+    border-top: 1px solid var(--border);
+}
+
+.form-actions .button-secondary {
+    text-decoration: none;
+}
+
+@media (max-width: 600px) {
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .form-actions .button-primary,
+    .form-actions .button-secondary {
+        width: 100%;
+        box-sizing: border-box;
+        text-align: center;
+    }
+}
+
+/* =========================================================
+   Compact heading for working pages
+   ========================================================= */
+
+.page-heading--compact {
+    padding-top: 2.75rem;
+    padding-bottom: 0.5rem;
+}
+
+.page-heading--compact .page-marker {
+    margin-bottom: 0.75rem;
+}
+
+.page-heading--compact h1 {
+    max-width: none;
+    margin: 0 0 0.75rem;
+
+    font-size: clamp(2.5rem, 4.5vw, 3.75rem);
+    line-height: 0.98;
+    letter-spacing: -0.045em;
+}
+
+.page-heading--compact h1 br {
+    display: none;
+}
+
+.page-heading--compact p {
+    max-width: 42rem;
+    margin: 0;
+
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.page-heading--compact + .heritage-rule {
+    margin-top: 1.75rem;
+    margin-bottom: 2rem;
+}
+
+
+/* Mobile working-page heading */
+
+@media (max-width: 700px) {
+
+    .page-heading--compact {
+        padding-top: 2rem;
+    }
+
+    .page-heading--compact h1 {
+        font-size: clamp(2.25rem, 11vw, 3rem);
+        line-height: 1;
+    }
+
+    .page-heading--compact h1 br {
+        display: initial;
+    }
+
+    .page-heading--compact + .heritage-rule {
+        margin-top: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+}
+
+
+/* =========================================================
+   Inventory
+   ========================================================= */
+
+.inventory-section {
+    margin-top: 2.25rem;
+}
+
+.inventory-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+
+    margin-bottom: 1.5rem;
+}
+
+.inventory-count {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.inventory-count-label {
+    margin-left: 0.25rem;
+    color: var(--text-muted);
+}
+
+.firearm-list {
+    display: grid;
+    gap: 1rem;
+}
+
+
+/* =========================================================
+   Firearm card
+   ========================================================= */
+
+.firearm-card {
+    padding: 1.5rem;
+
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--navy-muted);
+    border-radius: 3px;
+
+    background: rgba(241, 237, 227, 0.52);
+}
+
+.firearm-card-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+
+.firearm-manufacturer {
+    margin-bottom: 0.3rem;
+
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+
+    color: var(--crimson);
+}
+
+.firearm-card h2 {
+    margin: 0;
+
+    font-size: 1.45rem;
+    line-height: 1.2;
+
+    color: var(--text);
+}
+
+.firearm-status {
+    flex-shrink: 0;
+
+    padding: 0.35rem 0.65rem;
+
+    border: 1px solid var(--border);
+    border-radius: 999px;
+
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+
+    color: var(--navy-muted);
+}
+
+
+/* =========================================================
+   Firearm metadata
+   ========================================================= */
+
+.firearm-details {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+
+    border-top: 1px solid var(--border);
+}
+
+.firearm-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.firearm-detail-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+
+    color: var(--text-muted);
+}
+
+.firearm-detail-value {
+    font-size: 0.95rem;
+    color: var(--text);
+}
+
+.firearm-serial {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco,
+        Consolas, "Liberation Mono", monospace;
+
+    letter-spacing: 0.04em;
+}
+
+
+/* =========================================================
+   Firearm card footer
+   ========================================================= */
+
+.firearm-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+
+    border-top: 1px solid var(--border);
+
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.firearm-view-placeholder {
+    font-weight: 700;
+    color: var(--navy-muted);
+}
+
+
+/* =========================================================
+   Empty inventory
+   ========================================================= */
+
+.inventory-empty {
+    padding: 3rem 2rem;
+
+    border: 1px solid var(--border);
+    border-radius: 3px;
+
+    text-align: center;
+
+    background: rgba(241, 237, 227, 0.35);
+}
+
+.inventory-empty h2 {
+    margin-top: 0;
+    color: var(--text);
+}
+
+.inventory-empty p {
+    margin-bottom: 1.5rem;
+    color: var(--text-muted);
+}
+
+
+/* =========================================================
+   Inventory mobile
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .inventory-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .inventory-toolbar .button-primary {
+        width: 100%;
+        box-sizing: border-box;
+        text-align: center;
+    }
+
+    .firearm-card-main {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .firearm-details {
+        grid-template-columns: 1fr;
+    }
+
+    .firearm-card-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+/* =========================================================
+   Record detail
+   ========================================================= */
+
+.record-detail {
+    margin-top: 2rem;
+}
+
+.record-detail-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+
+    margin-bottom: 1.25rem;
+}
+
+.record-back,
+.firearm-view-link {
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--navy-muted);
+}
+
+.record-back:hover,
+.firearm-view-link:hover {
+    text-decoration: underline;
+}
+
+.record-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.button-disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.record-detail-card {
+    padding: 1.75rem;
+
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--navy-muted);
+    border-radius: 3px;
+
+    background: rgba(241, 237, 227, 0.52);
+}
+
+.record-detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.record-detail-header h2 {
+    margin: 0;
+
+    font-size: 1.75rem;
+    line-height: 1.2;
+
+    color: var(--text);
+}
+
+.record-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+
+    border-top: 1px solid var(--border);
+}
+
+.record-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.record-detail-value {
+    color: var(--text);
+}
+
+.record-detail-notes {
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+
+    border-top: 1px solid var(--border);
+}
+
+.record-detail-notes p {
+    margin: 0.5rem 0 0;
+    line-height: 1.6;
+}
+
+.record-empty-value {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.record-detail-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+
+    margin-top: 1.75rem;
+    padding-top: 1rem;
+
+    border-top: 1px solid var(--border);
+
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+@media (max-width: 700px) {
+
+    .record-detail-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .record-detail-header {
+        flex-direction: column;
+    }
+
+    .record-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .record-detail-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

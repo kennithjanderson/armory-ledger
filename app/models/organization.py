@@ -81,6 +81,12 @@ class Organization(Base):
         nullable=False,
     )
 
+    aliases = relationship(
+        "OrganizationAlias",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+
 
 class ManufacturerProfile(Base):
     __tablename__ = "manufacturer_profiles"

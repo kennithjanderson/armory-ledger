@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Add Firearm | {{ app_name }}{% endblock %}
+
+{% block content %}
+
+<section class="page-heading">
+    <div class="page-marker">FIREARM INVENTORY</div>
+    <h1>Add a firearm,<br><span>build the record.</span></h1>
+    <p>Start with the manufacturer. We'll build the rest of the firearm record from there.</p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<form class="record-form" id="firearm-form">
+    <div class="form-field">
+        <label for="manufacturer-search">Manufacturer</label>
+
+        <input
+            type="text"
+            id="manufacturer-search"
+            name="manufacturer_search"
+            autocomplete="off"
+            maxlength="255"
+            placeholder="Start typing a manufacturer..."
+        >
+
+        <input
+            type="hidden"
+            id="manufacturer-id"
+            name="manufacturer_id"
+        >
+
+        <div
+            id="manufacturer-results"
+            class="lookup-results"
+            aria-live="polite"
+        ></div>
+    </div>
+
+<div class="form-grid">
+
+    <div class="form-field form-field-wide">
+        <label for="model">Model</label>
+
+        <input
+            type="text"
+            id="model"
+            name="model"
+            maxlength="255"
+            autocomplete="off"
+            placeholder="e.g. M&P9 Shield EZ"
+        >
+    </div>
+
+    <div class="form-field form-field-wide">
+        <label for="serial-number">Serial Number</label>
+
+        <input
+            type="text"
+            id="serial-number"
+            name="serial_number"
+            maxlength="255"
+            autocomplete="off"
+            placeholder="Enter serial number"
+        >
+    </div>
+
+    <div class="form-field">
+        <label for="firearm-type">Firearm Type</label>
+
+        <select
+            id="firearm-type"
+            name="firearm_type"
+        >
+            {% for firearm_type in firearm_types %}
+                <option value="{{ firearm_type.value }}">
+                    {{ firearm_type.value | replace("_", " ") | title }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-field">
+        <label for="caliber">Caliber</label>
+
+        <select
+            id="caliber"
+            name="caliber_id"
+        >
+            <option value="">Unknown / Not specified</option>
+
+            {% for caliber in calibers %}
+                <option value="{{ caliber.id }}">
+                    {{ caliber.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+</div>
+
+    <div
+        id="firearm-form-error"
+        class="modal-error"
+        aria-live="polite"
+    ></div>
+
+    <div class="form-actions">
+        <a href="/firearms/" class="button-secondary">
+            Cancel
+        </a>
+
+        <button
+            type="submit"
+            class="button-primary"
+            id="firearm-save"
+        >
+            Save Firearm
+        </button>
+    </div>
+</form>
+
+<div
+    class="modal-backdrop"
+    id="manufacturer-modal"
+    hidden
+>
+    <div
+        class="modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manufacturer-modal-title"
+    >
+        <div class="modal-header">
+            <div>
+                <div class="page-marker">REFERENCE DATA</div>
+                <h2 id="manufacturer-modal-title">
+                    Add manufacturer
+                </h2>
+            </div>
+
+            <button
+                type="button"
+                class="modal-close"
+                id="manufacturer-modal-close"
+                aria-label="Close"
+            >
+                ×
+            </button>
+        </div>
+
+        <p class="modal-description">
+            Add the manufacturer's canonical name.
+            You'll be able to add aliases separately.
+        </p>
+
+        <div class="form-field">
+            <label for="new-manufacturer-name">
+                Manufacturer name
+            </label>
+
+            <input
+                type="text"
+                id="new-manufacturer-name"
+                maxlength="255"
+                autocomplete="off"
+            >
+        </div>
+
+        <div
+            id="manufacturer-modal-error"
+            class="modal-error"
+            aria-live="polite"
+        ></div>
+
+        <div class="modal-actions">
+            <button
+                type="button"
+                class="button-secondary"
+                id="manufacturer-modal-cancel"
+            >
+                Cancel
+            </button>
+
+            <button
+                type="button"
+                class="button-primary"
+                id="manufacturer-modal-save"
+            >
+                Add Manufacturer
+            </button>
+        </div>
+    </div>
+</div>
+
+<script
+    src="{{ url_for('static', path='/js/firearm-form.js') }}?v={{ app_version }}"
+    defer
+></script>
+
+{% endblock %}

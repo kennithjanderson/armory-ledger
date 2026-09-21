@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ firearm.manufacturer.name if firearm.manufacturer else "Unknown Manufacturer" }}
+{{ firearm.model }} | {{ app_name }}
+{% endblock %}
+
+{% block content %}
+
+<section class="page-heading page-heading--compact">
+    <div class="page-marker">FIREARM RECORD</div>
+
+    <h1>
+        {% if firearm.manufacturer %}
+            {{ firearm.manufacturer.name }}
+        {% else %}
+            Unknown Manufacturer
+        {% endif %}
+        <span>{{ firearm.model }}</span>
+    </h1>
+
+    <p>
+        Personal inventory record and firearm details.
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<section class="record-detail">
+
+    <div class="record-detail-toolbar">
+        <a href="/firearms/" class="record-back">
+            ← Firearm Inventory
+        </a>
+
+        <div class="record-actions">
+            <a
+                href="/firearms/{{ firearm.id }}/edit"
+                class="button-secondary"
+            >
+                Edit Firearm
+            </a>
+        </div>
+    </div>
+
+    <div class="record-detail-card">
+
+        <div class="record-detail-header">
+
+            <div>
+                <div class="firearm-manufacturer">
+                    {% if firearm.manufacturer %}
+                        {{ firearm.manufacturer.name }}
+                    {% else %}
+                        Unknown Manufacturer
+                    {% endif %}
+                </div>
+
+                <h2>{{ firearm.model }}</h2>
+            </div>
+
+            <div class="firearm-status">
+                {{ firearm.status.value | replace("_", " ") | title }}
+            </div>
+
+        </div>
+
+        <div class="record-detail-grid">
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Serial Number
+                </span>
+
+                <span class="record-detail-value firearm-serial">
+                    {{ firearm.serial_number }}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Firearm Type
+                </span>
+
+                <span class="record-detail-value">
+                    {{ firearm.firearm_type.value | replace("_", " ") | title }}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Caliber
+                </span>
+
+                <span class="record-detail-value">
+                    {% if firearm.caliber %}
+                        {{ firearm.caliber.name }}
+                    {% else %}
+                        Not specified
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Status
+                </span>
+
+                <span class="record-detail-value">
+                    {{ firearm.status.value | replace("_", " ") | title }}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Manufacture Date
+                </span>
+
+                <span class="record-detail-value">
+                    {% if firearm.manufacture_date_from %}
+                        {% if firearm.manufacture_date_to and firearm.manufacture_date_to != firearm.manufacture_date_from %}
+                            {{ firearm.manufacture_date_from }}
+                            –
+                            {{ firearm.manufacture_date_to }}
+                        {% else %}
+                            {{ firearm.manufacture_date_from }}
+                        {% endif %}
+                    {% else %}
+                        Unknown
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Date Confidence
+                </span>
+
+                <span class="record-detail-value">
+                    {{ firearm.manufacture_date_confidence.value | replace("_", " ") | title }}
+                </span>
+            </div>
+
+        </div>
+
+        <div class="record-detail-notes">
+            <span class="firearm-detail-label">
+                Notes
+            </span>
+
+            {% if firearm.notes %}
+                <p>{{ firearm.notes }}</p>
+            {% else %}
+                <p class="record-empty-value">
+                    No notes have been added.
+                </p>
+            {% endif %}
+        </div>
+
+        <div class="record-detail-footer">
+
+            <span>
+                Added
+                {{ firearm.created_at.strftime("%b %d, %Y") }}
+            </span>
+
+            <span>
+                Last updated
+                {{ firearm.updated_at.strftime("%b %d, %Y") }}
+            </span>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}

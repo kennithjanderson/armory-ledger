@@ -10,9 +10,13 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.api.auth import router as auth_router
 
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from app.main_templates import templates
 
 from app.core.dependencies import get_current_user
+
+from app.models.user import User
+
+from app.api.firearms import router as firearms_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -31,7 +35,8 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-templates = Jinja2Templates(directory="app/templates")
+app.include_router(auth_router)
+app.include_router(firearms_router)
 
 
 @app.get("/")
@@ -48,7 +53,7 @@ async def login_page(request: Request):
 @app.get("/dashboard")
 async def dashboard(
     request: Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     return templates.TemplateResponse(
         request=request,
@@ -57,6 +62,7 @@ async def dashboard(
             "app_name": settings.app_name,
             "app_version": settings.app_version,
             "current_user": current_user,
+            "is_admin": request.session["user"].get("is_admin", False),
         },
     )
 

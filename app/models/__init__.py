@@ -1,3 +1,4 @@
+from app.models.user import User
 from app.models.caliber import Caliber
 from app.models.caliber_alias import CaliberAlias
 from app.models.organization import (
@@ -7,13 +8,15 @@ from app.models.organization import (
     OrganizationRelationshipType,
     OrganizationStatus,
 )
+
+from app.models.organization_alias import OrganizationAlias
+from app.models.audit_event import AuditEvent
+
 from app.models.firearm import (
     Firearm,
     FirearmStatus,
     ManufactureDateConfidence,
 )
-
-from app.models.user import User
 
 from app.models.ammo_brand import AmmoBrand
 from app.models.ammo_inventory_transaction import (
@@ -34,6 +37,7 @@ __all__ = [
     "OrganizationRelationshipType",
     "OrganizationStatus",
     "User",
+    "AuditEvent",
     "Firearm",
     "FirearmStatus",
     "ManufactureDateConfidence",

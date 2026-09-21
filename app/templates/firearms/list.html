@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Firearms | {{ app_name }}{% endblock %}
+
+{% block content %}
+
+<section class="page-heading page-heading--compact">
+    <div class="page-marker">FIREARM INVENTORY</div>
+
+    <h1>Your firearms,<br><span>documented.</span></h1>
+
+    <p>
+        Firearms registered to your personal inventory.
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<section class="inventory-section">
+
+    <div class="inventory-toolbar">
+        <div>
+            <span class="inventory-count">
+                {{ firearms | length }}
+            </span>
+
+            <span class="inventory-count-label">
+                {% if firearms | length == 1 %}
+                    firearm
+                {% else %}
+                    firearms
+                {% endif %}
+            </span>
+        </div>
+
+        <a href="/firearms/new" class="button-primary">
+            Add Firearm
+        </a>
+    </div>
+
+    {% if firearms %}
+
+        <div class="firearm-list">
+
+            {% for firearm in firearms %}
+
+                <article class="firearm-card">
+
+                    <div class="firearm-card-main">
+
+                        <div class="firearm-card-heading">
+
+                            <div class="firearm-manufacturer">
+                                {% if firearm.manufacturer %}
+                                    {{ firearm.manufacturer.name }}
+                                {% else %}
+                                    Unknown Manufacturer
+                                {% endif %}
+                            </div>
+
+                            <h2>
+                                {{ firearm.model }}
+                            </h2>
+
+                        </div>
+
+                        <div class="firearm-status">
+                            {{ firearm.status.value | replace("_", " ") | title }}
+                        </div>
+
+                    </div>
+
+                    <div class="firearm-details">
+
+                        <div class="firearm-detail">
+                            <span class="firearm-detail-label">
+                                Type
+                            </span>
+
+                            <span class="firearm-detail-value">
+                                {{ firearm.firearm_type.value | replace("_", " ") | title }}
+                            </span>
+                        </div>
+
+                        <div class="firearm-detail">
+                            <span class="firearm-detail-label">
+                                Caliber
+                            </span>
+
+                            <span class="firearm-detail-value">
+                                {% if firearm.caliber %}
+                                    {{ firearm.caliber.name }}
+                                {% else %}
+                                    Not specified
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="firearm-detail">
+                            <span class="firearm-detail-label">
+                                Serial Number
+                            </span>
+
+                            <span class="firearm-detail-value firearm-serial">
+                                {{ firearm.serial_number }}
+                            </span>
+                        </div>
+
+                    </div>
+
+                    <div class="firearm-card-footer">
+
+                        <span>
+                            Added
+                            {{ firearm.created_at.strftime("%b %d, %Y") }}
+                        </span>
+
+                        {#
+                            This becomes a link when the firearm
+                            detail route is implemented.
+                        #}
+
+                        <a
+                            href="/firearms/{{ firearm.id }}"
+                            class="firearm-view-link"
+                        >
+                            View record →
+                        </a>
+
+                    </div>
+
+                </article>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="inventory-empty">
+
+            <h2>No firearms yet.</h2>
+
+            <p>
+                Add your first firearm to begin building your
+                personal inventory.
+            </p>
+
+            <a href="/firearms/new" class="button-primary">
+                Add Firearm
+            </a>
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}

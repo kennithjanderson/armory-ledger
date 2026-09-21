@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | {{ app_name }}{% endblock %}
+
+{% block content %}
+
+<section class="page-heading">
+    <div class="page-marker">PERSONAL ARMORY</div>
+
+    <h1>Your collection,<br><span>at a glance.</span></h1>
+
+    <p>
+        Welcome back, {{ current_user.name }}.
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+{% endblock %}

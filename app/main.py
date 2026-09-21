@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -11,6 +11,8 @@ from app.api.auth import router as auth_router
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
+from app.core.dependencies import get_current_user
 
 app = FastAPI(
     title=settings.app_name,
@@ -40,6 +42,21 @@ async def login_page(request: Request):
         context={
             "app_name": settings.app_name,
             "app_version": settings.app_version,
+        },
+    )
+
+@app.get("/dashboard")
+async def dashboard(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={
+            "app_name": settings.app_name,
+            "app_version": settings.app_version,
+            "current_user": current_user,
         },
     )
 

@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -8,6 +8,9 @@ from app.db.session import engine
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.auth import router as auth_router
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 app = FastAPI(
     title=settings.app_name,
@@ -23,6 +26,22 @@ app.add_middleware(
     https_only=True,
     same_site="lax",
 )
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+templates = Jinja2Templates(directory="app/templates")
+
+
+@app.get("/")
+async def login_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={
+            "app_name": settings.app_name,
+            "app_version": settings.app_version,
+        },
+    )
 
 @app.get("/health")
 async def health():

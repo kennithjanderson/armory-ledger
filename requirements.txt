@@ -7,3 +7,4 @@ alembic
 authlib
 httpx
 itsdangerous
+jinja2

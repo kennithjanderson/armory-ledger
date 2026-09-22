@@ -153,6 +153,32 @@ async def ammunition_list(
         },
     )
 
+@router.get("/new")
+async def ammunition_new(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    calibers = db.scalars(
+        select(Caliber)
+        .order_by(Caliber.name.asc())
+    ).all()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="ammunition/new.html",
+        context={
+            "app_name": settings.app_name,
+            "app_version": settings.app_version,
+            "current_user": current_user,
+            "is_admin": request.session["user"].get(
+                "is_admin",
+                False,
+            ),
+            "calibers": calibers,
+        },
+    )
+
 @router.get("/{ammo_lot_id}/edit")
 async def ammunition_edit(
     ammo_lot_id: UUID,

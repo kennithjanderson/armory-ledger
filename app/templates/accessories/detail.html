@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}{{ accessory.name }} | {{ app_name }}{% endblock %}
+
+{% block content %}
+
+<section class="page-heading page-heading--compact">
+    <div class="page-marker">ACCESSORY RECORD</div>
+
+    <h1>
+        {% if accessory.manufacturer %}
+            {{ accessory.manufacturer.name }}
+        {% else %}
+            Accessory
+        {% endif %}
+        <span>{{ accessory.name }}</span>
+    </h1>
+
+    <p>
+        Personal inventory record and accessory details.
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<section class="record-detail">
+
+    <div class="record-detail-toolbar">
+        <a href="/accessories/" class="record-back">
+            ← Accessory Inventory
+        </a>
+
+        <div class="record-actions">
+            <a
+                href="/accessories/{{ accessory.id }}/edit"
+                class="button-secondary"
+            >
+                Edit Accessory
+            </a>
+        </div>
+    </div>
+
+    <div class="record-detail-card">
+
+        <div class="record-detail-header">
+
+            <div>
+                <div class="firearm-manufacturer">
+                    {% if accessory.manufacturer %}
+                        {{ accessory.manufacturer.name }}
+                    {% else %}
+                        Manufacturer Not Recorded
+                    {% endif %}
+                </div>
+
+                <h2>{{ accessory.name }}</h2>
+            </div>
+
+        </div>
+
+        <div class="record-detail-grid">
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Model
+                </span>
+
+                <span class="record-detail-value">
+                    {{ accessory.model if accessory.model else "Not recorded" }}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Serial Number
+                </span>
+
+                <span class="record-detail-value firearm-serial">
+                    {{ accessory.serial_number if accessory.serial_number else "Not recorded" }}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Purchase Date
+                </span>
+
+                <span class="record-detail-value">
+                    {% if accessory.purchase_date %}
+                        {{ accessory.purchase_date.strftime("%b %d, %Y") }}
+                    {% else %}
+                        Not recorded
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Purchase Location
+                </span>
+
+                <span class="record-detail-value">
+                    {{ accessory.purchase_location if accessory.purchase_location else "Not recorded" }}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Current Location
+                </span>
+
+                <span class="record-detail-value">
+                    {% if accessory.firearm %}
+                        Installed on
+                        {% if accessory.firearm.manufacturer %}
+                            {{ accessory.firearm.manufacturer.name }}
+                        {% endif %}
+                        {{ accessory.firearm.model }}
+                    {% elif accessory.storage_location %}
+                        {{ accessory.storage_location }}
+                    {% else %}
+                        Not recorded
+                    {% endif %}
+                </span>
+            </div>
+
+        </div>
+
+        <div class="record-detail-notes">
+            <span class="firearm-detail-label">
+                Notes
+            </span>
+
+            {% if accessory.notes %}
+                <p>{{ accessory.notes }}</p>
+            {% else %}
+                <p class="record-empty-value">
+                    No notes have been added.
+                </p>
+            {% endif %}
+        </div>
+
+        <div class="record-detail-footer">
+
+            <span>
+                Added
+                <span data-local-datetime="{{ accessory.created_at.isoformat() }}">
+                    {{ accessory.created_at.strftime("%b %d, %Y") }}
+                </span>
+            </span>
+
+            <span>
+                Last updated
+                <span data-local-datetime="{{ accessory.updated_at.isoformat() }}">
+                    {{ accessory.updated_at.strftime("%b %d, %Y") }}
+                </span>
+            </span>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}

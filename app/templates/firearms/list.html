@@ -116,7 +116,9 @@
 
                         <span>
                             Added
-                            {{ firearm.created_at.strftime("%b %d, %Y") }}
+                            <span data-local-datetime="{{ firearm.created_at.isoformat() }}">
+                                {{ firearm.created_at.strftime("%b %d, %Y") }}
+                            </span>
                         </span>
 
                         {#

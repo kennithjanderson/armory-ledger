@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ accessory.name }} | {{ app_name }}{% endblock %}
+
+{% block content %}
+
+<section class="page-heading page-heading--compact">
+    <div class="page-marker">ACCESSORY RECORD</div>
+
+    <h1>Edit accessory,<br><span>update the record.</span></h1>
+
+    <p>
+        Update the current information for this accessory.
+        Changes will be recorded in its history.
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<form
+    class="record-form"
+    id="accessory-form"
+    data-mode="edit"
+    data-accessory-id="{{ accessory.id }}"
+>
+
+    <div class="form-field">
+        <label for="manufacturer-search">Manufacturer</label>
+
+        <input
+            type="text"
+            id="manufacturer-search"
+            name="manufacturer_search"
+            autocomplete="off"
+            maxlength="255"
+            placeholder="Start typing a manufacturer..."
+            value="{{ accessory.manufacturer.name if accessory.manufacturer else '' }}"
+        >
+
+        <input
+            type="hidden"
+            id="manufacturer-id"
+            name="manufacturer_id"
+            value="{{ accessory.manufacturer_id if accessory.manufacturer_id else '' }}"
+        >
+
+        <div
+            id="manufacturer-results"
+            class="lookup-results"
+            aria-live="polite"
+        ></div>
+    </div>
+
+    <div class="form-grid">
+
+        <div class="form-field form-field-wide">
+            <label for="name">Accessory Name</label>
+
+            <input
+                type="text"
+                id="name"
+                name="name"
+                maxlength="255"
+                autocomplete="off"
+                value="{{ accessory.name }}"
+                required
+            >
+        </div>
+
+        <div class="form-field form-field-wide">
+            <label for="model">Model</label>
+
+            <input
+                type="text"
+                id="model"
+                name="model"
+                maxlength="255"
+                autocomplete="off"
+                value="{{ accessory.model if accessory.model else '' }}"
+            >
+        </div>
+
+        <div class="form-field">
+            <label for="serial-number">Serial Number</label>
+
+            <input
+                type="text"
+                id="serial-number"
+                name="serial_number"
+                maxlength="255"
+                autocomplete="off"
+                value="{{ accessory.serial_number if accessory.serial_number else '' }}"
+            >
+        </div>
+
+        <div class="form-field">
+            <label for="purchase-date">Purchase Date</label>
+
+            <input
+                type="date"
+                id="purchase-date"
+                name="purchase_date"
+                value="{{ accessory.purchase_date.isoformat() if accessory.purchase_date else '' }}"
+            >
+        </div>
+
+        <div class="form-field form-field-wide">
+            <label for="purchase-location">Purchase Location</label>
+
+            <input
+                type="text"
+                id="purchase-location"
+                name="purchase_location"
+                maxlength="255"
+                autocomplete="off"
+                value="{{ accessory.purchase_location if accessory.purchase_location else '' }}"
+            >
+        </div>
+
+        <div class="form-field form-field-wide">
+            <label for="location-type">Current Location</label>
+
+            <select id="location-type" name="location_type">
+                <option
+                    value="none"
+                    {% if not accessory.firearm_id and not accessory.storage_location %}selected{% endif %}
+                >
+                    Not recorded
+                </option>
+
+                <option
+                    value="firearm"
+                    {% if accessory.firearm_id %}selected{% endif %}
+                >
+                    Installed on firearm
+                </option>
+
+                <option
+                    value="storage"
+                    {% if accessory.storage_location %}selected{% endif %}
+                >
+                    Stored at location
+                </option>
+            </select>
+        </div>
+
+        <div
+            class="form-field form-field-wide"
+            id="firearm-location-field"
+            {% if not accessory.firearm_id %}hidden{% endif %}
+        >
+            <label for="firearm-id">Installed On</label>
+
+            <select id="firearm-id" name="firearm_id">
+                <option value="">Select firearm</option>
+
+                {% for firearm in firearms %}
+                    <option
+                        value="{{ firearm.id }}"
+                        {% if accessory.firearm_id == firearm.id %}selected{% endif %}
+                    >
+                        {% if firearm.manufacturer %}
+                            {{ firearm.manufacturer.name }}
+                        {% endif %}
+                        {{ firearm.model }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div
+            class="form-field form-field-wide"
+            id="storage-location-field"
+            {% if not accessory.storage_location %}hidden{% endif %}
+        >
+            <label for="storage-location">Storage Location</label>
+
+            <input
+                type="text"
+                id="storage-location"
+                name="storage_location"
+                maxlength="255"
+                autocomplete="off"
+                value="{{ accessory.storage_location if accessory.storage_location else '' }}"
+            >
+        </div>
+
+        <div class="form-field form-field-wide">
+            <label for="notes">Notes</label>
+
+            <textarea
+                id="notes"
+                name="notes"
+                rows="5"
+            >{{ accessory.notes if accessory.notes else '' }}</textarea>
+        </div>
+
+    </div>
+
+    <div
+        id="accessory-form-error"
+        class="modal-error"
+        aria-live="polite"
+    ></div>
+
+    <div class="form-actions">
+        <a
+            href="/accessories/{{ accessory.id }}"
+            class="button-secondary"
+        >
+            Cancel
+        </a>
+
+        <button
+            type="submit"
+            class="button-primary"
+            id="accessory-save"
+        >
+            Save Changes
+        </button>
+    </div>
+
+</form>
+
+<div
+    class="modal-backdrop"
+    id="manufacturer-modal"
+    hidden
+>
+    <div
+        class="modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manufacturer-modal-title"
+    >
+        <div class="modal-header">
+            <div>
+                <div class="page-marker">REFERENCE DATA</div>
+                <h2 id="manufacturer-modal-title">
+                    Add manufacturer
+                </h2>
+            </div>
+
+            <button
+                type="button"
+                class="modal-close"
+                id="manufacturer-modal-close"
+                aria-label="Close"
+            >
+                ×
+            </button>
+        </div>
+
+        <p class="modal-description">
+            Add the manufacturer's canonical name.
+            You'll be able to add aliases separately.
+        </p>
+
+        <div class="form-field">
+            <label for="new-manufacturer-name">
+                Manufacturer name
+            </label>
+
+            <input
+                type="text"
+                id="new-manufacturer-name"
+                maxlength="255"
+                autocomplete="off"
+            >
+        </div>
+
+        <div
+            id="manufacturer-modal-error"
+            class="modal-error"
+            aria-live="polite"
+        ></div>
+
+        <div class="modal-actions">
+            <button
+                type="button"
+                class="button-secondary"
+                id="manufacturer-modal-cancel"
+            >
+                Cancel
+            </button>
+
+            <button
+                type="button"
+                class="button-primary"
+                id="manufacturer-modal-save"
+            >
+                Add Manufacturer
+            </button>
+        </div>
+    </div>
+</div>
+
+<script
+    src="{{ url_for('static', path='/js/accessory-form.js') }}?v={{ app_version }}-edit1"
+    defer
+></script>
+
+{% endblock %}

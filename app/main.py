@@ -20,6 +20,10 @@ from app.api.firearms import router as firearms_router
 
 from app.api.ammunition import router as ammunition_router
 
+from app.api.accessories import router as accessories_router
+
+
+
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
@@ -40,6 +44,7 @@ app.include_router(auth_router)
 app.include_router(firearms_router)
 app.include_router(ammunition_router)
 
+app.include_router(accessories_router)
 
 @app.get("/")
 async def login_page(request: Request):

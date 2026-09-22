@@ -26,6 +26,8 @@ from app.models.ammo_inventory_transaction import (
 from app.models.ammo_lot import AmmoLot
 from app.models.ammo_product import AmmoProduct
 
+from app.models.accessory import Accessory
+
 
 
 __all__ = [

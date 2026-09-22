@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Accessories | {{ app_name }}{% endblock %}
+
+{% block content %}
+
+<section class="page-heading page-heading--compact">
+    <div class="page-marker">ACCESSORY INVENTORY</div>
+
+    <h1>Your accessories,<br><span>&nbsp;accounted for.</span></h1>
+
+    <p>
+        Optics, magazines, cases, slings, and other equipment
+        in your personal inventory.
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<section class="inventory-section">
+
+    <div class="inventory-toolbar">
+        <div>
+            <span class="inventory-count">
+                {{ accessories | length }}
+            </span>
+
+            <span class="inventory-count-label">
+                {% if accessories | length == 1 %}
+                    accessory
+                {% else %}
+                    accessories
+                {% endif %}
+            </span>
+        </div>
+
+        <a href="/accessories/new" class="button-primary">
+            Add Accessory
+        </a>
+    </div>
+
+    {% if accessories %}
+
+        <div class="firearm-list">
+
+            {% for accessory in accessories %}
+
+                <article class="firearm-card">
+
+                    <div class="firearm-card-main">
+
+                        <div class="firearm-card-heading">
+
+                            <div class="firearm-manufacturer">
+                                {% if accessory.manufacturer %}
+                                    {{ accessory.manufacturer.name }}
+                                {% else %}
+                                    Manufacturer Not Recorded
+                                {% endif %}
+                            </div>
+
+                            <h2>{{ accessory.name }}</h2>
+
+                            {% if accessory.model %}
+                                <div class="record-empty-value">
+                                    {{ accessory.model }}
+                                </div>
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                    <div class="firearm-details">
+
+                        <div class="firearm-detail">
+                            <span class="firearm-detail-label">
+                                Current Location
+                            </span>
+
+                            <span class="firearm-detail-value">
+                                {% if accessory.firearm %}
+                                    Installed on {{ accessory.firearm.model }}
+                                {% elif accessory.storage_location %}
+                                    {{ accessory.storage_location }}
+                                {% else %}
+                                    Not recorded
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="firearm-detail">
+                            <span class="firearm-detail-label">
+                                Serial Number
+                            </span>
+
+                            <span class="firearm-detail-value firearm-serial">
+                                {% if accessory.serial_number %}
+                                    {{ accessory.serial_number }}
+                                {% else %}
+                                    Not recorded
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="firearm-detail">
+                            <span class="firearm-detail-label">
+                                Purchased
+                            </span>
+
+                            <span class="firearm-detail-value">
+                                {% if accessory.purchase_date %}
+                                    {{ accessory.purchase_date.strftime("%b %d, %Y") }}
+                                {% else %}
+                                    Not recorded
+                                {% endif %}
+                            </span>
+                        </div>
+
+                    </div>
+
+                    <div class="firearm-card-footer">
+
+                        <span>
+                            Added
+                            <span data-local-datetime="{{ accessory.created_at.isoformat() }}">
+                                {{ accessory.created_at.strftime("%b %d, %Y") }}
+                            </span>
+                        </span>
+
+                        <a
+                            href="/accessories/{{ accessory.id }}"
+                            class="firearm-view-link"
+                        >
+                            View record →
+                        </a>
+
+                    </div>
+
+                </article>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="inventory-empty">
+
+            <h2>No accessories yet.</h2>
+
+            <p>
+                Add your first accessory to begin tracking
+                your equipment.
+            </p>
+
+            <a href="/accessories/new" class="button-primary">
+                Add Accessory
+            </a>
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}

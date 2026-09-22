@@ -135,8 +135,9 @@
         {% endif %}
 
         <div class="record-detail-footer">
-            <span>
-                Added {{ lot.created_at.strftime("%b %-d, %Y") }}
+            Added
+            <span data-local-datetime="{{ lot.created_at.isoformat() }}">
+                {{ lot.created_at.strftime("%b %-d, %Y") }}
             </span>
         </div>
     </article>

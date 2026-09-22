@@ -47,4 +47,38 @@ document.addEventListener("DOMContentLoaded", () => {
         updateClock();
         window.setInterval(updateClock, 1000);
     }
+
+    /*
+     * =========================================================
+     * Browser-local system timestamps
+     * =========================================================
+     */
+
+    const localDateFormatter = new Intl.DateTimeFormat(
+        undefined,
+        {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+        },
+    );
+
+    document
+        .querySelectorAll("[data-local-datetime]")
+        .forEach(element => {
+            const timestamp = element.dataset.localDatetime;
+
+            if (!timestamp) {
+                return;
+            }
+
+            const date = new Date(timestamp);
+
+            if (Number.isNaN(date.getTime())) {
+                return;
+            }
+
+            element.textContent =
+                localDateFormatter.format(date);
+        });
 });

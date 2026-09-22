@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Add Ammunition | {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <p class="page-marker">AMMUNITION INVENTORY</p>
+
+    <h1>
+        Add ammunition,<span>build the record.</span>
+    </h1>
+
+    <p>
+        Record ammunition and its initial inventory acquisition.
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<section class="content-section">
+    <form id="ammunition-form" class="record-form">
+        <div class="form-grid">
+            <div class="form-field form-field-wide">
+                <label for="brand-name">Brand</label>
+                <input
+                    id="brand-name"
+                    name="brand_name"
+                    type="text"
+                    maxlength="255"
+                    placeholder="Ammo Inc."
+                    autocomplete="off"
+                    required
+                >
+                <p class="field-help">
+                    Enter the brand shown on the ammunition packaging.
+                </p>
+            </div>
+
+            <div class="form-field">
+                <label for="caliber">Caliber</label>
+                <select id="caliber" name="caliber_id" required>
+                    <option value="">Select caliber</option>
+
+                    {% for caliber in calibers %}
+                        <option value="{{ caliber.id }}">
+                            {{ caliber.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-field">
+                <label for="grain-weight">Grain Weight</label>
+                <input
+                    id="grain-weight"
+                    name="grain_weight"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="115"
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="projectile-type">Projectile Type</label>
+                <input
+                    id="projectile-type"
+                    name="projectile_type"
+                    type="text"
+                    maxlength="100"
+                    placeholder="JHP"
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="quantity">Quantity Acquired</label>
+                <input
+                    id="quantity"
+                    name="quantity"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="20"
+                    required
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="acquired-date">Acquired Date</label>
+                <input
+                    id="acquired-date"
+                    name="acquired_date"
+                    type="date"
+                    required
+                >
+                <p class="field-help">
+                    Date the ammunition was originally acquired.
+                </p>
+            </div>
+
+            <div class="form-field">
+                <label for="product-name">Product Name</label>
+                <input
+                    id="product-name"
+                    name="product_name"
+                    type="text"
+                    maxlength="255"
+                >
+                <p class="field-help">Optional</p>
+            </div>
+
+            <div class="form-field">
+                <label for="manufacturer-sku">Manufacturer SKU</label>
+                <input
+                    id="manufacturer-sku"
+                    name="manufacturer_sku"
+                    type="text"
+                    maxlength="100"
+                >
+                <p class="field-help">Optional</p>
+            </div>
+
+            <div class="form-field">
+                <label for="lot-number">Lot Number</label>
+                <input
+                    id="lot-number"
+                    name="lot_number"
+                    type="text"
+                    maxlength="255"
+                >
+                <p class="field-help">Optional</p>
+            </div>
+
+            <div class="form-field form-field-wide">
+                <label for="notes">Notes</label>
+                <textarea
+                    id="notes"
+                    name="notes"
+                    rows="4"
+                ></textarea>
+                <p class="field-help">Optional</p>
+            </div>
+        </div>
+
+        <p
+            id="ammunition-form-error"
+            class="form-error"
+            role="alert"
+        ></p>
+
+        <div class="form-actions">
+            <a
+                href="/ammunition/"
+                class="button-secondary button-link"
+            >
+                Cancel
+            </a>
+
+            <button
+                id="ammunition-save"
+                type="submit"
+                class="button-primary"
+                disabled
+            >
+                Add Ammunition
+            </button>
+        </div>
+    </form>
+</section>
+
+<script
+    src="{{ url_for('static', path='/js/ammunition-form.js') }}?v={{ app_version }}-ammo2"
+    defer
+></script>
+{% endblock %}

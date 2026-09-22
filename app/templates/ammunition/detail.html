@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ lot.ammo_product.brand.name }} | {{ app_name }}
+{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+    <p class="page-marker">AMMUNITION RECORD</p>
+
+    <h1>
+        {{ lot.ammo_product.brand.name }}
+    </h1>
+
+    <p>
+        {{ lot.ammo_product.caliber.name }}
+
+        {% if lot.ammo_product.grain_weight %}
+            · {{ lot.ammo_product.grain_weight | format_number }} gr
+        {% endif %}
+
+        {% if lot.ammo_product.projectile_type %}
+            · {{ lot.ammo_product.projectile_type }}
+        {% endif %}
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<section class="record-detail">
+    <div class="record-detail-toolbar">
+        <a href="/ammunition/" class="record-back">
+            ← Ammunition Inventory
+        </a>
+
+        <div class="record-actions">
+            <a
+                href="/ammunition/{{ lot.id }}/edit"
+                class="button-secondary button-link"
+            >
+                Edit Ammunition
+            </a>
+        </div>
+    </div>
+
+    <article class="record-detail-card">
+        <div class="record-detail-header">
+            <div>
+                <div class="firearm-manufacturer">
+                    {{ lot.ammo_product.brand.name }}
+                </div>
+
+                <h2>
+                    {{ lot.ammo_product.caliber.name }}
+                </h2>
+            </div>
+
+            <div class="ammo-quantity">
+                <strong>{{ physical_on_hand }}</strong>
+                <span>rounds</span>
+            </div>
+        </div>
+
+        <div class="record-detail-grid">
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Caliber
+                </span>
+                <span class="record-detail-value">
+                    {{ lot.ammo_product.caliber.name }}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Grain Weight
+                </span>
+                <span class="record-detail-value">
+                    {% if lot.ammo_product.grain_weight %}
+                        {{ lot.ammo_product.grain_weight | format_number }} gr
+                    {% else %}
+                        Unknown
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Projectile
+                </span>
+                <span class="record-detail-value">
+                    {{ lot.ammo_product.projectile_type or "Unknown" }}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Product Name
+                </span>
+                <span class="record-detail-value">
+                    {{ lot.ammo_product.product_name or "Not recorded" }}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Manufacturer SKU
+                </span>
+                <span class="record-detail-value">
+                    {{ lot.ammo_product.manufacturer_sku or "Not recorded" }}
+                </span>
+            </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Lot Number
+                </span>
+                <span class="record-detail-value">
+                    {{ lot.lot_number or "Not recorded" }}
+                </span>
+            </div>
+        </div>
+
+        {% if lot.notes %}
+            <div class="record-detail-notes">
+                <span class="firearm-detail-label">
+                    Notes
+                </span>
+                <p>{{ lot.notes }}</p>
+            </div>
+        {% endif %}
+
+        <div class="record-detail-footer">
+            <span>
+                Added {{ lot.created_at.strftime("%b %-d, %Y") }}
+            </span>
+        </div>
+    </article>
+</section>
+
+<section class="content-section">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Ledger</p>
+            <h2>Inventory History</h2>
+        </div>
+
+        <a
+            href="/ammunition/{{ lot.id }}/activity/new"
+            class="button-secondary button-link"
+        >
+            Add Activity
+        </a>
+   </div>
+
+    {% if transactions %}
+        <div class="transaction-list">
+            {% for transaction in transactions %}
+                <article class="transaction-card">
+                    <div>
+                        <strong>
+                            {{ transaction.transaction_type.value
+                                | replace("_", " ")
+                                | title }}
+                        </strong>
+
+                        <p>
+                            {{ transaction.occurred_at.strftime("%B %-d, %Y") }}
+                        </p>
+
+                        {% if transaction.notes %}
+                            <p>{{ transaction.notes }}</p>
+                        {% endif %}
+                    </div>
+
+                    <strong>
+                        {% if transaction.transaction_type.value in
+                            ["acquired", "returned", "adjustment_in"] %}
+                            +
+                        {% elif transaction.transaction_type.value in
+                            ["expended", "given", "sold", "disposed",
+                             "adjustment_out"] %}
+                            -
+                        {% endif %}
+                        {{ transaction.quantity }}
+                    </strong>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No inventory activity has been recorded.</p>
+    {% endif %}
+</section>
+{% endblock %}

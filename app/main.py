@@ -18,12 +18,13 @@ from app.models.user import User
 
 from app.api.firearms import router as firearms_router
 
+from app.api.ammunition import router as ammunition_router
+
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
 )
 
-app.include_router(auth_router)
 
 app.add_middleware(
     SessionMiddleware,
@@ -37,6 +38,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(auth_router)
 app.include_router(firearms_router)
+app.include_router(ammunition_router)
 
 
 @app.get("/")

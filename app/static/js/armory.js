@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (userButton && userDropdown) {
         userButton.addEventListener("click", () => {
             const open = userDropdown.classList.toggle("is-open");
+
             userButton.setAttribute("aria-expanded", open);
         });
     }
@@ -15,8 +16,35 @@ document.addEventListener("DOMContentLoaded", () => {
     if (mobileButton && mobileNavigation) {
         mobileButton.addEventListener("click", () => {
             const open = mobileNavigation.classList.toggle("is-open");
+
             mobileButton.classList.toggle("is-open", open);
+
             mobileButton.setAttribute("aria-expanded", open);
         });
+    }
+
+    const localClock = document.getElementById("local-clock");
+
+    if (localClock) {
+        const clockFormatter = new Intl.DateTimeFormat(
+            undefined,
+            {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                second: "2-digit",
+                timeZoneName: "short",
+            },
+        );
+
+        const updateClock = () => {
+            localClock.textContent =
+                clockFormatter.format(new Date());
+        };
+
+        updateClock();
+        window.setInterval(updateClock, 1000);
     }
 });

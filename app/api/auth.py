@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request, HTTPException
 from starlette.responses import RedirectResponse
 
 from app.core.auth import oauth
@@ -62,7 +62,7 @@ async def callback(request: Request):
         "is_admin": "Armory Admin" in groups,
     }
 
-    return RedirectResponse(url="/auth/me")
+    return RedirectResponse(url="/dashboard")
 
 @router.get("/me")
 async def me(request: Request):

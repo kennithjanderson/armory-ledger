@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ lot.ammo_product.brand.name }} | {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <p class="page-marker">AMMUNITION RECORD</p>
+
+    <h1>
+        Edit ammunition,<span>update the record.</span>
+    </h1>
+
+    <p>
+        Update the current information for this ammunition lot.
+        Changes will be recorded in its history.
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<section class="content-section">
+    <form
+        id="ammunition-edit-form"
+        data-lot-id="{{ lot.id }}"
+        class="record-form"
+    >
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Brand</label>
+                <input
+                    type="text"
+                    value="{{ lot.ammo_product.brand.name }}"
+                    disabled
+                >
+                <p class="field-help">
+                    Brand editing will be added separately.
+                </p>
+            </div>
+
+            <div class="form-field">
+                <label for="caliber_id">Caliber</label>
+                <select id="caliber_id" name="caliber_id" required>
+                    {% for caliber in calibers %}
+                        <option
+                            value="{{ caliber.id }}"
+                            {% if caliber.id == lot.ammo_product.caliber_id %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ caliber.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-field">
+                <label for="grain_weight">Grain Weight</label>
+                <input
+                    id="grain_weight"
+                    name="grain_weight"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value="{{ lot.ammo_product.grain_weight or '' }}"
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="projectile_type">Projectile Type</label>
+                <input
+                    id="projectile_type"
+                    name="projectile_type"
+                    type="text"
+                    maxlength="100"
+                    value="{{ lot.ammo_product.projectile_type or '' }}"
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="product_name">Product Name</label>
+                <input
+                    id="product_name"
+                    name="product_name"
+                    type="text"
+                    maxlength="255"
+                    value="{{ lot.ammo_product.product_name or '' }}"
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="manufacturer_sku">Manufacturer SKU</label>
+                <input
+                    id="manufacturer_sku"
+                    name="manufacturer_sku"
+                    type="text"
+                    maxlength="100"
+                    value="{{ lot.ammo_product.manufacturer_sku or '' }}"
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="lot_number">Lot Number</label>
+                <input
+                    id="lot_number"
+                    name="lot_number"
+                    type="text"
+                    maxlength="255"
+                    value="{{ lot.lot_number or '' }}"
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="acquired_date">Acquired Date</label>
+
+                {% if initial_acquisition %}
+                    <input
+                        id="acquired_date"
+                        name="acquired_date"
+                        type="date"
+                        value="{{ initial_acquisition.occurred_at.strftime('%Y-%m-%d') }}"
+                    >
+                {% else %}
+                    <input
+                        id="acquired_date"
+                        name="acquired_date"
+                        type="date"
+                        disabled
+                    >
+                {% endif %}
+            </div>
+
+            <div class="form-field form-field-wide">
+                <label for="notes">Notes</label>
+                <textarea
+                    id="notes"
+                    name="notes"
+                    rows="4"
+                >{{ lot.notes or '' }}</textarea>
+            </div>
+
+            {% if initial_acquisition %}
+                <div class="form-field form-field-wide">
+                    <label>Initial Quantity Acquired</label>
+                    <input
+                        type="number"
+                        value="{{ initial_acquisition.quantity }}"
+                        disabled
+                    >
+                    <p class="field-help">
+                        Inventory quantities are changed through ledger activity.
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+
+        <p
+            id="ammunition-edit-error"
+            class="form-error"
+            hidden
+        ></p>
+
+        <div class="form-actions">
+            <a
+                href="/ammunition/{{ lot.id }}"
+                class="button-secondary button-link"
+            >
+                Cancel
+            </a>
+
+            <button
+                type="submit"
+                id="save-ammunition"
+                class="button-primary"
+            >
+                Save Changes
+            </button>
+        </div>
+    </form>
+</section>
+
+<script
+    src="{{ url_for('static', path='/js/ammunition-edit.js') }}?v={{ app_version }}-ammo-edit2"
+    defer
+></script>
+{% endblock %}

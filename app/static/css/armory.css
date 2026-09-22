@@ -1551,3 +1551,137 @@ body {
         flex-direction: column;
     }
 }
+
+/* =========================================================
+   Shared inventory record extensions
+   ========================================================= */
+
+.content-section + .content-section {
+    margin-top: 2.5rem;
+}
+
+
+/* Section headings */
+
+.section-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.section-heading .eyebrow {
+    margin: 0 0 0.35rem;
+    color: var(--crimson);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.section-heading h2 {
+    margin: 0;
+    color: var(--gunmetal);
+    font-size: 1.65rem;
+    line-height: 1.2;
+}
+
+
+/* =========================================================
+   Ammunition transaction ledger
+   ========================================================= */
+
+.transaction-list {
+    border-top: 1px solid var(--border);
+}
+
+.transaction-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.transaction-card > div {
+    min-width: 0;
+}
+
+.transaction-card > div > strong {
+    color: var(--gunmetal);
+    font-size: 1rem;
+}
+
+.transaction-card p {
+    margin: 0.4rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.transaction-card > strong {
+    flex-shrink: 0;
+    color: var(--navy);
+    font-size: 1.2rem;
+    font-weight: 750;
+}
+
+
+/* =========================================================
+   Link buttons
+   ========================================================= */
+
+.button-link {
+    display: inline-block;
+    box-sizing: border-box;
+    text-decoration: none;
+}
+
+.button-link:hover {
+    text-decoration: none;
+}
+
+
+/* =========================================================
+   Ammunition-specific record values
+   ========================================================= */
+
+.ammo-quantity {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    color: var(--navy);
+    line-height: 1;
+}
+
+.ammo-quantity strong {
+    font-size: 1.45rem;
+    font-weight: 750;
+}
+
+.ammo-quantity span {
+    margin-top: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+
+/* =========================================================
+   Ammunition responsive
+   ========================================================= */
+
+@media (max-width: 700px) {
+    .transaction-card {
+        gap: 1rem;
+    }
+
+    .ammo-quantity {
+        align-items: flex-start;
+    }
+}

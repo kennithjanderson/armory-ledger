@@ -130,6 +130,8 @@ def find_similar_manufacturers(
 def create_manufacturer(
     db: Session,
     name: str,
+    *,
+    commit: bool = True,
 ) -> Organization:
     """
     Create a new selectable manufacturer.
@@ -162,8 +164,12 @@ def create_manufacturer(
     )
 
     db.add(profile)
-    db.commit()
-    db.refresh(organization)
+
+    if commit:
+        db.commit()
+        db.refresh(organization)
+    else:
+        db.flush()
 
     return organization
 

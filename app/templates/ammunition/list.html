@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Ammunition | {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <div>
+        <p class="page-marker">AMMUNITION INVENTORY</p>
+
+        <h1>
+            Your ammunition,<span>&nbsp;documented.</span>
+        </h1>
+
+        <p class="page-heading__description">
+            Ammunition tracked by product, lot, and inventory activity.
+        </p>
+    </div>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<section class="inventory-section">
+    <div class="inventory-toolbar">
+        <div class="inventory-count">
+            {{ lots | length }}
+            <span class="inventory-count-label">
+                {% if lots | length == 1 %}
+                    ammunition lot
+                {% else %}
+                    ammunition lots
+                {% endif %}
+            </span>
+        </div>
+
+        <a
+            href="/ammunition/new"
+            class="button-primary button-link"
+        >
+            Add Ammunition
+        </a>
+    </div>
+
+    {% if lots %}
+        <div class="firearm-list">
+            {% for lot in lots %}
+                <article class="firearm-card">
+                    <div class="firearm-card-main">
+                        <div>
+                            <div class="firearm-manufacturer">
+                                {{ lot.ammo_product.brand.name }}
+                            </div>
+
+                            <h2>
+                                {{ lot.ammo_product.caliber.name }}
+                            </h2>
+                        </div>
+
+                        <div class="ammo-quantity">
+                            <strong>
+                                {{ inventory_by_lot.get(lot.id, 0) }}
+                            </strong>
+                            <span>rounds</span>
+                        </div>
+                    </div>
+
+                    <div class="firearm-details">
+                        <div class="firearm-detail">
+                            <span class="firearm-detail-label">
+                                Grain Weight
+                            </span>
+                            <span class="firearm-detail-value">
+                                {% if lot.ammo_product.grain_weight %}
+                                    {{ lot.ammo_product.grain_weight | format_number }} gr
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="firearm-detail">
+                            <span class="firearm-detail-label">
+                                Projectile
+                            </span>
+                            <span class="firearm-detail-value">
+                                {{ lot.ammo_product.projectile_type or "Unknown" }}
+                            </span>
+                        </div>
+
+                        <div class="firearm-detail">
+                            <span class="firearm-detail-label">
+                                Lot Number
+                            </span>
+                            <span class="firearm-detail-value">
+                                {{ lot.lot_number or "Not recorded" }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="firearm-card-footer">
+                        <span>
+                            {% set acquired_at = acquired_at_by_lot.get(lot.id) %}
+
+                            {% if acquired_at %}
+                                Acquired {{ acquired_at.strftime("%b %-d, %Y") }}
+                            {% else %}
+                                Acquisition date not recorded
+                            {% endif %}
+                        </span>
+
+                        <a
+                            href="/ammunition/{{ lot.id }}"
+                            class="firearm-view-link"
+                        >
+                            View record →
+                        </a>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="inventory-empty">
+            <h2>Your ammunition inventory is empty.</h2>
+
+            <p>
+                Add your first ammunition purchase or existing inventory
+                to begin tracking quantities and lots.
+            </p>
+
+            <a
+                href="/ammunition/new"
+                class="button-primary button-link"
+            >
+                Add Ammunition
+            </a>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

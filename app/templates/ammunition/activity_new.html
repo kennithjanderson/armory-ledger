@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Record Activity | {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <p class="page-marker">AMMUNITION ACTIVITY</p>
+
+    <h1>
+        Record activity,<span>&nbsp;update the ledger.</span>
+    </h1>
+
+    <p>
+        Record a change to the physical inventory of
+        {{ lot.ammo_product.brand.name }}
+        {{ lot.ammo_product.caliber.name }}.
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<section class="content-section">
+    <form
+        id="ammunition-activity-form"
+        data-lot-id="{{ lot.id }}"
+        class="record-form"
+    >
+        <div class="form-grid">
+            <div class="form-field">
+                <label>Current Physical Inventory</label>
+                <input
+                    type="text"
+                    value="{{ physical_on_hand }} rounds"
+                    disabled
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="transaction_type">Activity</label>
+                <select
+                    id="transaction_type"
+                    name="transaction_type"
+                    required
+                >
+                    <option value="">Select activity</option>
+                    <option value="expended">Expended</option>
+                    <option value="acquired">Acquired</option>
+                    <option value="given">Given</option>
+                    <option value="sold">Sold</option>
+                    <option value="returned">Returned</option>
+                    <option value="disposed">Disposed</option>
+                    <option value="adjustment_in">Adjustment In</option>
+                    <option value="adjustment_out">Adjustment Out</option>
+                </select>
+            </div>
+
+            <div class="form-field">
+                <label for="quantity">Quantity</label>
+                <input
+                    id="quantity"
+                    name="quantity"
+                    type="number"
+                    min="1"
+                    step="1"
+                    required
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="occurred_date">Date</label>
+                <input
+                    id="occurred_date"
+                    name="occurred_date"
+                    type="date"
+                    required
+                >
+            </div>
+
+            <div class="form-field form-field-wide">
+                <label for="notes">Notes</label>
+                <textarea
+                    id="notes"
+                    name="notes"
+                    rows="4"
+                ></textarea>
+                <p class="field-help">Optional</p>
+            </div>
+        </div>
+
+        <p
+            id="ammunition-activity-error"
+            class="form-error"
+            role="alert"
+            hidden
+        ></p>
+
+        <div class="form-actions">
+            <a
+                href="/ammunition/{{ lot.id }}"
+                class="button-secondary button-link"
+            >
+                Cancel
+            </a>
+
+            <button
+                id="ammunition-activity-save"
+                type="submit"
+                class="button-primary"
+                disabled
+            >
+                Record Activity
+            </button>
+        </div>
+    </form>
+</section>
+
+<script
+    src="{{ url_for('static', path='/js/ammunition-activity.js') }}?v={{ app_version }}-ammo-activity1"
+    defer
+></script>
+{% endblock %}

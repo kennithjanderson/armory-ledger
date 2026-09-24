@@ -20,4 +20,47 @@
     <span class="rule-red"></span>
 </div>
 
+<section class="dashboard-summary" aria-label="Collection summary">
+    <a href="/firearms" class="dashboard-stat">
+        <span class="dashboard-stat-label">Firearms</span>
+        <strong class="dashboard-stat-value">
+            {{ firearm_count }}
+        </strong>
+        <span class="dashboard-stat-detail">
+            View collection →
+        </span>
+    </a>
+
+    <a href="/ammunition" class="dashboard-stat">
+        <span class="dashboard-stat-label">Ammunition</span>
+        <strong class="dashboard-stat-value">
+            {{ rounds_on_hand }}
+            <span class="dashboard-stat-unit">rounds</span>
+        </strong>
+        <span class="dashboard-stat-detail">
+            Rounds on hand →
+        </span>
+    </a>
+
+    <a href="/accessories" class="dashboard-stat">
+        <span class="dashboard-stat-label">Accessories</span>
+        <strong class="dashboard-stat-value">
+            {{ accessory_count }}
+        </strong>
+        <span class="dashboard-stat-detail">
+            View inventory →
+        </span>
+    </a>
+
+    <a href="/range" class="dashboard-stat">
+        <span class="dashboard-stat-label">Range Sessions</span>
+        <strong class="dashboard-stat-value">
+            {{ range_session_count }}
+        </strong>
+        <span class="dashboard-stat-detail">
+            View history →
+        </span>
+    </a>
+</section>
+
 {% endblock %}

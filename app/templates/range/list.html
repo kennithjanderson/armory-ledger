@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Range | {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <div>
+        <p class="page-marker">RANGE HISTORY</p>
+
+        <h1>
+            Range sessions,<span>&nbsp;documented.</span>
+        </h1>
+
+        <p class="page-heading__description">
+            Track firearm usage, ammunition expenditure, and range activity.
+        </p>
+    </div>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<section class="inventory-section">
+    <div class="inventory-toolbar">
+        <div class="inventory-count">
+            {{ sessions | length }}
+            <span class="inventory-count-label">
+                {% if sessions | length == 1 %}
+                    range session
+                {% else %}
+                    range sessions
+                {% endif %}
+            </span>
+        </div>
+
+        <a
+            href="/range/new"
+            class="button-primary button-link"
+        >
+            Add Range Session
+        </a>
+    </div>
+
+    {% if sessions %}
+        <div class="firearm-list">
+            {% for session in sessions %}
+                <article class="firearm-card">
+                    <div class="firearm-card-main">
+                        <div>
+                            <div class="firearm-manufacturer">
+                                RANGE SESSION
+                            </div>
+
+                            <h2>
+                                {{ session.occurred_date.strftime("%Y-%m-%d") }}
+                            </h2>
+                        </div>
+                    </div>
+
+                    <div class="firearm-details">
+                        <div class="firearm-detail">
+                            <span class="firearm-detail-label">
+                                Location
+                            </span>
+
+                            <span class="firearm-detail-value">
+                                {{ session.location or "Not recorded" }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="firearm-card-footer">
+                        <span>
+                            Recorded
+                            <span data-local-datetime="{{ session.created_at.isoformat() }}">
+                                {{ session.created_at.strftime("%Y-%m-%d") }}
+                            </span>
+                        </span>
+
+                        <a
+                            href="/range/{{ session.id }}"
+                            class="firearm-view-link"
+                        >
+                            View record →
+                        </a>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="inventory-empty">
+            <h2>No range sessions recorded.</h2>
+
+            <p>
+                Record your first range session to begin tracking
+                firearm usage and ammunition expenditure.
+            </p>
+
+            <a
+                href="/range/new"
+                class="button-primary button-link"
+            >
+                Add Range Session
+            </a>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

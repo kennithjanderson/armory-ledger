@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Range Session | {{ app_name }}{% endblock %}
+
+{% block content %}
+
+<section class="page-heading">
+    <div class="page-marker">RANGE SESSION</div>
+
+    <h1>
+        {{ range_session.occurred_date.strftime("%Y-%m-%d") }}
+    </h1>
+
+    <p>
+        {{ total_rounds }} round{% if total_rounds != 1 %}s{% endif %}
+        recorded across
+        {{ firearm_records | length }}
+        firearm{% if firearm_records | length != 1 %}s{% endif %}.
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<div class="record-detail-toolbar">
+    <a href="/range/" class="record-back">
+        ← Range History
+    </a>
+
+    <div class="record-actions">
+        <a
+            href="/range/{{ range_session.id }}/edit"
+            class="button-secondary button-link"
+        >
+            Edit Range Session
+        </a>
+    </div>
+</div>
+
+<section class="record-card range-session-summary">
+
+    <div class="record-card-header">
+        <div>
+            <div class="record-card-kicker">
+                SESSION SUMMARY
+            </div>
+        </div>
+
+        <div class="record-quantity">
+            <strong>{{ total_rounds }}</strong>
+            <span>ROUNDS</span>
+        </div>
+    </div>
+
+    <div class="record-detail-grid">
+
+        <div>
+            <span class="record-detail-label">Location</span>
+
+            <div class="record-detail-value">
+                {{ range_session.location or "Not recorded" }}
+            </div>
+        </div>
+
+        <div>
+            <span class="record-detail-label">Firearms Used</span>
+
+            <div class="record-detail-value">
+                {{ firearm_records | length }}
+            </div>
+        </div>
+
+        <div class="form-field-wide">
+            <span class="record-detail-label">Session Notes</span>
+
+            <div class="record-detail-value">
+                {{ range_session.notes or "Not recorded" }}
+            </div>
+        </div>
+
+    </div>
+
+</section>
+
+<section class="range-detail-section">
+
+    <div class="page-marker">
+        FIREARMS & AMMUNITION
+    </div>
+
+    <h2>Firearms Used</h2>
+
+    {% for record in firearm_records %}
+
+        {% set session_firearm = record.session_firearm %}
+        {% set firearm = session_firearm.firearm %}
+
+        <article class="range-firearm-card range-detail-firearm">
+
+            <div class="range-card-header">
+
+                <div>
+                    <div class="range-card-kicker">
+                        FIREARM
+                    </div>
+
+                    <h2>
+                        {% if firearm.manufacturer %}
+                            {{ firearm.manufacturer.name }}
+                        {% endif %}
+                        {{ firearm.model }}
+                    </h2>
+                </div>
+
+                <div class="record-quantity">
+                    <strong>{{ record.rounds }}</strong>
+                    <span>ROUNDS</span>
+                </div>
+
+            </div>
+
+            <div class="range-detail-actions">
+                <a
+                    href="/firearms/{{ firearm.id }}"
+                    class="record-back"
+                >
+                    View firearm →
+                </a>
+            </div>
+
+            <div class="range-ammo-section">
+
+                <div class="range-ammo-heading">
+                    <div>
+                        <div class="range-card-kicker">
+                            AMMUNITION
+                        </div>
+
+                        <h3>Ammunition Fired</h3>
+                    </div>
+                </div>
+
+                {% for usage in record.ammo_usage %}
+
+                    <div class="range-ammo-row range-detail-ammo">
+
+                        {% if usage.source_type.value == "inventory" %}
+
+                            {% set lot = usage.ammo_lot %}
+                            {% set product = lot.ammo_product %}
+
+                            <div class="range-ammo-row-header">
+
+                                <div>
+                                    <strong class="range-ammo-title">
+                                        {{ product.brand.name }}
+                                    </strong>
+
+                                    <div class="range-detail-ammo-description">
+                                        {{ product.caliber.name }}
+
+                                        {% if product.grain_weight %}
+                                            · {{ product.grain_weight | format_number }} gr
+                                        {% endif %}
+
+                                        {% if product.projectile_type %}
+                                            · {{ product.projectile_type }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="record-quantity">
+                                    <strong>{{ usage.quantity }}</strong>
+                                    <span>ROUNDS</span>
+                                </div>
+
+                            </div>
+
+                            {% if lot.lot_number %}
+                                <div class="range-detail-meta">
+                                    Lot {{ lot.lot_number }}
+                                </div>
+                            {% endif %}
+
+                            <div class="range-detail-actions">
+                                <a
+                                    href="/ammunition/{{ lot.id }}"
+                                    class="record-back"
+                                >
+                                    View ammunition →
+                                </a>
+                            </div>
+
+                        {% else %}
+
+                            <div class="range-ammo-row-header">
+
+                                <div>
+                                    <strong class="range-ammo-title">
+                                        Other / Borrowed
+                                    </strong>
+
+                                    <div class="range-detail-ammo-description">
+                                        {{ usage.description or "No description recorded" }}
+                                    </div>
+                                </div>
+
+                                <div class="record-quantity">
+                                    <strong>{{ usage.quantity }}</strong>
+                                    <span>ROUNDS</span>
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+            <div class="range-detail-notes">
+                <span class="record-detail-label">
+                    Firearm Notes
+                </span>
+
+                <div class="record-detail-value">
+                    {{ session_firearm.notes or "Not recorded" }}
+                </div>
+            </div>
+
+        </article>
+
+    {% endfor %}
+
+</section>
+
+{% endblock %}

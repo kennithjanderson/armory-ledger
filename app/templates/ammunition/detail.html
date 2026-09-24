@@ -137,16 +137,78 @@
         <div class="record-detail-footer">
             Added
             <span data-local-datetime="{{ lot.created_at.isoformat() }}">
-                {{ lot.created_at.strftime("%b %-d, %Y") }}
+                {{ lot.created_at.strftime("%Y-%m-%d") }}
             </span>
         </div>
     </article>
 </section>
 
-<section class="content-section">
+<section class="range-detail-section">
+
+        <div class="page-marker">
+            Activity
+        </div>
+        <h2>Range Usage</h2>
+
+    {% if range_usage %}
+        <div class="transaction-list">
+            {% for usage in range_usage %}
+                <article class="transaction-card">
+                    <div>
+                        <strong>
+                            {{ usage.occurred_date.strftime("%Y-%m-%d") }}
+                        </strong>
+
+                        <p>
+                            <a
+                                href="/firearms/{{ usage.firearm_id }}"
+                                class="record-back"
+                            >
+                                {{ usage.firearm_model }}
+                            </a>
+                        </p>
+
+                        {% if usage.location %}
+                            <p>{{ usage.location }}</p>
+                        {% else %}
+                            <p>Location not specified</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <strong>
+                            {{ usage.quantity }}
+                            {% if usage.quantity == 1 %}
+                                round
+                            {% else %}
+                                rounds
+                            {% endif %}
+                        </strong>
+
+                        <p>
+                            <a
+                                href="/range/{{ usage.session_id }}"
+                                class="record-back"
+                            >
+                                View Session →
+                            </a>
+                        </p>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No range usage has been recorded for this ammunition.</p>
+    {% endif %}
+</section>
+
+<section class="range-detail-section">
     <div class="section-heading">
         <div>
-            <p class="eyebrow">Ledger</p>
+            <div class="page-marker">
+                Ledger
+            </div>
+
             <h2>Inventory History</h2>
         </div>
 
@@ -156,7 +218,7 @@
         >
             Add Activity
         </a>
-   </div>
+    </div>
 
     {% if transactions %}
         <div class="transaction-list">
@@ -170,7 +232,7 @@
                         </strong>
 
                         <p>
-                            {{ transaction.occurred_at.strftime("%B %-d, %Y") }}
+                            {{ transaction.occurred_at.strftime("%Y-%m-%d") }}
                         </p>
 
                         {% if transaction.notes %}

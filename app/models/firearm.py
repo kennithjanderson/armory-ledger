@@ -19,6 +19,7 @@ from app.db.base import Base
 
 class FirearmStatus(str, enum.Enum):
     OWNED = "owned"
+    DECOMMISSIONED = "decommissioned"
     SOLD = "sold"
     TRANSFERRED = "transferred"
     STOLEN = "stolen"
@@ -34,10 +35,11 @@ class FirearmType(str, enum.Enum):
     OTHER = "other"
     UNKNOWN = "unknown"
 
-class ManufactureDateConfidence(str, enum.Enum):
+class DatePrecision(str, enum.Enum):
     EXACT = "exact"
+    MONTH = "month"
     YEAR = "year"
-    ESTIMATED = "estimated"
+    APPROXIMATE_YEAR = "approximate_year"
     UNKNOWN = "unknown"
 
 
@@ -91,23 +93,34 @@ class Firearm(Base):
         nullable=False,
     )
 
-    manufacture_date_from: Mapped[date | None] = mapped_column(
+    manufacture_date: Mapped[date | None] = mapped_column(
         Date,
         nullable=True,
     )
 
-    manufacture_date_to: Mapped[date | None] = mapped_column(
-        Date,
-        nullable=True,
-    )
-
-    manufacture_date_confidence: Mapped[ManufactureDateConfidence] = mapped_column(
+    manufacture_date_precision: Mapped[DatePrecision] = mapped_column(
         Enum(
-            ManufactureDateConfidence,
-            name="manufacture_date_confidence",
+            DatePrecision,
+            name="firearm_date_precision",
             values_callable=lambda enum_cls: [item.value for item in enum_cls],
         ),
-        default=ManufactureDateConfidence.UNKNOWN,
+        default=DatePrecision.UNKNOWN,
+        nullable=False,
+    )
+
+    obtained_date: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+    )
+
+    obtained_date_precision: Mapped[DatePrecision] = mapped_column(
+        Enum(
+            DatePrecision,
+            name="firearm_date_precision",
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+            create_type=False,
+        ),
+        default=DatePrecision.UNKNOWN,
         nullable=False,
     )
 

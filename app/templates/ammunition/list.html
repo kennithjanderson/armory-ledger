@@ -105,7 +105,7 @@
                             {% set acquired_at = acquired_at_by_lot.get(lot.id) %}
 
                             {% if acquired_at %}
-                                Acquired {{ acquired_at.strftime("%b %-d, %Y") }}
+                                Acquired {{ acquired_at.strftime("%Y-%m-%d") }}
                             {% else %}
                                 Acquisition date not recorded
                             {% endif %}

@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi.responses import HTMLResponse
 from starlette.responses import RedirectResponse
 
 from app.core.auth import oauth
 from app.core.config import settings
+from app.core.dependencies import get_current_user
 
 from app.db.session import SessionLocal
+from app.models.user import User
 from app.services.user_service import sync_oidc_user
 
 
@@ -12,7 +15,12 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.get("/login")
-async def login(request: Request):
+async def login(
+    request: Request,
+    popup: bool = False,
+):
+    request.session["auth_popup"] = popup
+
     return await oauth.authentik.authorize_redirect(
         request,
         settings.oidc_redirect_uri,
@@ -62,13 +70,20 @@ async def callback(request: Request):
         "is_admin": "Armory Admin" in groups,
     }
 
+    popup = request.session.pop("auth_popup", False)
+
+    if popup:
+        return RedirectResponse(url="/auth/popup-complete")
+
     return RedirectResponse(url="/dashboard")
 
 @router.get("/me")
-async def me(request: Request):
+async def me(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
     return {
-        "authenticated": "user" in request.session,
-        "user": request.session.get("user"),
+        "authenticated": True,
     }
 
 
@@ -76,3 +91,35 @@ async def me(request: Request):
 async def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/")
+
+@router.get("/popup-complete", response_class=HTMLResponse)
+async def popup_complete(request: Request):
+    if "user" not in request.session:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required.",
+        )
+
+    return HTMLResponse(
+        content="""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Authentication Complete</title>
+</head>
+<body>
+<script>
+    if (window.opener) {
+        window.opener.postMessage(
+            { type: "armory-authenticated" },
+            window.location.origin
+        );
+    }
+
+    window.close();
+</script>
+</body>
+</html>
+"""
+    )

@@ -32,6 +32,11 @@ from app.services.ammo_inventory_service import (
     record_inventory_activity,
 )
 
+from app.models.firearm import Firearm
+from app.models.range_session import RangeSession
+from app.models.range_session_firearm import RangeSessionFirearm
+from app.models.range_session_ammo_usage import RangeSessionAmmoUsage
+
 router = APIRouter(
     prefix="/ammunition",
     tags=["ammunition"],
@@ -321,9 +326,41 @@ async def ammunition_detail(
     ).all()
 
     physical_on_hand = get_physical_inventory(
-    db,
-    lot_id=lot.id,
-)
+        db,
+        lot_id=lot.id,
+    )
+
+    range_usage = db.execute(
+        select(
+            RangeSession.id.label("session_id"),
+            RangeSession.occurred_date,
+            RangeSession.location,
+            Firearm.id.label("firearm_id"),
+            Firearm.model.label("firearm_model"),
+            RangeSessionAmmoUsage.quantity,
+        )
+        .join(
+            RangeSessionFirearm,
+            RangeSessionFirearm.range_session_id == RangeSession.id,
+        )
+        .join(
+            RangeSessionAmmoUsage,
+            RangeSessionAmmoUsage.range_session_firearm_id
+            == RangeSessionFirearm.id,
+        )
+        .join(
+            Firearm,
+            Firearm.id == RangeSessionFirearm.firearm_id,
+        )
+        .where(
+            RangeSession.owner_id == current_user.id,
+            RangeSessionAmmoUsage.ammo_lot_id == lot.id,
+        )
+        .order_by(
+            RangeSession.occurred_date.desc(),
+            RangeSession.created_at.desc(),
+        )
+    ).all()
 
     return templates.TemplateResponse(
         request=request,
@@ -336,6 +373,7 @@ async def ammunition_detail(
             "lot": lot,
             "transactions": transactions,
             "physical_on_hand": physical_on_hand,
+            "range_usage": range_usage,
         },
     )
 

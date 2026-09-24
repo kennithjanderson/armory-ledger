@@ -121,29 +121,47 @@
                 </span>
 
                 <span class="record-detail-value">
-                    {% if firearm.manufacture_date_from %}
-                        {% if firearm.manufacture_date_to and firearm.manufacture_date_to != firearm.manufacture_date_from %}
-                            {{ firearm.manufacture_date_from }}
-                            –
-                            {{ firearm.manufacture_date_to }}
-                        {% else %}
-                            {{ firearm.manufacture_date_from }}
-                        {% endif %}
-                    {% else %}
+                    {% if firearm.manufacture_date_precision.value == "unknown" %}
                         Unknown
+
+                    {% elif firearm.manufacture_date_precision.value == "approximate_year" %}
+                        About {{ firearm.manufacture_date.strftime("%Y") }}
+
+                    {% elif firearm.manufacture_date_precision.value == "year" %}
+                        {{ firearm.manufacture_date.strftime("%Y") }}
+
+                    {% elif firearm.manufacture_date_precision.value == "month" %}
+                        {{ firearm.manufacture_date.strftime("%B %Y") }}
+
+                    {% else %}
+                        {{ firearm.manufacture_date.strftime("%Y-%m-%d") }}
                     {% endif %}
                 </span>
             </div>
 
-            <div class="record-detail-item">
-                <span class="firearm-detail-label">
-                    Date Confidence
-                </span>
+             <div class="record-detail-item">
+                 <span class="firearm-detail-label">
+                     Obtained Date
+                 </span>
 
-                <span class="record-detail-value">
-                    {{ firearm.manufacture_date_confidence.value | replace("_", " ") | title }}
-                </span>
-            </div>
+                 <span class="record-detail-value">
+                     {% if firearm.obtained_date_precision.value == "unknown" %}
+                         Unknown
+
+                     {% elif firearm.obtained_date_precision.value == "approximate_year" %}
+                         About {{ firearm.obtained_date.strftime("%Y") }}
+
+                     {% elif firearm.obtained_date_precision.value == "year" %}
+                         {{ firearm.obtained_date.strftime("%Y") }}
+
+                     {% elif firearm.obtained_date_precision.value == "month" %}
+                         {{ firearm.obtained_date.strftime("%B %Y") }}
+
+                     {% else %}
+                         {{ firearm.obtained_date.strftime("%Y-%m-%d") }}
+                     {% endif %}
+                 </span>
+             </div>
 
         </div>
 
@@ -166,19 +184,70 @@
             <span>
                 Added
                 <span data-local-datetime="{{ firearm.created_at.isoformat() }}">
-                    {{ firearm.created_at.strftime("%b %d, %Y") }}
+                    {{ firearm.created_at.strftime("%Y-%m-%d") }}
                 </span>
             </span>
 
             <span>
                 Last updated
                 <span data-local-datetime="{{ firearm.updated_at.isoformat() }}">
-                    {{ firearm.updated_at.strftime("%b %d, %Y") }}
+                    {{ firearm.updated_at.strftime("%Y-%m-%d") }}
                 </span>
             </span>
 
         </div>
 
+    </div>
+
+    <div class="record-detail-card">
+        <div class="record-detail-header">
+            <div>
+                <div class="page-marker">ACTIVITY</div>
+                <h2>Range History</h2>
+            </div>
+        </div>
+
+        {% if range_history %}
+            <div class="record-detail-grid">
+                {% for session in range_history %}
+                    <div class="record-detail-item">
+                        <span class="firearm-detail-label">
+                            {{ session.occurred_date.strftime("%Y-%m-%d") }}
+                        </span>
+
+                        <span class="record-detail-value">
+                            {% if session.location %}
+                                {{ session.location }}
+                            {% else %}
+                                Location not specified
+                            {% endif %}
+                        </span>
+
+                        <span class="record-detail-value">
+                            {{ session.rounds_fired }}
+                            {% if session.rounds_fired == 1 %}
+                                round
+                            {% else %}
+                                rounds
+                            {% endif %}
+                        </span>
+
+                        <a
+                            href="/range/{{ session.session_id }}"
+                            class="record-back"
+                        >
+                            View Session →
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="record-detail-notes">
+                <p class="record-empty-value">
+                    No range sessions have been recorded with this firearm.
+                </p>
+            </div>
+        {% endif %}
     </div>
 
 </section>

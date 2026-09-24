@@ -15,7 +15,7 @@ from app.models.audit_event import AuditEvent
 from app.models.firearm import (
     Firearm,
     FirearmStatus,
-    ManufactureDateConfidence,
+    DatePrecision,
 )
 
 from app.models.ammo_brand import AmmoBrand
@@ -27,6 +27,13 @@ from app.models.ammo_lot import AmmoLot
 from app.models.ammo_product import AmmoProduct
 
 from app.models.accessory import Accessory
+
+from app.models.range_session import RangeSession
+from app.models.range_session_firearm import RangeSessionFirearm
+from app.models.range_session_ammo_usage import (
+    RangeAmmoSourceType,
+    RangeSessionAmmoUsage,
+)
 
 
 
@@ -48,4 +55,8 @@ __all__ = [
     "AmmoLot",
     "AmmoProduct",
     "AmmoTransactionType",
+    "RangeSession",
+    "RangeSessionFirearm",
+    "RangeSessionAmmoUsage",
+    "RangeAmmoSourceType",
 ]

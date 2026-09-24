@@ -19,6 +19,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const firearmForm = document.getElementById("firearm-form");
     const firearmSave = document.getElementById("firearm-save");
     const firearmFormError = document.getElementById("firearm-form-error");
+    const statusInput = document.getElementById("status");
+    const notesInput = document.getElementById("notes");
+
+    const manufacturePrecision = document.getElementById(
+        "manufacture-date-precision"
+    );
+    const manufactureDate = document.getElementById(
+        "manufacture-date"
+    );
+
+    const obtainedPrecision = document.getElementById(
+        "obtained-date-precision"
+    );
+    const obtainedDate = document.getElementById(
+        "obtained-date"
+    );
 
     const formMode = firearmForm?.dataset.mode || "create";
     const firearmId = firearmForm?.dataset.firearmId || null;
@@ -39,12 +55,28 @@ document.addEventListener("DOMContentLoaded", () => {
         !modalClose ||
         !firearmForm ||
         !firearmSave ||
-        !firearmFormError
+        !firearmFormError ||
+        !statusInput ||
+        !notesInput ||
+        !manufacturePrecision ||
+        !manufactureDate ||
+        !obtainedPrecision ||
+        !obtainedDate
     ) {
         return;
     }
 
     let searchTimer = null;
+
+    configureDateInput(
+        manufacturePrecision,
+        manufactureDate
+    );
+
+    configureDateInput(
+        obtainedPrecision,
+        obtainedDate
+    );
 
 
     /*
@@ -57,6 +89,82 @@ document.addEventListener("DOMContentLoaded", () => {
         const element = document.createElement("div");
         element.textContent = value;
         return element.innerHTML;
+    }
+
+    function configureDateInput(precisionSelect, dateInput) {
+    const precision = precisionSelect.value;
+    const storedDate = dateInput.dataset.dateValue || "";
+
+    dateInput.hidden = precision === "unknown";
+    dateInput.required = precision !== "unknown";
+
+    if (precision === "unknown") {
+        dateInput.type = "text";
+        dateInput.value = "";
+        return;
+    }
+
+    if (
+        precision === "year" ||
+        precision === "approximate_year"
+    ) {
+        dateInput.type = "number";
+        dateInput.min = "1000";
+        dateInput.max = "9999";
+        dateInput.step = "1";
+        dateInput.placeholder = "YYYY";
+
+        if (storedDate) {
+            dateInput.value = storedDate.slice(0, 4);
+        }
+
+        return;
+    }
+
+    if (precision === "month") {
+        dateInput.type = "month";
+
+        if (storedDate) {
+            dateInput.value = storedDate.slice(0, 7);
+        }
+
+        return;
+    }
+
+    dateInput.type = "date";
+
+    if (storedDate) {
+        dateInput.value = storedDate;
+    }
+}
+
+
+    function canonicalDateValue(precisionSelect, dateInput) {
+        const precision = precisionSelect.value;
+        const value = dateInput.value.trim();
+
+        if (precision === "unknown") {
+            return null;
+        }
+
+        if (!value) {
+            throw new Error(
+                "Please enter a value for each specified date."
+            );
+        }
+
+        if (
+            precision === "year" ||
+            precision === "approximate_year"
+        ) {
+            return `${value}-01-01`;
+        }
+
+        if (precision === "month") {
+            return `${value}-01`;
+        }
+
+        return value;
     }
 
 
@@ -398,6 +506,24 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        let manufactureDateValue;
+        let obtainedDateValue;
+
+        try {
+            manufactureDateValue = canonicalDateValue(
+                manufacturePrecision,
+                manufactureDate
+            );
+
+            obtainedDateValue = canonicalDateValue(
+                obtainedPrecision,
+                obtainedDate
+            );
+        } catch (error) {
+            firearmFormError.textContent = error.message;
+            return;
+        }
+
         const isEdit = formMode === "edit";
 
         if (isEdit && !firearmId) {
@@ -432,6 +558,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         serial_number: serialNumber,
                         firearm_type: firearmType,
                         caliber_id: caliberId || null,
+                        manufacture_date: manufactureDateValue,
+                        manufacture_date_precision: manufacturePrecision.value,
+                        obtained_date: obtainedDateValue,
+                        obtained_date_precision: obtainedPrecision.value,
+                        status: statusInput.value,
+                        notes: notesInput.value.trim() || null,
                     }),
                 }
             );
@@ -475,6 +607,22 @@ document.addEventListener("DOMContentLoaded", () => {
      * =========================================================
      */
 
+
+    manufacturePrecision.addEventListener("change", () => {
+        manufactureDate.dataset.dateValue = "";
+        configureDateInput(
+            manufacturePrecision,
+            manufactureDate
+        );
+    });
+
+    obtainedPrecision.addEventListener("change", () => {
+        obtainedDate.dataset.dateValue = "";
+        configureDateInput(
+            obtainedPrecision,
+            obtainedDate
+        );
+    });
     searchInput.addEventListener("input", () => {
         /*
          * Any edit to the visible manufacturer field invalidates

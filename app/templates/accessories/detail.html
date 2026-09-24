@@ -91,7 +91,7 @@
 
                 <span class="record-detail-value">
                     {% if accessory.purchase_date %}
-                        {{ accessory.purchase_date.strftime("%b %d, %Y") }}
+                        {{ accessory.purchase_date.strftime("%Y-%m-%d") }}
                     {% else %}
                         Not recorded
                     {% endif %}
@@ -149,14 +149,14 @@
             <span>
                 Added
                 <span data-local-datetime="{{ accessory.created_at.isoformat() }}">
-                    {{ accessory.created_at.strftime("%b %d, %Y") }}
+                    {{ accessory.created_at.strftime("%Y-%m-%d") }}
                 </span>
             </span>
 
             <span>
                 Last updated
                 <span data-local-datetime="{{ accessory.updated_at.isoformat() }}">
-                    {{ accessory.updated_at.strftime("%b %d, %Y") }}
+                    {{ accessory.updated_at.strftime("%Y-%m-%d") }}
                 </span>
             </span>
 

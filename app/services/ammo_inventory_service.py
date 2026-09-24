@@ -74,6 +74,8 @@ def record_inventory_activity(
     quantity: int,
     occurred_date: date,
     notes: str | None = None,
+    audit_context: dict | None = None,
+    commit: bool = True,
 ) -> AmmoInventoryTransaction:
     lot = db.scalar(
         select(AmmoLot).where(
@@ -123,28 +125,34 @@ def record_inventory_activity(
     db.add(transaction)
     db.flush()
 
-    audit_event = AuditEvent(
-    owner_id=owner_id,
-    actor_user_id=actor_user_id,
-    entity_type="ammo_lot",
-    entity_id=lot.id,
-    action="inventory_activity",
-    changes={
+    audit_changes = {
         "transaction_id": str(transaction.id),
         "transaction_type": transaction_type.value,
         "quantity": quantity,
         "occurred_date": occurred_date.isoformat(),
         "notes": notes,
-    },
-)
+    }
+
+    if audit_context:
+        audit_changes.update(audit_context)
+
+    audit_event = AuditEvent(
+        owner_id=owner_id,
+        actor_user_id=actor_user_id,
+        entity_type="ammo_lot",
+        entity_id=lot.id,
+        action="inventory_activity",
+        changes=audit_changes,
+    )
 
     db.add(audit_event)
 
-    try:
-        db.commit()
-        db.refresh(transaction)
-    except Exception:
-        db.rollback()
-        raise
+    if commit:
+        try:
+            db.commit()
+            db.refresh(transaction)
+        except Exception:
+            db.rollback()
+            raise
 
     return transaction

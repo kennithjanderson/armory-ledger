@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+<section class="page-heading">
+    <div class="page-marker">RANGE HISTORY</div>
+
+    <h1>
+        {% if edit_mode %}
+            Edit range session,<br>
+            <span>correct the record.</span>
+        {% else %}
+            Record a range session,<br>
+            <span>track every round.</span>
+        {% endif %}
+    </h1>
+
+    <p>
+        {% if edit_mode %}
+            Update the session details, firearms used,
+            and ammunition fired.
+        {% else %}
+            Record when and where you shot, the firearms used,
+            and the ammunition fired.
+        {% endif %}
+    </p>
+</section>
+
+{% block content %}
+
+<section class="page-heading">
+    <div class="page-marker">RANGE HISTORY</div>
+
+    <h1>
+        Record a range session,<br>
+        <span>track every round.</span>
+    </h1>
+
+    <p>
+        Record when and where you shot, the firearms used,
+        and the ammunition fired.
+    </p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<form
+    class="record-form"
+    id="range-form"
+    method="post"
+    data-mode="{{ 'edit' if edit_mode else 'create' }}"
+    data-session-id="{{ range_session.id if edit_mode else '' }}"
+>
+
+    <div class="form-grid">
+
+        <div class="form-field">
+            <label for="occurred-date">Range Date</label>
+
+            <input
+                type="date"
+                id="occurred-date"
+                name="occurred_date"
+                required
+            >
+        </div>
+
+        <div class="form-field">
+            <label for="location">Location</label>
+
+            <input
+                type="text"
+                id="location"
+                name="location"
+                maxlength="255"
+                autocomplete="off"
+                placeholder="Optional range or property"
+            >
+        </div>
+
+        <div class="form-field form-field-wide">
+            <label for="notes">Session Notes</label>
+
+            <textarea
+                id="notes"
+                name="notes"
+                rows="4"
+                placeholder="Optional notes about this range session"
+            ></textarea>
+        </div>
+
+    </div>
+
+    <div class="range-firearms-heading">
+        <div>
+            <div class="page-marker">FIREARMS & AMMUNITION</div>
+            <h2>Firearms Used</h2>
+        </div>
+
+        <button
+            type="button"
+            class="button-secondary"
+            id="add-firearm"
+        >
+            + Add Another Firearm
+        </button>
+    </div>
+
+    <div id="range-firearms"></div>
+
+    <div
+        id="range-form-error"
+        class="modal-error"
+        aria-live="polite"
+    ></div>
+
+    <div class="form-actions">
+        <a
+            href="{{ '/range/' ~ range_session.id if edit_mode else '/range/' }}"
+            class="button-secondary"
+        >
+            Cancel
+        </a>
+
+        <button
+            type="submit"
+            class="button-primary"
+            id="range-save"
+        >
+            {% if edit_mode %}
+                Save Changes
+            {% else %}
+                Save Range Session
+            {% endif %}
+        </button>
+    </div>
+
+</form>
+
+<template id="range-firearm-template">
+    <section class="range-firearm-card">
+
+        <div class="range-card-header">
+            <div>
+                <h2 class="range-firearm-title">
+                    Firearm
+                </h2>
+            </div>
+
+            <button
+                type="button"
+                class="range-remove-button range-remove-firearm"
+            >
+                Remove Firearm
+            </button>
+        </div>
+
+        <div class="form-field">
+            <label>Firearm</label>
+
+            <select
+                class="range-firearm-select"
+                required
+            >
+                <option value="">Select firearm</option>
+
+                {% for firearm in firearms %}
+                    <option value="{{ firearm.id }}">
+                        {% if firearm.manufacturer %}
+                            {{ firearm.manufacturer.name }}
+                        {% endif %}
+                        {{ firearm.model }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="range-ammo-section">
+            <div class="range-ammo-heading">
+                <div>
+                    <h3>Ammunition Fired</h3>
+                </div>
+
+                <button
+                    type="button"
+                    class="button-secondary range-add-ammo"
+                >
+                    + Add Ammunition
+                </button>
+            </div>
+
+            <div class="range-ammo-rows"></div>
+        </div>
+
+        <div class="form-field">
+            <label>Firearm Notes</label>
+
+            <textarea
+                class="range-firearm-notes"
+                rows="3"
+                placeholder="Optional notes specific to this firearm"
+            ></textarea>
+        </div>
+
+    </section>
+</template>
+
+<template id="range-ammo-template">
+    <div class="range-ammo-row">
+
+        <div class="range-ammo-row-header">
+            <strong class="range-ammo-title">
+                Ammunition
+            </strong>
+
+            <button
+                type="button"
+                class="range-remove-button range-remove-ammo"
+            >
+                Remove
+            </button>
+        </div>
+
+        <div class="form-grid">
+
+            <div class="form-field">
+                <label>Ammunition Source</label>
+
+                <select class="range-ammo-source">
+                    <option value="inventory">
+                        Select From Inventory
+                    </option>
+
+                    <option value="other">
+                        Other / Borrowed
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-field">
+                <label>Rounds Fired</label>
+
+                <input
+                    type="number"
+                    class="range-ammo-quantity"
+                    min="1"
+                    step="1"
+                    inputmode="numeric"
+                    placeholder="e.g. 100"
+                >
+            </div>
+
+            <div class="form-field form-field-wide range-inventory-field">
+                <label>Ammunition</label>
+
+                <select class="range-ammo-lot">
+                    <option value="">
+                        Select ammunition
+                    </option>
+
+                    {% for lot in ammo_lots %}
+                        <option
+                            value="{{ lot.id }}"
+                            data-on-hand="{{ inventory_by_lot.get(lot.id, 0) }}"
+                        >
+                            {{ lot.ammo_product.brand.name }}
+                            · {{ lot.ammo_product.caliber.name }}
+                            {% if lot.ammo_product.grain_weight %}
+                                · {{ lot.ammo_product.grain_weight | format_number }} gr
+                            {% endif %}
+                            {% if lot.ammo_product.projectile_type %}
+                                · {{ lot.ammo_product.projectile_type }}
+                            {% endif %}
+                            · {{ inventory_by_lot.get(lot.id, 0) }} rounds
+                            {% if lot.lot_number %}
+                                · Lot {{ lot.lot_number }}
+                            {% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div
+                class="form-field form-field-wide range-other-field"
+                hidden
+            >
+                <label>Ammunition Description</label>
+
+                <input
+                    type="text"
+                    class="range-ammo-description"
+                    maxlength="255"
+                    autocomplete="off"
+                    placeholder="e.g. Federal 124 gr FMJ"
+                >
+            </div>
+
+        </div>
+
+    </div>
+</template>
+
+<script>
+    window.rangeInitialData =
+        {{ initial_data | tojson if initial_data else 'null' }};
+</script>
+
+<script
+    src="{{ url_for('static', path='/js/range-form.js') }}?v={{ app_version }}"
+    defer
+></script>
+
+{% endblock %}

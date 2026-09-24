@@ -101,7 +101,102 @@
             {% endfor %}
         </select>
     </div>
+<div class="form-field">
+    <label for="status">Status</label>
 
+    <select
+        id="status"
+        name="status"
+    >
+        {% for firearm_status in firearm_statuses %}
+            <option
+                value="{{ firearm_status.value }}"
+                {% if firearm_status.value == "owned" %}selected{% endif %}
+            >
+                {{ firearm_status.value | replace("_", " ") | title }}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="form-field">
+    <label for="manufacture-date-precision">
+        Manufacture Date
+    </label>
+
+    <select
+        id="manufacture-date-precision"
+        name="manufacture_date_precision"
+        class="date-precision"
+        data-date-target="manufacture-date"
+    >
+        {% for precision in date_precisions %}
+            <option
+                value="{{ precision.value }}"
+                {% if precision.value == "unknown" %}selected{% endif %}
+            >
+                {% if precision.value == "approximate_year" %}
+                    About Year
+                {% else %}
+                    {{ precision.value | replace("_", " ") | title }}
+                {% endif %}
+            </option>
+        {% endfor %}
+    </select>
+
+    <input
+        type="text"
+        id="manufacture-date"
+        class="precision-date-input"
+        autocomplete="off"
+        hidden
+    >
+</div>
+
+<div class="form-field">
+    <label for="obtained-date-precision">
+        Obtained Date
+    </label>
+
+    <select
+        id="obtained-date-precision"
+        name="obtained_date_precision"
+        class="date-precision"
+        data-date-target="obtained-date"
+    >
+        {% for precision in date_precisions %}
+            <option
+                value="{{ precision.value }}"
+                {% if precision.value == "unknown" %}selected{% endif %}
+            >
+                {% if precision.value == "approximate_year" %}
+                    About Year
+                {% else %}
+                    {{ precision.value | replace("_", " ") | title }}
+                {% endif %}
+            </option>
+        {% endfor %}
+    </select>
+
+    <input
+        type="text"
+        id="obtained-date"
+        class="precision-date-input"
+        autocomplete="off"
+        hidden
+    >
+</div>
+
+<div class="form-field form-field-wide">
+    <label for="notes">Notes</label>
+
+    <textarea
+        id="notes"
+        name="notes"
+        rows="4"
+        placeholder="Optional notes about this firearm"
+    ></textarea>
+</div>
 </div>
 
     <div

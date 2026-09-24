@@ -37,20 +37,11 @@ Planned functionality includes:
 - Inventory exports
 - User notification preferences
 
-## Architecture
+## Deployment Architecture
 
-Armory Ledger currently uses:
+Armory Ledger is designed to run as a private, self-hosted application behind a Cloudflare Tunnel.
 
-- FastAPI
-- PostgreSQL 17
-- SQLAlchemy
-- Alembic
-- Authlib
-- Authentik OIDC
-- Docker Compose
-- Cloudflare Tunnel
-
-The intended deployment path is:
+A typical deployment looks like:
 
     Internet
        |
@@ -58,20 +49,27 @@ The intended deployment path is:
     Cloudflare
        |
        v
-    Cloudflare Access
-       |
-       v
     cloudflared
        |
        v
     Armory Ledger
        |
+       +------> Authentik
+       |          (OIDC)
+       |
        v
     PostgreSQL
 
-The application and Cloudflare Tunnel share a frontend Docker network.
+Cloudflare Tunnel provides external connectivity without exposing the
+application host directly to the Internet.
 
-Armory Ledger and PostgreSQL share a separate internal backend network. PostgreSQL is not exposed directly to the frontend network or host.
+Armory Ledger handles application authentication through an external
+OpenID Connect (OIDC) identity provider. The reference deployment uses
+Authentik, although the application is designed around standard OIDC
+rather than local user passwords.
+
+PostgreSQL stores application data and is not intended to be exposed
+directly to the Internet.
 
 ## Authentication
 

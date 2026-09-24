@@ -8,3 +8,4 @@ venv/
 storage/documents/*
 !storage/documents/.gitkeep
 release.sh
+update-main.sh

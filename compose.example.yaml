@@ -1,13 +1,20 @@
 services:
+
   armory-ledger:
     build: .
     container_name: armory-ledger
     restart: unless-stopped
+
     env_file:
       - .env
+
     depends_on:
       db:
         condition: service_healthy
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
     networks:
       - frontend
       - backend
@@ -16,12 +23,15 @@ services:
     image: postgres:17
     container_name: armory-ledger-db
     restart: unless-stopped
+
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
     healthcheck:
       test:
         [
@@ -31,25 +41,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
     networks:
       - backend
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: armory-ledger-cloudflared
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run
-    environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - armory-ledger
-    networks:
-      - frontend
 
 volumes:
   postgres_data:
 
 networks:
+
   frontend:
+
   backend:
     internal: true

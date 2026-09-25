@@ -12,17 +12,19 @@ data under the control of the person hosting it.
 - Firearm inventory and detailed firearm records
 - Ammunition product and lot tracking
 - Ledger-based ammunition inventory history
-- Accessory inventory management
+- Accessory inventory management with quantity tracking
 - Range session logging
 - Firearm and ammunition usage tracking for range sessions
 - Multi-user ownership isolation
 - Manufacturer and organization records
-- Normalized caliber records and aliases
+- Shared caliber records and aliases
 - OpenID Connect (OIDC) authentication
 - Group-based user and administrator authorization
 - PostgreSQL database with Alembic migrations
+- Automatic database migrations during application startup
 - Responsive desktop and mobile interface
 - Docker Compose deployment
+- GitHub Container Registry distribution
 - Reverse-proxy and Cloudflare Tunnel compatible
 - Application and database health monitoring
 
@@ -31,18 +33,23 @@ through an external OpenID Connect identity provider.
 
 ## Quick Start
 
-Clone the repository:
+Armory Ledger is distributed as a container image through the GitHub Container
+Registry.
+
+### Requirements
+
+- Docker
+- Docker Compose
+- An OpenID Connect (OIDC) identity provider
+
+Download the example Compose and environment files:
 
 ```bash
-git clone https://github.com/kennithjanderson/armory-ledger.git
-cd armory-ledger
-```
+curl -O https://raw.githubusercontent.com/kennithjanderson/armory-ledger/main/compose.example.yaml
+curl -O https://raw.githubusercontent.com/kennithjanderson/armory-ledger/main/.env.example
 
-Create the local configuration files:
-
-```bash
-cp .env.example .env
 cp compose.example.yaml compose.yaml
+cp .env.example .env
 ```
 
 Generate an application session signing secret:
@@ -51,20 +58,21 @@ Generate an application session signing secret:
 python3 -c 'import secrets; print(secrets.token_urlsafe(64))'
 ```
 
-Edit `.env` and configure the PostgreSQL password and your OpenID Connect
-provider.
+Edit `.env` and configure the PostgreSQL credentials, application session
+secret, and OpenID Connect provider.
 
-Build and start Armory Ledger:
-
-```bash
-docker compose up -d --build
-```
-
-Apply the database migrations:
+Start Armory Ledger:
 
 ```bash
-docker compose exec armory-ledger alembic upgrade head
+docker compose up -d
 ```
+
+Docker Compose will pull the Armory Ledger and PostgreSQL container images and
+start the application.
+
+Armory Ledger automatically applies required database migrations before the
+application starts. Manual Alembic commands are not required for normal
+installation.
 
 Check the running services:
 
@@ -85,7 +93,7 @@ A healthy installation returns information similar to:
   "status": "healthy",
   "application": "Armory Ledger",
   "database": "connected",
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
 ```
 
@@ -94,11 +102,33 @@ The example Compose configuration makes Armory Ledger available on
 
 A configured OIDC identity provider is required to sign in.
 
+## Updating
+
+Pull the latest container images and recreate the services:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+When a new Armory Ledger container starts, required database migrations are
+automatically applied before the application is started.
+
+Application containers can be recreated without removing the PostgreSQL data
+stored in the persistent `postgres_data` Docker volume.
+
+Do not remove the PostgreSQL volume unless you intentionally want to delete the
+database.
+
+Database backup and restore tooling is planned for a future release. Operators
+should maintain appropriate backups of their PostgreSQL data before performing
+upgrades.
+
 ## Deployment Architecture
 
 Armory Ledger is designed primarily for private, self-hosted deployment.
 
-The application itself requires:
+The application requires an OIDC identity provider and PostgreSQL database:
 
 ```text
                     OIDC Provider
@@ -143,8 +173,8 @@ PostgreSQL should not be exposed directly to the Internet.
 Armory Ledger does not maintain local passwords.
 
 Authentication is performed through OpenID Connect. The reference deployment
-uses Authentik, but authentication is designed around OIDC rather than local
-passwords.
+uses Authentik, but Armory Ledger is designed around standard OIDC rather than a
+specific identity provider.
 
 Armory Ledger maintains an internal user UUID associated with the immutable
 OIDC subject (`sub`) supplied by the identity provider. Email addresses and
@@ -241,24 +271,37 @@ A Cloudflare-specific `cloudflared` service is intentionally not included in
 the public example Compose configuration. This keeps the example deployment
 independent of any particular reverse proxy or ingress provider.
 
-## Database Migrations
+## Database and Migrations
 
-Armory Ledger uses Alembic for database schema migrations.
+Armory Ledger uses PostgreSQL for application data and Alembic for database
+schema migrations.
 
-Apply all available migrations:
+The example Compose deployment stores PostgreSQL data in the persistent
+`postgres_data` Docker volume.
+
+Migration files are included in the Armory Ledger container image. During
+container startup, Armory Ledger automatically runs:
 
 ```bash
-docker compose exec armory-ledger alembic upgrade head
+alembic upgrade head
 ```
 
-Check the currently applied migration:
+The application starts only after database migrations complete successfully.
+If a migration fails, the application container exits rather than starting new
+application code against an incompatible database schema.
+
+Manual migration commands are not required during normal installation or
+upgrades.
+
+For development and troubleshooting, the currently applied migration can be
+checked with:
 
 ```bash
 docker compose exec armory-ledger alembic current
 ```
 
-When developing through Docker, a new migration can be generated directly into
-the host source tree with:
+When developing from source through Docker, a new migration can be generated
+with:
 
 ```bash
 docker compose run --rm -T \
@@ -282,10 +325,6 @@ data, including:
 - Authentication credentials
 - OIDC client secrets
 - Session signing secrets
-- User-uploaded documents
-
-Uploaded documents are stored under `storage/documents/` and are excluded from
-Git except for the directory placeholder.
 
 Private inventory records are associated with an internal Armory Ledger user
 identity. Ownership restrictions are enforced server-side by the application
@@ -297,17 +336,56 @@ instance.
 
 Do not expose PostgreSQL directly to untrusted networks.
 
+## Building from Source
+
+The published container image is the recommended deployment method.
+
+For development or testing, Armory Ledger can also be built directly from the
+repository:
+
+```bash
+git clone https://github.com/kennithjanderson/armory-ledger.git
+cd armory-ledger
+
+cp .env.example .env
+cp compose.example.yaml compose.yaml
+```
+
+Because `compose.example.yaml` uses the published container image, change the
+Armory Ledger service in your development `compose.yaml` from:
+
+```yaml
+image: ghcr.io/kennithjanderson/armory-ledger:latest
+```
+
+to:
+
+```yaml
+build: .
+```
+
+Then build and start the development deployment:
+
+```bash
+docker compose build --no-cache armory-ledger
+docker compose up -d
+```
+
+The locally built container uses the same startup process as the published
+image, including automatic database migrations.
+
 ## Project Status
 
 Armory Ledger is under active development.
 
-Version `0.1.0` is the first functional release and includes firearm,
-ammunition, and accessory inventory management; ammunition transaction history;
-range session logging; multi-user ownership isolation; OIDC authentication; and
-containerized deployment.
+The current release is version `0.1.1`.
 
-Additional functionality and improvements will be developed as the application
-continues to mature.
+Armory Ledger is distributed as a container image through GitHub Container
+Registry and automatically applies required database migrations during container
+startup.
+
+Armory Ledger is still an early project. Additional functionality and
+improvements will be developed as the application continues to mature.
 
 Bugs and feature requests can be submitted through GitHub Issues.
 

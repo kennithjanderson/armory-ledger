@@ -1,7 +1,7 @@
 services:
 
   armory-ledger:
-    build: .
+    image: ghcr.io/kennithjanderson/armory-ledger:latest
     container_name: armory-ledger
     restart: unless-stopped
 

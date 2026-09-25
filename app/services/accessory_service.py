@@ -78,6 +78,7 @@ def create_accessory(
     *,
     owner_id: UUID,
     name: str,
+    quantity: int = 1,
     manufacturer_id: UUID | None = None,
     model: str | None = None,
     serial_number: str | None = None,
@@ -91,6 +92,9 @@ def create_accessory(
 
     if not name:
         raise ValueError("Accessory name is required.")
+
+    if quantity < 1:
+        raise ValueError("Accessory quantity must be at least 1.")
 
     model = _clean_optional(model)
     serial_number = _clean_optional(serial_number)
@@ -119,6 +123,7 @@ def create_accessory(
     accessory = Accessory(
         owner_id=owner_id,
         name=name,
+        quantity=quantity,
         manufacturer_id=manufacturer_id,
         model=model,
         serial_number=serial_number,
@@ -147,6 +152,7 @@ def update_accessory(
     actor_user_id: UUID,
     accessory_id: UUID,
     name: str,
+    quantity: int = 1,
     manufacturer_id: UUID | None = None,
     model: str | None = None,
     serial_number: str | None = None,
@@ -166,6 +172,9 @@ def update_accessory(
 
     if not name:
         raise ValueError("Accessory name is required.")
+
+    if quantity < 1:
+        raise ValueError("Accessory quantity must be at least 1.")
 
     model = _clean_optional(model)
     serial_number = _clean_optional(serial_number)
@@ -195,6 +204,7 @@ def update_accessory(
 
     fields = {
         "name": name,
+        "quantity": quantity,
         "manufacturer_id": manufacturer_id,
         "model": model,
         "serial_number": serial_number,

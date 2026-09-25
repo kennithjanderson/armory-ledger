@@ -4,7 +4,7 @@ from sqlalchemy import URL
 
 class Settings(BaseSettings):
     app_name: str = "Armory Ledger"
-    app_version: str = "0.1.0"
+    app_version: str = "0.1.1"
 
     postgres_db: str
     postgres_user: str

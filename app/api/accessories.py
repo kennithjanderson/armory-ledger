@@ -37,6 +37,7 @@ class ManufacturerCreateRequest(BaseModel):
 
 class AccessoryCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
+    quantity: int = Field(default=1, ge=1)
     manufacturer_id: UUID | None = None
     model: str | None = Field(default=None, max_length=255)
     serial_number: str | None = Field(default=None, max_length=255)
@@ -236,6 +237,7 @@ async def accessory_create(
             db,
             owner_id=current_user.id,
             name=payload.name,
+            quantity=payload.quantity,
             manufacturer_id=payload.manufacturer_id,
             model=payload.model,
             serial_number=payload.serial_number,
@@ -285,6 +287,7 @@ async def accessory_update(
             actor_user_id=current_user.id,
             accessory_id=accessory_id,
             name=payload.name,
+            quantity=payload.quantity,
             manufacturer_id=payload.manufacturer_id,
             model=payload.model,
             serial_number=payload.serial_number,

@@ -107,39 +107,40 @@ async def ammunition_list(
         )
         .where(AmmoLot.owner_id == current_user.id)
         .order_by(
-            AmmoBrand.name.asc(),
             Caliber.name.asc(),
+            AmmoBrand.name.asc(),
             AmmoProduct.grain_weight.asc().nulls_last(),
             AmmoProduct.projectile_type.asc().nulls_last(),
             AmmoLot.id.asc(),
         )
     ).unique().all()
 
-    inventory_by_lot = {}
-    acquired_at_by_lot = {}
+    caliber_summaries_by_id = {}
 
     for lot in lots:
-        inventory_by_lot[lot.id] = get_physical_inventory(
+        caliber = lot.ammo_product.caliber
+
+        if caliber.id not in caliber_summaries_by_id:
+            caliber_summaries_by_id[caliber.id] = {
+                "caliber": caliber,
+                "lot_count": 0,
+                "quantity": 0,
+            }
+
+        caliber_summaries_by_id[
+            caliber.id
+        ]["lot_count"] += 1
+
+        caliber_summaries_by_id[
+            caliber.id
+        ]["quantity"] += get_physical_inventory(
             db,
             lot_id=lot.id,
         )
 
-        initial_acquisition = db.scalar(
-            select(AmmoInventoryTransaction)
-            .where(
-                AmmoInventoryTransaction.ammo_lot_id == lot.id,
-                AmmoInventoryTransaction.transaction_type
-                == AmmoTransactionType.ACQUIRED,
-            )
-            .order_by(AmmoInventoryTransaction.created_at.asc())
-            .limit(1)
-        )
-
-        acquired_at_by_lot[lot.id] = (
-            initial_acquisition.occurred_at
-            if initial_acquisition
-            else None
-        )
+    caliber_summaries = list(
+        caliber_summaries_by_id.values()
+    )
 
     return templates.TemplateResponse(
         request=request,
@@ -152,9 +153,7 @@ async def ammunition_list(
                 "is_admin",
                 False,
             ),
-            "lots": lots,
-            "inventory_by_lot": inventory_by_lot,
-            "acquired_at_by_lot": acquired_at_by_lot,
+            "caliber_summaries": caliber_summaries,
         },
     )
 
@@ -166,6 +165,7 @@ async def ammunition_new(
 ):
     calibers = db.scalars(
         select(Caliber)
+        .where(Caliber.is_selectable.is_(True))
         .order_by(Caliber.name.asc())
     ).all()
 
@@ -181,6 +181,103 @@ async def ammunition_new(
                 False,
             ),
             "calibers": calibers,
+        },
+    )
+
+@router.get("/calibers/{caliber_id}")
+async def ammunition_caliber_detail(
+    caliber_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    caliber = db.scalar(
+        select(Caliber)
+        .where(Caliber.id == caliber_id)
+    )
+
+    if caliber is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Caliber not found.",
+        )
+
+    lots = db.scalars(
+        select(AmmoLot)
+        .join(AmmoLot.ammo_product)
+        .join(AmmoProduct.brand)
+        .options(
+            joinedload(AmmoLot.ammo_product)
+            .joinedload(AmmoProduct.brand),
+            joinedload(AmmoLot.ammo_product)
+            .joinedload(AmmoProduct.caliber),
+        )
+        .where(
+            AmmoLot.owner_id == current_user.id,
+            AmmoProduct.caliber_id == caliber_id,
+        )
+        .order_by(
+            AmmoBrand.name.asc(),
+            AmmoProduct.grain_weight.asc().nulls_last(),
+            AmmoProduct.projectile_type.asc().nulls_last(),
+            AmmoLot.id.asc(),
+        )
+    ).unique().all()
+
+    if not lots:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No ammunition found for this caliber.",
+        )
+
+    inventory_by_lot = {}
+    acquired_at_by_lot = {}
+    total_quantity = 0
+
+    for lot in lots:
+        physical_inventory = get_physical_inventory(
+            db,
+            lot_id=lot.id,
+        )
+
+        inventory_by_lot[lot.id] = physical_inventory
+        total_quantity += physical_inventory
+
+        initial_acquisition = db.scalar(
+            select(AmmoInventoryTransaction)
+            .where(
+                AmmoInventoryTransaction.ammo_lot_id == lot.id,
+                AmmoInventoryTransaction.transaction_type
+                == AmmoTransactionType.ACQUIRED,
+            )
+            .order_by(
+                AmmoInventoryTransaction.created_at.asc()
+            )
+            .limit(1)
+        )
+
+        acquired_at_by_lot[lot.id] = (
+            initial_acquisition.occurred_at
+            if initial_acquisition
+            else None
+        )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="ammunition/caliber.html",
+        context={
+            "app_name": settings.app_name,
+            "app_version": settings.app_version,
+            "current_user": current_user,
+            "is_admin": request.session["user"].get(
+                "is_admin",
+                False,
+            ),
+            "caliber": caliber,
+            "lots": lots,
+            "inventory_by_lot": inventory_by_lot,
+            "acquired_at_by_lot": acquired_at_by_lot,
+            "total_quantity": total_quantity,
         },
     )
 

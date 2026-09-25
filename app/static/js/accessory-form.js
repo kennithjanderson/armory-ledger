@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const modal = document.getElementById("manufacturer-modal");
     const modalName = document.getElementById("new-manufacturer-name");
+    const quantityInput = document.getElementById("quantity");
     const modalError = document.getElementById("manufacturer-modal-error");
     const modalSave = document.getElementById("manufacturer-modal-save");
     const modalCancel = document.getElementById("manufacturer-modal-cancel");
@@ -46,6 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
         !accessorySave ||
         !accessoryFormError ||
         !locationType ||
+        !quantityInput ||
         !firearmLocationField ||
         !storageLocationField ||
         !firearmId ||
@@ -395,6 +397,8 @@ document.addEventListener("DOMContentLoaded", () => {
             .value
             .trim();
 
+        const quantity = Number(quantityInput.value);
+
         const model = document
             .getElementById("model")
             .value;
@@ -420,6 +424,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 "Accessory name is required.";
 
             document.getElementById("name").focus();
+            return;
+        }
+
+        if (
+            !Number.isInteger(quantity) ||
+                quantity < 1
+        ) {
+            accessoryFormError.textContent =
+                "Accessory quantity must be a whole number of at least 1.";
+
+            quantityInput.focus();
             return;
         }
 
@@ -499,6 +514,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     },
                     body: JSON.stringify({
                         name: name,
+                        quantity: quantity,
                         manufacturer_id:
                             manufacturerId.value || null,
                         model: optionalValue(model),

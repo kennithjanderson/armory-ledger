@@ -42,8 +42,27 @@
             </div>
 
             <div class="form-field">
-                <label for="caliber_id">Caliber</label>
-                <select id="caliber_id" name="caliber_id" required>
+                <div class="field-label-row">
+                    <label for="caliber_id">Caliber</label>
+
+                    <button
+                        type="button"
+                        class="field-action"
+                        id="caliber-add"
+                    >
+                        + Add caliber
+                    </button>
+                </div>
+
+               <select
+                    id="caliber_id"
+                    name="caliber_id"
+                    required
+                >
+                    <option value="">
+                        Select caliber
+                    </option>
+
                     {% for caliber in calibers %}
                         <option
                             value="{{ caliber.id }}"
@@ -182,8 +201,89 @@
     </form>
 </section>
 
+<div
+    class="modal-backdrop"
+    id="caliber-modal"
+    data-caliber-select="caliber_id"
+    hidden
+>
+    <div
+        class="modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="caliber-modal-title"
+    >
+        <div class="modal-header">
+            <div>
+                <div class="page-marker">
+                    REFERENCE DATA
+                </div>
+
+                <h2 id="caliber-modal-title">
+                    Add caliber
+                </h2>
+            </div>
+
+            <button
+                type="button"
+                class="modal-close"
+                id="caliber-modal-close"
+                aria-label="Close"
+            >
+                ×
+            </button>
+        </div>
+
+        <p class="modal-description">
+            Add a caliber for use throughout Armory Ledger.
+        </p>
+
+        <div class="form-field">
+            <label for="new-caliber-name">
+                Caliber name
+            </label>
+
+            <input
+                type="text"
+                id="new-caliber-name"
+                maxlength="100"
+                autocomplete="off"
+                placeholder="e.g. .45 ACP"
+            >
+        </div>
+
+        <div
+            id="caliber-modal-error"
+            class="modal-error"
+            aria-live="polite"
+        ></div>
+
+        <div class="modal-actions">
+            <button
+                type="button"
+                class="button-secondary"
+                id="caliber-modal-cancel"
+            >
+                Cancel
+            </button>
+
+            <button
+                type="button"
+                class="button-primary"
+                id="caliber-modal-save"
+            >
+                Add Caliber
+            </button>
+        </div>
+    </div>
+</div>
+
 <script
-    src="{{ url_for('static', path='/js/ammunition-edit.js') }}?v={{ app_version }}-ammo-edit2"
+    src="{{ url_for('static', path='/js/ammunition-edit.js') }}?v={{ app_version }}"
+    defer
+></script>
+<script
+    src="{{ url_for('static', path='/js/caliber-modal.js') }}?v={{ app_version }}"
     defer
 ></script>
 {% endblock %}

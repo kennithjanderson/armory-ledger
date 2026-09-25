@@ -1,41 +1,33 @@
 from uuid import UUID
+
 from fastapi import Depends, FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-
-from app.core.config import settings
-from app.db.session import engine
-
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import RedirectResponse
-from fastapi.responses import JSONResponse
-
-from app.api.auth import router as auth_router
-
-from fastapi.staticfiles import StaticFiles
-from app.main_templates import templates
-
-from app.core.dependencies import get_current_user, get_db
-
-from app.models.user import User
-
-from app.api.firearms import router as firearms_router
-
-from app.api.ammunition import router as ammunition_router
 
 from app.api.accessories import router as accessories_router
-
+from app.api.ammunition import router as ammunition_router
+from app.api.auth import router as auth_router
+from app.api.firearms import router as firearms_router
 from app.api.range import router as range_router
+from app.api.reference import router as reference_router
+
+from app.core.config import settings
+from app.core.dependencies import get_current_user, get_db
+from app.db.session import engine
+from app.main_templates import templates
 
 from app.models.accessory import Accessory
 from app.models.ammo_lot import AmmoLot
 from app.models.firearm import Firearm
 from app.models.range_session import RangeSession
+from app.models.user import User
 
 from app.services.ammo_inventory_service import get_physical_inventory
-
 
 
 app = FastAPI(
@@ -61,8 +53,12 @@ PUBLIC_PATHS = {
     "/health",
 }
 
+
 @app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
+async def http_exception_handler(
+    request: Request,
+    exc: HTTPException,
+):
     if exc.status_code == 401:
         return RedirectResponse(
             url="/",
@@ -75,14 +71,20 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         headers=exc.headers,
     )
 
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+app.mount(
+    "/static",
+    StaticFiles(directory="app/static"),
+    name="static",
+)
 
 app.include_router(auth_router)
 app.include_router(firearms_router)
 app.include_router(ammunition_router)
 app.include_router(range_router)
-
 app.include_router(accessories_router)
+app.include_router(reference_router)
+
 
 @app.get("/")
 async def login_page(request: Request):
@@ -101,13 +103,13 @@ async def login_page(request: Request):
         },
     )
 
+
 @app.get("/dashboard")
 async def dashboard(
     request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-
     firearm_count = db.scalar(
         select(func.count())
         .select_from(Firearm)
@@ -115,8 +117,7 @@ async def dashboard(
     ) or 0
 
     accessory_count = db.scalar(
-        select(func.count())
-        .select_from(Accessory)
+        select(func.coalesce(func.sum(Accessory.quantity), 0))
         .where(Accessory.owner_id == current_user.id)
     ) or 0
 
@@ -138,6 +139,7 @@ async def dashboard(
         )
         for lot_id in ammo_lot_ids
     )
+
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -145,13 +147,17 @@ async def dashboard(
             "app_name": settings.app_name,
             "app_version": settings.app_version,
             "current_user": current_user,
-            "is_admin": request.session["user"].get("is_admin", False),
+            "is_admin": request.session["user"].get(
+                "is_admin",
+                False,
+            ),
             "firearm_count": firearm_count,
             "rounds_on_hand": rounds_on_hand,
             "accessory_count": accessory_count,
             "range_session_count": range_session_count,
         },
     )
+
 
 @app.get("/health")
 async def health():

@@ -2094,3 +2094,30 @@ body {
 .app-footer-status.is-degraded .app-footer-status-dot {
     background: #c92129;
 }
+
+.field-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.field-label-row label {
+    margin-bottom: 0;
+}
+
+.field-action {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--blue);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.field-action:hover,
+.field-action:focus-visible {
+    text-decoration: underline;
+}

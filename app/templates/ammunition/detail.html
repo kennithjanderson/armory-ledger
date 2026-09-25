@@ -33,8 +33,10 @@
 
 <section class="record-detail">
     <div class="record-detail-toolbar">
-        <a href="/ammunition/" class="record-back">
-            ← Ammunition Inventory
+        <a href="/ammunition/calibers/{{ lot.ammo_product.caliber.id }}"
+           class="record-back"
+        >
+            ← {{ lot.ammo_product.caliber.name }}
         </a>
 
         <div class="record-actions">

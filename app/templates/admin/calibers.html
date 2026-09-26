@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Calibers | {{ app_name }}{% endblock %}
+{% block content %}
+<a href="/admin" class="record-back">← Administration</a>
+<section class="page-heading"><h1>Calibers</h1><p>Shared reference data. Read-only.</p></section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+{% include "partials/admin_navigation.html" %}
+
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead><tr><th>Name</th><th>Selectable</th></tr></thead>
+    <tbody>{% for record in records %}<tr><td>{{ record.name }}</td><td>{{ 'Yes' if record.is_selectable else 'No' }}</td></tr>
+    {% else %}<tr><td colspan="2">No calibers found.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
@@ -45,13 +46,17 @@ class ManufacturerCreateRequest(BaseModel):
 class FirearmCreateRequest(BaseModel):
     manufacturer_id: UUID | None = None
     model: str = Field(min_length=1, max_length=255)
-    serial_number: str = Field(min_length=1, max_length=255)
+    serial_number: str | None = Field(default=None, max_length=255)
     firearm_type: FirearmType
     caliber_id: UUID | None = None
     manufacture_date: date | None = None
     manufacture_date_precision: DatePrecision = DatePrecision.UNKNOWN
     obtained_date: date | None = None
     obtained_date_precision: DatePrecision = DatePrecision.UNKNOWN
+    purchase_price: Decimal | None = Field(
+        default=None, ge=0, max_digits=12, decimal_places=2,
+        allow_inf_nan=False,
+    )
     status: FirearmStatus = FirearmStatus.OWNED
     notes: str | None = None
 
@@ -59,13 +64,17 @@ class FirearmCreateRequest(BaseModel):
 class FirearmUpdateRequest(BaseModel):
     manufacturer_id: UUID | None = None
     model: str = Field(min_length=1, max_length=255)
-    serial_number: str = Field(min_length=1, max_length=255)
+    serial_number: str | None = Field(default=None, max_length=255)
     firearm_type: FirearmType
     caliber_id: UUID | None = None
     manufacture_date: date | None = None
     manufacture_date_precision: DatePrecision = DatePrecision.UNKNOWN
     obtained_date: date | None = None
     obtained_date_precision: DatePrecision = DatePrecision.UNKNOWN
+    purchase_price: Decimal | None = Field(
+        default=None, ge=0, max_digits=12, decimal_places=2,
+        allow_inf_nan=False,
+    )
     status: FirearmStatus
     notes: str | None = None
 
@@ -269,18 +278,12 @@ async def firearm_create(
             }
 
     model = " ".join(payload.model.strip().split())
-    serial_number = payload.serial_number.strip()
+    serial_number = (payload.serial_number or "").strip() or None
 
     if not model:
         return {
             "success": False,
             "error": "Model is required.",
-        }
-
-    if not serial_number:
-        return {
-            "success": False,
-            "error": "Serial number is required.",
         }
 
     try:
@@ -315,6 +318,8 @@ async def firearm_create(
         manufacture_date_precision=payload.manufacture_date_precision,
         obtained_date=payload.obtained_date,
         obtained_date_precision=payload.obtained_date_precision,
+        purchase_price=payload.purchase_price,
+        purchase_currency="USD" if payload.purchase_price is not None else None,
         status=payload.status,
         notes=notes,
     )
@@ -387,18 +392,16 @@ async def firearm_update(
             }
 
     model = " ".join(payload.model.strip().split())
-    serial_number = payload.serial_number.strip()
+    serial_number = (
+        (payload.serial_number or "").strip() or None
+        if "serial_number" in payload.model_fields_set
+        else firearm.serial_number
+    )
 
     if not model:
         return {
             "success": False,
             "error": "Model is required.",
-        }
-
-    if not serial_number:
-        return {
-            "success": False,
-            "error": "Serial number is required.",
         }
 
     try:
@@ -423,6 +426,39 @@ async def firearm_update(
         notes = payload.notes.strip() or None
 
     changes = {}
+
+    # Omitted fields preserve existing data; explicit null clears the price.
+    price_supplied = "purchase_price" in payload.model_fields_set
+    purchase_currency = firearm.purchase_currency
+    if price_supplied:
+        if firearm.purchase_currency not in (None, "USD"):
+            raise HTTPException(
+                status_code=422,
+                detail="This form only supports purchase prices in USD.",
+            )
+        purchase_currency = (
+            "USD" if payload.purchase_price is not None else None
+        )
+        if (
+            firearm.purchase_price != payload.purchase_price
+            or firearm.purchase_currency != purchase_currency
+        ):
+            changes["purchase_price"] = {
+                "old": {
+                    "amount": (
+                        format(firearm.purchase_price, ".2f")
+                        if firearm.purchase_price is not None else None
+                    ),
+                    "currency": firearm.purchase_currency,
+                },
+                "new": {
+                    "amount": (
+                        format(payload.purchase_price, ".2f")
+                        if payload.purchase_price is not None else None
+                    ),
+                    "currency": purchase_currency,
+                },
+            }
 
     if firearm.manufacturer_id != payload.manufacturer_id:
         changes["manufacturer"] = {
@@ -569,6 +605,9 @@ async def firearm_update(
     firearm.obtained_date_precision = (
         payload.obtained_date_precision
     )
+    if price_supplied:
+        firearm.purchase_price = payload.purchase_price
+        firearm.purchase_currency = purchase_currency
     firearm.status = payload.status
     firearm.notes = notes
 

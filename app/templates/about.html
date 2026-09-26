@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}About / Privacy | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div class="page-marker">ABOUT / PRIVACY</div>
+    <h1>Armory Ledger</h1>
+    <p>A self-hosted application for private inventory record keeping. Version {{ app_version }}.</p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+<section class="record-card about-section">
+    <h2>The software</h2>
+    <p>Armory Ledger is publicly distributed software that operators can install on infrastructure they control. The upstream software project and the operator of this installation are separate roles.</p>
+    <p>Armory Ledger does not send inventory data to a centralized Armory Ledger service operated by the upstream developer.</p>
+</section>
+{% if operator_name or support_email or support_url %}
+<section class="record-card about-section">
+    <h2>This installation</h2>
+    {% if operator_name %}<p>Operator: {{ operator_name }}</p>{% endif %}
+    {% if support_email %}<p>Support email: <a href="{{ support_email_href }}">{{ support_email }}</a></p>{% endif %}
+    {% if support_url %}<p><a href="{{ support_url }}" rel="noopener noreferrer">Contact / support</a></p>{% endif %}
+</section>
+{% endif %}
+<section class="record-card about-section">
+    <h2>Privacy and access</h2>
+    <p>Inventory records are isolated between application users. Armory Ledger does not intentionally expose one user's inventory to another ordinary application user.</p>
+    <p>The Armory Admin role provides account-administration identity information, shared reference-data views, and announcement management. It does not grant access to another user's inventory or inventory-derived summaries.</p>
+    <p>Manufacturer and caliber names are shared reference data available to users of this installation. Adding a reference name does not share the inventory record that uses it.</p>
+    <p>Because Armory Ledger is self-hosted, the operator or administrator of this installation may have infrastructure-level access to the database, host, backups, logs, or related systems. Application access controls do not prevent that infrastructure access.</p>
+    <p>Authentication is handled by the identity provider configured for this installation. Infrastructure, identity providers, and any configured support services are operated separately from the upstream software project.</p>
+</section>
+<section class="record-card about-section">
+    <h2>Your records</h2>
+    <p>You are responsible for the information you choose to store and for following applicable laws, regulations, and policies.</p>
+    <p>The software does not guarantee the legal sufficiency, accuracy, retention, or suitability of stored records. Backup and retention practices depend on the operator of this installation.</p>
+</section>
+{% endblock %}

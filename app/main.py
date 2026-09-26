@@ -15,7 +15,10 @@ from app.api.auth import router as auth_router
 from app.api.firearms import router as firearms_router
 from app.api.range import router as range_router
 from app.api.reference import router as reference_router
+from app.api.admin import router as admin_router
+from app.api.about import router as about_router
 
+from app.core.admin_access import AdminAccessMiddleware
 from app.core.config import settings
 from app.core.dependencies import get_current_user, get_db
 from app.db.session import engine
@@ -36,6 +39,8 @@ app = FastAPI(
 )
 
 
+# SessionMiddleware is added last so the admin guard can read signed sessions.
+app.add_middleware(AdminAccessMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.session_secret,
@@ -84,6 +89,8 @@ app.include_router(ammunition_router)
 app.include_router(range_router)
 app.include_router(accessories_router)
 app.include_router(reference_router)
+app.include_router(admin_router)
+app.include_router(about_router)
 
 
 @app.get("/")

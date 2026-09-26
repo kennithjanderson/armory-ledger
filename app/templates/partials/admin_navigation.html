@@ -1,0 +1,18 @@
+<nav class="admin-links" aria-label="Administration">
+    {% for path, label in [
+        ('/admin/users', 'Users'),
+        ('/admin/manufacturers', 'Manufacturers'),
+        ('/admin/calibers', 'Calibers'),
+        ('/admin/announcements', 'Announcements')
+    ] %}
+    <a
+        href="{{ path }}"
+        class="button-secondary button-link"
+        {% if request.url.path == path %}
+        aria-current="page"
+        {% elif request.url.path.startswith(path ~ '/') %}
+        aria-current="location"
+        {% endif %}
+    >{{ label }}</a>
+    {% endfor %}
+</nav>

@@ -113,12 +113,16 @@
     </header>
 
     <main class="app-main">
+        {% include "partials/announcements.html" %}
         {% block content %}{% endblock %}
     </main>
 
 <footer class="app-footer">
     <div class="app-footer-inner">
-        <span>PRIVATE &bull; SELF-HOSTED</span>
+        <span class="app-footer-identity">
+            PRIVATE &bull; SELF-HOSTED
+            <a href="/about">About / Privacy</a>
+        </span>
 
         <span
             id="local-clock"

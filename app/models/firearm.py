@@ -1,8 +1,11 @@
 import enum
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
+    CheckConstraint,
+    Numeric,
     Date,
     DateTime,
     Enum,
@@ -45,6 +48,18 @@ class DatePrecision(str, enum.Enum):
 
 class Firearm(Base):
     __tablename__ = "firearms"
+    __table_args__ = (
+        CheckConstraint(
+            "purchase_price IS NULL OR purchase_price >= 0",
+            name="ck_firearms_purchase_price_nonnegative",
+        ),
+        CheckConstraint(
+            "(purchase_price IS NULL AND purchase_currency IS NULL) OR "
+            "(purchase_price IS NOT NULL AND purchase_currency IS NOT NULL "
+            "AND purchase_currency ~ '^[A-Z]{3}$')",
+            name="ck_firearms_purchase_price_currency",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -78,9 +93,9 @@ class Firearm(Base):
         nullable=False,
     )
 
-    serial_number: Mapped[str] = mapped_column(
+    serial_number: Mapped[str | None] = mapped_column(
         String(255),
-        nullable=False,
+        nullable=True,
     )
 
     firearm_type: Mapped[FirearmType] = mapped_column(
@@ -122,6 +137,14 @@ class Firearm(Base):
         ),
         default=DatePrecision.UNKNOWN,
         nullable=False,
+    )
+
+    purchase_price: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True,
+    )
+
+    purchase_currency: Mapped[str | None] = mapped_column(
+        String(3), nullable=True,
     )
 
     status: Mapped[FirearmStatus] = mapped_column(

@@ -59,3 +59,13 @@ def get_current_user(
         )
 
     return user
+
+
+def require_admin(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+) -> User:
+    # Login already requires Armory User. Armory Admin is additional authority.
+    if request.session.get("user", {}).get("is_admin") is not True:
+        raise HTTPException(status_code=403, detail="Armory Admin access required.")
+    return current_user

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Announcements | {{ app_name }}{% endblock %}
+{% block content %}
+<a href="/admin" class="record-back">← Administration</a>
+<section class="page-heading"><h1>Announcements</h1><p>Enabled announcements appear during their scheduled UTC window when users request a page.</p></section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+{% include "partials/admin_navigation.html" %}
+
+<p><a href="/admin/announcements/new" class="button-primary button-link">Create Announcement</a></p>
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead><tr><th>Title</th><th>Severity</th><th>Enabled</th><th>Start (UTC)</th><th>End (UTC)</th><th>Action</th></tr></thead>
+    <tbody>{% for announcement in announcements %}<tr>
+        <td>{{ announcement.title }}</td><td>{{ announcement.severity | title }}</td>
+        <td>{{ 'Yes' if announcement.enabled else 'No' }}</td>
+        <td>{{ announcement.starts_at | utc_display }}</td><td>{{ announcement.ends_at | utc_display }}</td>
+        <td><a href="/admin/announcements/{{ announcement.id }}/edit">Edit</a></td>
+    </tr>{% else %}<tr><td colspan="6">No announcements.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% if active_announcements %}
+<section class="server-announcements" aria-label="Server announcements">
+    {% for announcement in active_announcements %}
+    <article class="server-announcement announcement-{{ announcement.severity }}">
+        <span class="announcement-type">{{ announcement.severity | title }}</span>
+        <h2>{{ announcement.title }}</h2>
+        <p class="announcement-message">{{ announcement.message }}</p>
+    </article>
+    {% endfor %}
+</section>
+{% endif %}

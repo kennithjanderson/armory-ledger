@@ -40,6 +40,8 @@ async def callback(request: Request):
     email = userinfo.get("email")
     display_name = userinfo.get("name") or email
     groups = userinfo.get("groups", [])
+    if not isinstance(groups, list) or not all(isinstance(group, str) for group in groups):
+        groups = []
 
     if not oidc_subject or not email:
         raise HTTPException(
@@ -63,6 +65,8 @@ async def callback(request: Request):
 
         user_id = str(user.id)
 
+    # A new authenticated session must not reuse a previous CSRF token.
+    request.session.pop("csrf_token", None)
     request.session["user"] = {
         "id": user_id,
         "email": email,

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if announcement else 'Create' }} Announcement | {{ app_name }}{% endblock %}
+{% block content %}
+<a href="/admin/announcements" class="record-back">← Announcements</a>
+<section class="page-heading"><h1>{{ 'Edit' if announcement else 'Create' }} Announcement</h1></section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+{% include "partials/admin_navigation.html" %}
+
+<form id="announcement-form" class="record-form" data-id="{{ announcement.id if announcement else '' }}" data-csrf="{{ csrf_token }}">
+    <div class="form-grid">
+        <div class="form-field form-field-wide"><label for="title">Title</label><input id="title" maxlength="200" required value="{{ announcement.title if announcement else '' }}"></div>
+        <div class="form-field form-field-wide"><label for="message">Message (plain text)</label><textarea id="message" maxlength="5000" rows="5" required>{{ announcement.message if announcement else '' }}</textarea></div>
+        <div class="form-field"><label for="severity">Severity</label><select id="severity">
+            {% for value in ['info', 'success', 'warning', 'danger'] %}<option value="{{ value }}" {% if announcement and announcement.severity == value %}selected{% endif %}>{{ value | title }}</option>{% endfor %}
+        </select></div>
+        <div class="form-field"><label for="enabled"><input type="checkbox" id="enabled" {% if not announcement or announcement.enabled %}checked{% endif %}> Enabled</label></div>
+        <p id="schedule-timezone" class="form-field-wide">All schedule entries are in UTC (UTC+00:00), not your browser's local timezone. The start is inclusive and the end is exclusive.</p>
+        <div class="form-field"><label for="starts-at">Start (UTC)</label><input type="datetime-local" id="starts-at" step="1" required aria-describedby="schedule-timezone" value="{{ announcement.starts_at | utc_input if announcement else '' }}"></div>
+        <div class="form-field"><label for="ends-at">End (UTC)</label><input type="datetime-local" id="ends-at" step="1" required aria-describedby="schedule-timezone" value="{{ announcement.ends_at | utc_input if announcement else '' }}"></div>
+    </div>
+    <p id="announcement-error" class="modal-error" role="alert"></p>
+    <div class="form-actions"><a href="/admin/announcements" class="button-secondary">Cancel</a><button type="submit" class="button-primary">Save Announcement</button></div>
+</form>
+<script src="{{ url_for('static', path='/js/admin-announcements.js') }}?v={{ app_version }}" defer></script>
+{% endblock %}

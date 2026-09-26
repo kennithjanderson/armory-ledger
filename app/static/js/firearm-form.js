@@ -499,10 +499,13 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        if (!serialNumber) {
+        const purchasePrice = document
+            .getElementById("purchase-price").value.trim();
+
+        // Preserve decimal text; the API validates it as Decimal.
+        if (purchasePrice && !/^\d{1,10}(\.\d{1,2})?$/.test(purchasePrice)) {
             firearmFormError.textContent =
-                "Serial number is required.";
-            document.getElementById("serial-number").focus();
+                "Enter a nonnegative USD amount with at most two decimal places.";
             return;
         }
 
@@ -555,13 +558,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     body: JSON.stringify({
                         manufacturer_id: manufacturerId.value,
                         model: model,
-                        serial_number: serialNumber,
+                        serial_number: serialNumber || null,
                         firearm_type: firearmType,
                         caliber_id: caliberId || null,
                         manufacture_date: manufactureDateValue,
                         manufacture_date_precision: manufacturePrecision.value,
                         obtained_date: obtainedDateValue,
                         obtained_date_precision: obtainedPrecision.value,
+                        purchase_price: purchasePrice || null,
                         status: statusInput.value,
                         notes: notesInput.value.trim() || null,
                     }),

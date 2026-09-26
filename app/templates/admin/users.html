@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Users | {{ app_name }}{% endblock %}
+{% block content %}
+<a href="/admin" class="record-back">← Administration</a>
+<section class="page-heading"><h1>Users</h1><p>Account-administration information only.</p></section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+{% include "partials/admin_navigation.html" %}
+
+<div class="admin-table-scroll">
+<table class="admin-table">
+    <thead><tr><th>Display name</th><th>Email</th><th>User UUID</th><th>First seen (UTC)</th><th>Last login (UTC)</th></tr></thead>
+    <tbody>{% for account in accounts %}<tr>
+        <td>{{ account.display_name }}</td><td>{{ account.email }}</td><td>{{ account.id }}</td>
+        <td>{{ account.created_at | utc_display }}</td><td>{{ account.last_login_at | utc_display }}</td>
+    </tr>{% else %}<tr><td colspan="5">No accounts found.</td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% endblock %}

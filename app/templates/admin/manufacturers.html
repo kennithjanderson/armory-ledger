@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Manufacturers | {{ app_name }}{% endblock %}
+{% block content %}
+<a href="/admin" class="record-back">← Administration</a>
+<section class="page-heading"><h1>Manufacturers</h1><p>Shared reference data. Read-only.</p></section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+{% include "partials/admin_navigation.html" %}
+
+<div class="admin-table-scroll"><table class="admin-table">
+    <thead><tr><th>Name</th><th>Legal name</th><th>Status</th><th>Selectable</th></tr></thead>
+    <tbody>{% for record in records %}<tr>
+        <td>{{ record.name }}</td><td>{{ record.legal_name or 'Not recorded' }}</td>
+        <td>{{ record.status.value | title }}</td><td>{{ 'Yes' if record.is_selectable else 'No' }}</td>
+    </tr>{% else %}<tr><td colspan="4">No manufacturers found.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}

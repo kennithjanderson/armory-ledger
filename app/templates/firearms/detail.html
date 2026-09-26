@@ -77,7 +77,7 @@
                 </span>
 
                 <span class="record-detail-value firearm-serial">
-                    {{ firearm.serial_number }}
+                    {{ firearm.serial_number or 'Not recorded' }}
                 </span>
             </div>
 
@@ -162,6 +162,19 @@
                      {% endif %}
                  </span>
              </div>
+
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">
+                    Purchase Price{% if firearm.purchase_currency %} ({{ firearm.purchase_currency }}){% endif %}
+                </span>
+                <span class="record-detail-value">
+                    {% if firearm.purchase_price is not none %}
+                        {{ firearm.purchase_price | format_money_amount(firearm.purchase_currency) }}
+                    {% else %}
+                        Not recorded
+                    {% endif %}
+                </span>
+            </div>
 
         </div>
 

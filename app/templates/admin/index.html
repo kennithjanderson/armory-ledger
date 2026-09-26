@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Administration | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading"><div class="page-marker">ADMINISTRATION</div><h1>Administration</h1></section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span>
+    <span class="rule-ivory"></span>
+    <span class="rule-red"></span>
+</div>
+
+{% include "partials/admin_navigation.html" %}
+<p>Manage server announcements and view account identities and shared reference data. User inventory is private.</p>
+{% endblock %}

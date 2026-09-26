@@ -11,6 +11,7 @@ from app.models.organization import (
 
 from app.models.organization_alias import OrganizationAlias
 from app.models.audit_event import AuditEvent
+from app.models.announcement import Announcement
 
 from app.models.firearm import (
     Firearm,
@@ -47,6 +48,7 @@ __all__ = [
     "OrganizationStatus",
     "User",
     "AuditEvent",
+    "Announcement",
     "Firearm",
     "FirearmStatus",
     "ManufactureDateConfidence",

@@ -93,7 +93,7 @@ A healthy installation returns information similar to:
   "status": "healthy",
   "application": "Armory Ledger",
   "database": "connected",
-  "version": "0.1.1"
+  "version": "0.1.2"
 }
 ```
 
@@ -378,7 +378,7 @@ image, including automatic database migrations.
 
 Armory Ledger is under active development.
 
-The current release is version `0.1.1`.
+The development source targets version `0.1.2`. Its schema migrations are pending review; see [the schema plan](docs/v0.1.2-schema-plan.md) before deployment.
 
 Armory Ledger is distributed as a container image through GitHub Container
 Registry and automatically applies required database migrations during container
@@ -402,3 +402,59 @@ Armory Ledger was created by Kennith Anderson.
 ## License
 
 Armory Ledger is available under the [MIT License](LICENSE).
+
+## v0.1.2 development scope
+
+Firearm serial numbers and purchase prices are optional. Unknown purchase prices
+are stored as NULL, separately from a recorded USD $0.00. Prices use decimal
+storage with a separate recorded currency code. The current forms support USD;
+there is no currency conversion or collection valuation.
+
+Administrative access requires both `Armory User` and `Armory Admin` at login.
+Admin membership is evaluated at login for this release; changing identity-provider
+membership does not immediately revoke an existing signed application session.
+The `/admin*` namespace is protected server-side, with additional authorization
+on the admin router. Announcement mutations also require a session-bound CSRF
+header. No live group lookup or forced OIDC reauthentication is performed.
+
+The Users view shows display name, email, internal UUID, creation time and last
+login time. It has no inventory records, counts, summaries, usage information, or
+links to another user's inventory. Manufacturer and caliber views are read-only
+shared reference data. There are no purge, alias-management, merge, or reference
+rename actions in this release.
+
+Announcements have a title, plain-text message, severity, enabled state and
+required start/end times. Enter schedule times in **UTC (UTC+00:00)** in the admin
+form. The API requires ISO 8601 timestamps with `Z` or an explicit UTC offset;
+timezone-free timestamps are rejected. Times are normalized to UTC. Enabled
+announcements appear on authenticated pages when start <= now < end, evaluated
+when the page is requested. Already-open pages do not poll or update automatically.
+No scheduler or dismissal tracking is used.
+
+### Optional instance/operator information
+
+The authenticated About / Privacy page is linked from the application footer.
+Software identity is separate from the identity of whoever operates an instance.
+These environment variables are optional and may be left blank:
+
+| Variable | Purpose |
+| --- | --- |
+| `ARMORY_OPERATOR_NAME` | Name of this installation's operator |
+| `ARMORY_SUPPORT_EMAIL` | Plain support email address for this installation |
+| `ARMORY_SUPPORT_URL` | HTTP or HTTPS contact/support URL |
+
+Only configured fields are displayed. If all are blank, the entire installation
+contact section is omitted. No operator name, email, or domain is supplied by
+default. Malformed configured contact values are rejected by configuration
+validation. Configure these values in your own deployment environment; do not
+commit private deployment configuration.
+
+The page explains user isolation, shared reference data, infrastructure-level
+operator access, and record-keeping limitations. Armory Ledger does not send
+inventory to a centralized service operated by the upstream developer.
+
+### Pending schema work
+
+See [the v0.1.2 schema plan](docs/v0.1.2-schema-plan.md). No migration files are
+included for the new schema yet. Do not start this development version against
+the previous schema until the migrations have been created, reviewed and applied.

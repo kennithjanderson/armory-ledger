@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="app/static/img/favicon.png" alt="Armory Ledger" width="180">
+</p>
+
 # Armory Ledger
 
 Armory Ledger is a self-hosted firearm, ammunition, accessory, and range activity

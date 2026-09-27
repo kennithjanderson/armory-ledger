@@ -10,3 +10,4 @@ storage/documents/*
 release.sh
 update-main.sh
 rebuild.sh
+*.bak

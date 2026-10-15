@@ -20,10 +20,16 @@ class AmmoTransactionType(str, enum.Enum):
     DISPOSED = "disposed"
     ADJUSTMENT_IN = "adjustment_in"
     ADJUSTMENT_OUT = "adjustment_out"
+    MERGE_IN = "merge_in"
+    MERGE_OUT = "merge_out"
 
 
 class AmmoInventoryTransaction(Base):
     __tablename__ = "ammo_inventory_transactions"
+
+    merge_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ammo_lot_merges.id"), nullable=True, index=True,
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

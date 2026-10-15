@@ -1,0 +1,51 @@
+[
+  {
+    "version": "0.1.3",
+    "date": "2026-10-15",
+    "unreleased": false,
+    "added": [
+      "Shooting Log activity types: Range Session, Hunting, Training, Defensive Action and Other.",
+      "Recorded Rounds Fired and Shooting History on firearm records.",
+      "Compatible ammunition lot merging with archived source records and preserved history.",
+      "A public Changelog page."
+    ],
+    "improved": [
+      "Ammunition choices are filtered by the selected firearm's caliber.",
+      "Announcement scheduling supports IANA timezones, UTC previews and explicit daylight-saving choices.",
+      "Shared calendar controls offer direct month/year selection and 24-hour time entry.",
+      "System timestamps use consistent 24-hour formatting."
+    ],
+    "fixed": [
+      "Merge confirmation distinguishes completed merges from uncertain outcomes and redirects successful merges to the destination lot.",
+      "Shooting Log expenditure descriptions reflect the activity type.",
+      "Merge-history links use consistent visited and keyboard-focus styles."
+    ],
+    "upgrade_notes": [
+      "Includes database migrations for activity types and lot merging. Back up the database before upgrading.",
+      "Lot-merging downgrade is blocked when merge history exists; recovery requires a reviewed forward fix or a compatible backup restore."
+    ]
+  },
+  {
+    "version": "0.1.2",
+    "date": "2026-09-26",
+    "added": [
+      "Administration pages for account identities and read-only shared manufacturer/caliber reference data.",
+      "Scheduled server announcements.",
+      "About / Privacy page with optional instance contact information."
+    ],
+    "improved": ["Optional firearm serial numbers and optional USD purchase prices."],
+    "upgrade_notes": ["Includes firearm and announcement database migrations. Release date follows the repository's v0.1.2 tag."]
+  },
+  {
+    "version": "0.1.1",
+    "date": "2026-09-25",
+    "improved": ["Container publication, startup migration handling and deployment documentation."],
+    "upgrade_notes": ["Release date follows the v0.1.1 tag. Historical notes summarize the tagged source changes; a complete original release narrative is not available here."]
+  },
+  {
+    "version": "0.1.0",
+    "date": "2026-09-24",
+    "added": ["Initial tagged release with firearm, ammunition and accessory records, range-session logging and ownership-aware record keeping."],
+    "upgrade_notes": ["Release date follows the v0.1.0 tag. Historical notes summarize the tagged application; a complete original release narrative is not available here."]
+  }
+]

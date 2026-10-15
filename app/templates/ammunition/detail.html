@@ -31,6 +31,14 @@
     <span class="rule-red"></span>
 </div>
 
+{% if merge_success %}<p role="status">Merge completed. The updated destination balance is shown below.</p>{% endif %}
+{% if lot.is_merged %}
+<section class="record-detail-card">
+    <h2>Merged — historical record</h2>
+    <p>This source is read-only and unavailable for new inventory activity.</p>
+    <a class="record-back" href="/ammunition/{{ lot.merged_into_lot_id }}">View destination lot →</a>
+</section>
+{% endif %}
 <section class="record-detail">
     <div class="record-detail-toolbar">
         <a href="/ammunition/calibers/{{ lot.ammo_product.caliber.id }}"
@@ -40,12 +48,17 @@
         </a>
 
         <div class="record-actions">
+            {% if not lot.is_merged %}
             <a
                 href="/ammunition/{{ lot.id }}/edit"
                 class="button-secondary button-link"
             >
                 Edit Ammunition
             </a>
+            {% endif %}
+            {% if can_merge %}
+            <a href="/ammunition/{{ lot.id }}/merge" class="button-secondary button-link">Merge Lot</a>
+            {% endif %}
         </div>
     </div>
 
@@ -150,7 +163,7 @@
         <div class="page-marker">
             Activity
         </div>
-        <h2>Range Usage</h2>
+        <h2>Shooting Usage</h2>
 
     {% if range_usage %}
         <div class="transaction-list">
@@ -173,7 +186,7 @@
                         {% if usage.location %}
                             <p>{{ usage.location }}</p>
                         {% else %}
-                            <p>Location not specified</p>
+                            <p>Location unspecified</p>
                         {% endif %}
                     </div>
 
@@ -192,7 +205,7 @@
                                 href="/range/{{ usage.session_id }}"
                                 class="record-back"
                             >
-                                View Session →
+                                View Activity →
                             </a>
                         </p>
                     </div>
@@ -214,12 +227,14 @@
             <h2>Inventory History</h2>
         </div>
 
+        {% if not lot.is_merged %}
         <a
             href="/ammunition/{{ lot.id }}/activity/new"
             class="button-secondary button-link"
         >
             Add Activity
         </a>
+        {% endif %}
     </div>
 
     {% if transactions %}
@@ -237,18 +252,19 @@
                             {{ transaction.occurred_at.strftime("%Y-%m-%d") }}
                         </p>
 
-                        {% if transaction.notes %}
-                            <p>{{ transaction.notes }}</p>
+                        {% set description = expenditure_descriptions.get(transaction.id, transaction.notes) %}
+                        {% if description %}
+                            <p>{{ description }}</p>
                         {% endif %}
                     </div>
 
                     <strong>
                         {% if transaction.transaction_type.value in
-                            ["acquired", "returned", "adjustment_in"] %}
+                            ["acquired", "returned", "adjustment_in", "merge_in"] %}
                             +
                         {% elif transaction.transaction_type.value in
                             ["expended", "given", "sold", "disposed",
-                             "adjustment_out"] %}
+                             "adjustment_out", "merge_out"] %}
                             -
                         {% endif %}
                         {{ transaction.quantity }}
@@ -260,4 +276,25 @@
         <p>No inventory activity has been recorded.</p>
     {% endif %}
 </section>
+{% if merges %}
+<section class="range-detail-section">
+    <h2>Merge History</h2>
+    {% for merge in merges %}
+    <article class="transaction-card">
+        <div>
+            {% if merge.source_lot_id == lot.id %}
+                <strong>−{{ merge.quantity }} rounds — Merged into
+                    <a class="record-back" href="/ammunition/{{ merge.destination_lot_id }}">View destination lot →</a></strong>
+            {% else %}
+                <strong>+{{ merge.quantity }} rounds — Merged from
+                    <a class="record-back" href="/ammunition/{{ merge.source_lot_id }}">View source lot →</a></strong>
+            {% endif %}
+            <details><summary>Lot identifiers</summary><p>Source: {{ merge.source_lot_id }}<br>Destination: {{ merge.destination_lot_id }}</p></details>
+            <p>Merge {{ merge.id }} · recorded by {{ merge.actor_user_id }}
+                · <span data-time-seconds="true" data-local-datetime="{{ merge.created_at.isoformat() }}">{{ merge.created_at.isoformat() }}</span></p>
+        </div>
+    </article>
+    {% endfor %}
+</section>
+{% endif %}
 {% endblock %}

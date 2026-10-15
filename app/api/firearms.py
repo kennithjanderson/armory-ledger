@@ -30,6 +30,7 @@ from app.services.manufacturer_service import (
     create_manufacturer,
 )
 
+from app.services.range_service import get_firearm_recorded_rounds
 from app.models.range_session import RangeSession
 from app.models.range_session_firearm import RangeSessionFirearm
 from app.models.range_session_ammo_usage import RangeSessionAmmoUsage
@@ -705,6 +706,7 @@ async def firearm_detail(
             RangeSession.id.label("session_id"),
             RangeSession.occurred_date,
             RangeSession.location,
+            RangeSession.activity_type,
             func.coalesce(
                 func.sum(RangeSessionAmmoUsage.quantity),
                 0,
@@ -727,6 +729,7 @@ async def firearm_detail(
             RangeSession.id,
             RangeSession.occurred_date,
             RangeSession.location,
+            RangeSession.activity_type,
         )
         .order_by(
             RangeSession.occurred_date.desc(),
@@ -744,5 +747,8 @@ async def firearm_detail(
             "is_admin": request.session["user"].get("is_admin", False),
             "firearm": firearm,
             "range_history": range_history,
+            "recorded_rounds": get_firearm_recorded_rounds(
+                db, owner_id=current_user.id, firearm_id=firearm.id,
+            ),
         },
     )

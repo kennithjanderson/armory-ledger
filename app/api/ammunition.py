@@ -1,6 +1,7 @@
 from uuid import UUID
+from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from datetime import date
@@ -21,6 +22,9 @@ from app.models.ammo_inventory_transaction import (
     AmmoTransactionType,
 )
 from app.models.ammo_lot import AmmoLot
+from app.models.ammo_lot_merge import AmmoLotMerge
+from app.services.ammo_merge_service import merge_candidates, merge_lots
+from app.core.csrf import csrf_token, require_csrf
 from app.models.user import User
 
 from decimal import Decimal
@@ -30,6 +34,7 @@ from pydantic import BaseModel, Field
 from app.services.ammo_inventory_service import (
     get_physical_inventory,
     record_inventory_activity,
+    shooting_expenditure_descriptions,
 )
 
 from app.models.firearm import Firearm
@@ -105,7 +110,7 @@ async def ammunition_list(
             joinedload(AmmoLot.ammo_product)
             .joinedload(AmmoProduct.caliber),
         )
-        .where(AmmoLot.owner_id == current_user.id)
+        .where(AmmoLot.owner_id == current_user.id, AmmoLot.merged_into_lot_id.is_(None))
         .order_by(
             Caliber.name.asc(),
             AmmoBrand.name.asc(),
@@ -156,6 +161,70 @@ async def ammunition_list(
             "caliber_summaries": caliber_summaries,
         },
     )
+
+class AmmunitionMergeRequest(BaseModel):
+    destination_id: UUID
+    expected_source: int = Field(gt=0)
+    expected_destination: int = Field(ge=0)
+    confirmed: Literal[True]
+
+
+@router.get("/archive")
+async def ammunition_archive(
+    request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    lots = db.scalars(select(AmmoLot).options(
+        joinedload(AmmoLot.ammo_product).joinedload(AmmoProduct.brand),
+        joinedload(AmmoLot.ammo_product).joinedload(AmmoProduct.caliber),
+    ).where(AmmoLot.owner_id == current_user.id, AmmoLot.merged_into_lot_id.is_not(None))
+      .order_by(AmmoLot.created_at.desc())).all()
+    return templates.TemplateResponse(request=request, name="ammunition/archive.html", context={
+        "app_name": settings.app_name, "app_version": settings.app_version,
+        "current_user": current_user, "is_admin": request.session["user"].get("is_admin", False),
+        "lots": lots,
+    })
+
+
+@router.get("/{ammo_lot_id}/merge")
+async def ammunition_merge_form(
+    ammo_lot_id: UUID, request: Request,
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    lot = db.scalar(select(AmmoLot).where(AmmoLot.id == ammo_lot_id, AmmoLot.owner_id == current_user.id))
+    if lot is None:
+        raise HTTPException(status_code=404, detail="Ammunition lot not found.")
+    candidates = merge_candidates(db, source=lot)
+    if not candidates:
+        raise HTTPException(status_code=409, detail="No eligible destination lots are available.")
+    return templates.TemplateResponse(request=request, name="ammunition/merge.html", context={
+        "app_name": settings.app_name, "app_version": settings.app_version,
+        "current_user": current_user, "is_admin": request.session["user"].get("is_admin", False),
+        "lot": lot, "candidates": candidates,
+        "source_quantity": get_physical_inventory(db, lot_id=lot.id),
+        "balances": {item.id: get_physical_inventory(db, lot_id=item.id) for item in candidates},
+        "csrf_token": csrf_token(request),
+    })
+
+
+@router.post("/{ammo_lot_id}/merge")
+async def ammunition_merge(
+    ammo_lot_id: UUID, payload: AmmunitionMergeRequest, request: Request,
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    require_csrf(request)
+    try:
+        merge = merge_lots(db, owner_id=current_user.id, source_id=ammo_lot_id,
+                           destination_id=payload.destination_id,
+                           expected_source=payload.expected_source,
+                           expected_destination=payload.expected_destination)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Ammunition lot not found.")
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return {"success": True, "merge_id": str(merge.id),
+            "destination_id": str(merge.destination_lot_id),
+            "redirect_url": f"/ammunition/{merge.destination_lot_id}?merged={merge.id}"}
+
 
 @router.get("/new")
 async def ammunition_new(
@@ -214,6 +283,7 @@ async def ammunition_caliber_detail(
         )
         .where(
             AmmoLot.owner_id == current_user.id,
+            AmmoLot.merged_into_lot_id.is_(None),
             AmmoProduct.caliber_id == caliber_id,
         )
         .order_by(
@@ -308,6 +378,9 @@ async def ammunition_edit(
             detail="Ammunition lot not found.",
         )
 
+    if lot.is_merged:
+        raise HTTPException(status_code=409, detail="Merged ammunition lots are read-only.")
+
     initial_acquisition = db.scalar(
         select(AmmoInventoryTransaction)
         .where(
@@ -365,6 +438,9 @@ async def ammunition_activity_new(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ammunition lot not found.",
         )
+
+    if lot.is_merged:
+        raise HTTPException(status_code=409, detail="Merged ammunition lots are read-only.")
 
     physical_on_hand = get_physical_inventory(
         db,
@@ -459,6 +535,14 @@ async def ammunition_detail(
         )
     ).all()
 
+    merges = db.scalars(select(AmmoLotMerge).where(
+        AmmoLotMerge.owner_id == current_user.id,
+        or_(AmmoLotMerge.source_lot_id == lot.id, AmmoLotMerge.destination_lot_id == lot.id),
+    ).order_by(AmmoLotMerge.created_at)).all()
+    candidates = merge_candidates(db, source=lot)
+    merge_success = any(str(item.id) == request.query_params.get("merged")
+                        and item.destination_lot_id == lot.id for item in merges)
+
     return templates.TemplateResponse(
         request=request,
         name="ammunition/detail.html",
@@ -469,8 +553,13 @@ async def ammunition_detail(
             "is_admin": request.session["user"].get("is_admin", False),
             "lot": lot,
             "transactions": transactions,
+            "expenditure_descriptions": shooting_expenditure_descriptions(
+                db, owner_id=current_user.id, transaction_ids=[item.id for item in transactions],
+            ),
             "physical_on_hand": physical_on_hand,
             "range_usage": range_usage,
+            "merges": merges, "can_merge": bool(candidates),
+            "merge_success": merge_success,
         },
     )
 

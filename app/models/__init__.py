@@ -25,6 +25,7 @@ from app.models.ammo_inventory_transaction import (
     AmmoTransactionType,
 )
 from app.models.ammo_lot import AmmoLot
+from app.models.ammo_lot_merge import AmmoLotMerge
 from app.models.ammo_product import AmmoProduct
 
 from app.models.accessory import Accessory
@@ -55,6 +56,7 @@ __all__ = [
     "AmmoBrand",
     "AmmoInventoryTransaction",
     "AmmoLot",
+    "AmmoLotMerge",
     "AmmoProduct",
     "AmmoTransactionType",
     "RangeSession",

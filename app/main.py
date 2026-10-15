@@ -17,6 +17,7 @@ from app.api.range import router as range_router
 from app.api.reference import router as reference_router
 from app.api.admin import router as admin_router
 from app.api.about import router as about_router
+from app.api.changelog import router as changelog_router
 
 from app.core.admin_access import AdminAccessMiddleware
 from app.core.config import settings
@@ -56,6 +57,8 @@ PUBLIC_PATHS = {
     "/auth/callback",
     "/auth/popup-complete",
     "/health",
+    "/changelog",
+    "/about",
 }
 
 
@@ -91,6 +94,7 @@ app.include_router(accessories_router)
 app.include_router(reference_router)
 app.include_router(admin_router)
 app.include_router(about_router)
+app.include_router(changelog_router)
 
 
 @app.get("/")
@@ -136,7 +140,7 @@ async def dashboard(
 
     ammo_lot_ids = db.scalars(
         select(AmmoLot.id)
-        .where(AmmoLot.owner_id == current_user.id)
+        .where(AmmoLot.owner_id == current_user.id, AmmoLot.merged_into_lot_id.is_(None))
     ).all()
 
     rounds_on_hand = sum(

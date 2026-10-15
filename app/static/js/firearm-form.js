@@ -92,8 +92,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function configureDateInput(precisionSelect, dateInput) {
+        window.ArmoryDateTime?.remove(dateInput);
+        configureNativeDateInput(precisionSelect, dateInput);
+        window.ArmoryDateTime?.enhance(dateInput);
+    }
+
+    function configureNativeDateInput(precisionSelect, dateInput) {
     const precision = precisionSelect.value;
     const storedDate = dateInput.dataset.dateValue || "";
+    dateInput.removeAttribute("min");
+    dateInput.removeAttribute("max");
 
     dateInput.hidden = precision === "unknown";
     dateInput.required = precision !== "unknown";

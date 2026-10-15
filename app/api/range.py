@@ -10,7 +10,7 @@ from app.main_templates import templates
 from app.models.ammo_lot import AmmoLot
 from app.models.ammo_product import AmmoProduct
 from app.models.firearm import Firearm, FirearmStatus
-from app.models.range_session import RangeSession
+from app.models.range_session import RangeSession, ShootingActivityType
 from app.models.range_session_firearm import RangeSessionFirearm
 from app.models.range_session_ammo_usage import RangeSessionAmmoUsage
 from app.models.user import User
@@ -50,6 +50,7 @@ class RangeFirearmRequest(BaseModel):
 
 
 class RangeSessionCreateRequest(BaseModel):
+    activity_type: ShootingActivityType = ShootingActivityType.RANGE
     occurred_date: date
     location: str | None = Field(default=None, max_length=255)
     notes: str | None = None
@@ -117,7 +118,7 @@ async def range_new(
             joinedload(AmmoLot.ammo_product)
             .joinedload(AmmoProduct.caliber),
         )
-        .where(AmmoLot.owner_id == current_user.id)
+        .where(AmmoLot.owner_id == current_user.id, AmmoLot.merged_into_lot_id.is_(None))
         .order_by(
             AmmoProduct.grain_weight.asc().nulls_last(),
             AmmoLot.id.asc(),
@@ -149,6 +150,7 @@ async def range_new(
                 "is_admin",
                 False,
             ),
+            "activity_types": list(ShootingActivityType),
             "firearms": firearms,
             "ammo_lots": ammo_lots,
             "inventory_by_lot": inventory_by_lot,
@@ -189,6 +191,7 @@ async def range_create(
             location=payload.location,
             notes=payload.notes,
             firearms=firearms,
+            activity_type=payload.activity_type,
         )
 
     except (ValueError, LookupError) as exc:
@@ -201,6 +204,7 @@ async def range_create(
         "success": True,
         "range_session": {
             "id": str(range_session.id),
+            "activity_type": range_session.activity_type.value,
         },
     }
 
@@ -337,7 +341,7 @@ async def range_edit(
         lot
         for lot in all_ammo_lots
         if (
-            inventory_by_lot.get(lot.id, 0) > 0
+            (not lot.is_merged and inventory_by_lot.get(lot.id, 0) > 0)
             or lot.id in referenced_lot_ids
         )
     ]
@@ -382,6 +386,7 @@ async def range_edit(
 
     initial_data = {
         "range_session_id": str(range_session.id),
+        "activity_type": range_session.activity_type.value,
         "occurred_date": (
             range_session.occurred_date.isoformat()
         ),
@@ -401,6 +406,7 @@ async def range_edit(
                 "is_admin",
                 False,
             ),
+            "activity_types": list(ShootingActivityType),
             "firearms": firearms,
             "ammo_lots": ammo_lots,
             "inventory_by_lot": inventory_by_lot,
@@ -551,6 +557,10 @@ async def range_update(
             location=payload.location,
             notes=payload.notes,
             firearms=firearms,
+            activity_type=(
+                payload.activity_type
+                if "activity_type" in payload.model_fields_set else None
+            ),
         )
 
     except (ValueError, LookupError) as exc:
@@ -563,5 +573,6 @@ async def range_update(
         "success": True,
         "range_session": {
             "id": str(range_session.id),
+            "activity_type": range_session.activity_type.value,
         },
     }

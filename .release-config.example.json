@@ -1,0 +1,9 @@
+{
+  "repository": "kennithjanderson/armory-ledger",
+  "state_dir": "/home/REPLACE_ME/.local/state/armory-ledger/releases",
+  "runner_python": "/usr/bin/python3",
+  "test_python": "/home/REPLACE_ME/.local/share/armory-release-tests/bin/python",
+  "node": "/usr/bin/node",
+  "node_path": "/home/REPLACE_ME/.local/share/armory-release-js/node_modules",
+  "docker": ["docker"]
+}

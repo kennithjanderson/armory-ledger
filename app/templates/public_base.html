@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block footer %}
+{% if current_user %}
+    {{ super() }}
+{% else %}
+    <div class="public-footer-container">
+        {% include "partials/login_footer.html" %}
+    </div>
+{% endif %}
+{% endblock %}

@@ -3,6 +3,7 @@ import re
 from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
+from app.schemas.announcement_schedule import LocalSchedule
 
 
 class AnnouncementRequest(BaseModel):
@@ -18,6 +19,8 @@ class AnnouncementRequest(BaseModel):
     @field_validator("starts_at", "ends_at", mode="before")
     @classmethod
     def reject_numeric_timestamp(cls, value):
+        if isinstance(value, dict):
+            return LocalSchedule.model_validate(value).instant()
         if isinstance(value, (int, float, bool)):
             raise ValueError("Use an ISO 8601 timestamp with Z or an explicit UTC offset.")
         if isinstance(value, str) and not re.fullmatch(

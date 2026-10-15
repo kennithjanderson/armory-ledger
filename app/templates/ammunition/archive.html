@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Merged Ammunition | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div class="page-marker">AMMUNITION HISTORY</div>
+    <h1>Merged ammunition lots.</h1>
+    <p>Archived source records preserve their original history and are not available inventory.</p>
+</section>
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span>
+</div>
+<a class="record-back" href="/ammunition/">← Active Ammunition Inventory</a>
+<div class="firearm-list">
+    {% for lot in lots %}
+    <article class="firearm-card">
+        <h2>{{ lot.ammo_product.brand.name }} · {{ lot.ammo_product.caliber.name }}</h2>
+        <p>Merged · Lot {{ lot.id }} · manufacturer lot {{ lot.lot_number or 'Unknown' }}</p>
+        <a class="record-back" href="/ammunition/{{ lot.id }}">View historical record →</a>
+    </article>
+    {% else %}<p>No merged ammunition lots.</p>{% endfor %}
+</div>
+{% endblock %}

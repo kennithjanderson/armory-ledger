@@ -1,0 +1,8 @@
+{
+  "tools/release/common.py:private-reference:1b65922cd605b70ad929bf32d5f3d87f209fae5ed79b74d886617b33d31e5da2": {
+    "reason": "Detector expression contains the private-reference pattern itself; not instance configuration."
+  },
+  "tools/release/validation.py:literal-secret:46ee6bbdb5485b13787fb980950266cd47cfd9e4794b260c5b33abba871f375e": {
+    "reason": "Disposable validation generates a fresh random OIDC secret at runtime; this line contains no credential."
+  }
+}

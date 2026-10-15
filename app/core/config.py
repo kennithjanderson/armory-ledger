@@ -7,7 +7,7 @@ from sqlalchemy import URL
 
 class Settings(BaseSettings):
     app_name: str = "Armory Ledger"
-    app_version: str = "0.1.2"
+    app_version: str = "0.1.3"
 
     # Optional identity of this installation, separate from upstream authorship.
     armory_operator_name: str | None = None

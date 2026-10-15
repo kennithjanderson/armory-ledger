@@ -92,10 +92,7 @@
 
         </section>
 
-        <footer class="login-footer">
-            <span>PRIVATE &bull; SELF-HOSTED</span>
-            <span>ARMORY LEDGER</span>
-        </footer>
+        {% include "partials/login_footer.html" %}
 
     </main>
 <script src="{{ url_for('static', path='/js/login.js') }}?v={{ app_version }}"></script>

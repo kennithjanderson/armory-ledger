@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Range Session | {{ app_name }}{% endblock %}
+{% block title %}Shooting Activity | {{ app_name }}{% endblock %}
 
 {% block content %}
 
 <section class="page-heading">
-    <div class="page-marker">RANGE SESSION</div>
+    <div class="page-marker">{{ range_session.activity_type.label }}</div>
 
     <h1>
         {{ range_session.occurred_date.strftime("%Y-%m-%d") }}
@@ -27,7 +27,7 @@
 
 <div class="record-detail-toolbar">
     <a href="/range/" class="record-back">
-        ← Range History
+        ← Shooting Log
     </a>
 
     <div class="record-actions">
@@ -35,7 +35,7 @@
             href="/range/{{ range_session.id }}/edit"
             class="button-secondary button-link"
         >
-            Edit Range Session
+            Edit Shooting Activity
         </a>
     </div>
 </div>
@@ -45,7 +45,7 @@
     <div class="record-card-header">
         <div>
             <div class="record-card-kicker">
-                SESSION SUMMARY
+                ACTIVITY SUMMARY
             </div>
         </div>
 

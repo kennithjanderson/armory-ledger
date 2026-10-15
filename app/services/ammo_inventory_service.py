@@ -11,11 +11,15 @@ from app.models.ammo_inventory_transaction import (
 from app.models.ammo_lot import AmmoLot
 
 from app.models.audit_event import AuditEvent
+from app.models.range_session import RangeSession
+from app.models.range_session_firearm import RangeSessionFirearm
+from app.models.range_session_ammo_usage import RangeSessionAmmoUsage
 
 INVENTORY_IN_TYPES = {
     AmmoTransactionType.ACQUIRED,
     AmmoTransactionType.RETURNED,
     AmmoTransactionType.ADJUSTMENT_IN,
+    AmmoTransactionType.MERGE_IN,
 }
 
 INVENTORY_OUT_TYPES = {
@@ -24,9 +28,56 @@ INVENTORY_OUT_TYPES = {
     AmmoTransactionType.SOLD,
     AmmoTransactionType.DISPOSED,
     AmmoTransactionType.ADJUSTMENT_OUT,
+    AmmoTransactionType.MERGE_OUT,
 }
 
-MANUAL_ACTIVITY_TYPES = INVENTORY_IN_TYPES | INVENTORY_OUT_TYPES
+MANUAL_ACTIVITY_TYPES = (INVENTORY_IN_TYPES | INVENTORY_OUT_TYPES) - {
+    AmmoTransactionType.MERGE_IN, AmmoTransactionType.MERGE_OUT,
+}
+
+
+def shooting_expenditure_descriptions(db: Session, *, owner_id: UUID, transaction_ids) -> dict:
+    """Display current classification only for uniquely linked expenditures.
+
+    Stored transaction notes and audits are never changed. Missing/ambiguous links
+    retain their original text, including removed historical usage records.
+    """
+    if not transaction_ids:
+        return {}
+    rows = db.execute(
+        select(AmmoInventoryTransaction.id, RangeSession.id, RangeSession.activity_type)
+        .join(AmmoLot, AmmoInventoryTransaction.ammo_lot_id == AmmoLot.id)
+        .join(RangeSessionAmmoUsage,
+              RangeSessionAmmoUsage.inventory_transaction_id == AmmoInventoryTransaction.id)
+        .join(RangeSessionFirearm,
+              RangeSessionAmmoUsage.range_session_firearm_id == RangeSessionFirearm.id)
+        .join(RangeSession, RangeSessionFirearm.range_session_id == RangeSession.id)
+        .where(AmmoInventoryTransaction.id.in_(transaction_ids),
+               AmmoInventoryTransaction.transaction_type == AmmoTransactionType.EXPENDED,
+               AmmoLot.owner_id == owner_id, RangeSession.owner_id == owner_id)
+    ).all()
+    linked = {}
+    for transaction_id, session_id, activity_type in rows:
+        linked.setdefault(transaction_id, {})[session_id] = activity_type
+    return {transaction_id: next(iter(sessions.values())).expenditure_description
+            for transaction_id, sessions in linked.items() if len(sessions) == 1}
+
+
+def lock_owned_lots(db: Session, *, owner_id: UUID, lot_ids) -> dict[UUID, AmmoLot]:
+    """All writers lock lot rows in UUID order before reading balances/status."""
+    ids = set(lot_ids)
+    if not ids:
+        return {}
+    lots = db.scalars(
+        select(AmmoLot)
+        .where(AmmoLot.owner_id == owner_id, AmmoLot.id.in_(ids))
+        .order_by(AmmoLot.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).all()
+    if len(lots) != len(ids):
+        raise LookupError("Ammunition lot not found.")
+    return {lot.id: lot for lot in lots}
 
 
 def get_physical_inventory(
@@ -77,15 +128,9 @@ def record_inventory_activity(
     audit_context: dict | None = None,
     commit: bool = True,
 ) -> AmmoInventoryTransaction:
-    lot = db.scalar(
-        select(AmmoLot).where(
-            AmmoLot.id == lot_id,
-            AmmoLot.owner_id == owner_id,
-        )
-    )
-
-    if lot is None:
-        raise LookupError("Ammunition lot not found.")
+    lot = lock_owned_lots(db, owner_id=owner_id, lot_ids=[lot_id])[lot_id]
+    if lot.is_merged:
+        raise ValueError("Merged ammunition lots cannot receive inventory activity.")
 
     if transaction_type not in MANUAL_ACTIVITY_TYPES:
         raise ValueError("Invalid inventory activity type.")

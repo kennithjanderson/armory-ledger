@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Merge Ammunition Lots | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <div class="page-marker">AMMUNITION INVENTORY</div>
+    <h1>Merge lot.</h1>
+    <p>{{ lot.ammo_product.brand.name }} · {{ lot.ammo_product.caliber.name }}
+        · {{ lot.ammo_product.grain_weight | format_number }} gr
+        · {{ lot.ammo_product.projectile_type or 'Unknown projectile' }}</p>
+</section>
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span>
+</div>
+<a class="record-back" href="/ammunition/{{ lot.id }}">← Ammunition Record</a>
+<form id="merge-form" class="record-form" data-source-id="{{ lot.id }}"
+      data-source-quantity="{{ source_quantity }}" data-csrf-token="{{ csrf_token }}">
+    <p>Source: {{ source_quantity }} rounds · added {{ lot.created_at.strftime('%Y-%m-%d') }}</p>
+    <p>Manufacturer lot number: {{ lot.lot_number or 'Unknown' }}.</p>
+    <div class="form-field">
+        <label for="merge-destination">Destination lot</label>
+        <select id="merge-destination" required>
+            <option value="">Select a compatible lot</option>
+            {% for candidate in candidates %}
+            <option value="{{ candidate.id }}" data-quantity="{{ balances[candidate.id] }}" data-record-url="/ammunition/{{ candidate.id }}">
+                {{ candidate.ammo_product.brand.name }} · {{ candidate.ammo_product.caliber.name }}
+                · {{ candidate.ammo_product.grain_weight | format_number }} gr
+                · {{ candidate.ammo_product.projectile_type or 'Unknown projectile' }}
+                · {{ balances[candidate.id] }} rounds
+                · added {{ candidate.created_at.strftime('%Y-%m-%d') }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <button class="button-secondary" type="button" id="merge-review">Review Merge</button>
+    <section id="merge-confirmation" class="record-detail-card" aria-labelledby="merge-heading" hidden>
+        <h2 id="merge-heading">Merge ammunition lots?</h2>
+        <p id="merge-preview"></p>
+        <p><strong>This cannot be undone through the current interface.</strong>
+            The source will become <strong>0 rounds</strong> and be archived as Merged.</p>
+        <p id="merge-balance"></p>
+        <p>All historical acquisitions, shooting records, and inventory transactions will be preserved.
+            Historical quantities using the source will become read-only.</p>
+        <details>
+            <summary>Lot identifiers</summary>
+            <p>Source: {{ lot.id }}<br>Destination: <span id="merge-destination-id"></span></p>
+        </details>
+        <div class="form-actions">
+            <button class="button-primary" type="submit" id="merge-submit">Proceed with Merger</button>
+            <button class="button-secondary" type="button" id="merge-cancel">Cancel</button>
+        </div>
+    </section>
+    <p id="merge-check-records" hidden>
+        <a class="record-back" href="/ammunition/{{ lot.id }}">Check source record</a>
+        · <a class="record-back" id="merge-destination-link">Open destination record</a>
+    </p>
+    <p id="merge-error" class="modal-error" aria-live="polite"></p>
+</form>
+<script src="{{ url_for('static', path='/js/ammunition-merge.js') }}?v={{ app_version }}" defer></script>
+{% endblock %}

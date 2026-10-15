@@ -4,46 +4,82 @@ on:
   release:
     types: [published]
 
+# Alias decisions and writes must not overlap across different release versions.
+concurrency:
+  group: armory-container-publication
+  cancel-in-progress: false
+  queue: max
+
+permissions:
+  contents: read
+  packages: write
+
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  RELEASE_TAG: ${{ github.event.release.tag_name }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   publish:
+    if: ${{ !github.event.release.prerelease && !github.event.release.draft }}
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
-
     steps:
-      - name: Checkout repository
+      - name: Checkout exact release tag
         uses: actions/checkout@v6
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
+      - name: Resolve approved release commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          RELEASE_SHA="$(git rev-parse HEAD)"
+          test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
+          test "$GITHUB_SHA" = "$RELEASE_SHA"
+          echo "RELEASE_SHA=$RELEASE_SHA" >> "$GITHUB_ENV"
+          echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push image
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check immutable version identity
+        id: identity
+        run: python3 tools/release/image_policy.py plan
+
+      - name: Build and publish immutable version
+        id: build
+        if: steps.identity.outputs.skip != 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
+          platforms: linux/amd64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.IMAGE_NAME }}:${{ steps.identity.outputs.version }}
+          labels: |
+            org.opencontainers.image.revision=${{ env.RELEASE_SHA }}
+            org.opencontainers.image.version=${{ steps.identity.outputs.version }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Verify image and promote aliases without regression
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest || steps.identity.outputs.digest }}
+        run: python3 tools/release/image_policy.py promote --digest "$IMAGE_DIGEST"
+
+      - name: Record verified container identity
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-receipt
+          path: release-receipt.json
+          retention-days: 90
+          overwrite: true
+          if-no-files-found: error

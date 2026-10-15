@@ -1,0 +1,15 @@
+{% extends "public_base.html" %}
+{% block title %}Changelog | {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading"><h1>Changelog</h1><p>What's changed in Armory Ledger.</p></section>
+<div class="heritage-rule" aria-hidden="true"><span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span></div>
+{% for release in releases %}
+<article class="changelog-entry">
+    <h2>v{{ release.version }}{% if release.unreleased %} — Unreleased draft{% endif %}</h2>
+    <p>{% if release.unreleased %}Release date not set.{% elif release.date %}<time datetime="{{ release.date.isoformat() }}">{{ release.date.isoformat() }}</time>{% else %}Release date not recorded.{% endif %}</p>
+    {% for label, items in release.sections %}{% if items %}
+    <h3>{{ label }}</h3><ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>
+    {% endif %}{% else %}<p>Detailed release notes are not available.</p>{% endfor %}
+</article>
+{% else %}<p>Release notes are not available yet.</p>{% endfor %}
+{% endblock %}

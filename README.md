@@ -97,7 +97,7 @@ A healthy installation returns information similar to:
   "status": "healthy",
   "application": "Armory Ledger",
   "database": "connected",
-  "version": "0.1.2"
+  "version": "0.1.3"
 }
 ```
 
@@ -382,7 +382,8 @@ image, including automatic database migrations.
 
 Armory Ledger is under active development.
 
-The development source targets version `0.1.2`. Its schema migrations are pending review; see [the schema plan](docs/v0.1.2-schema-plan.md) before deployment.
+The development source targets version `0.1.3`. Review the current migration and
+testing status in [implementation status](docs/IMPLEMENTATION_STATUS.md) before deployment.
 
 Armory Ledger is distributed as a container image through GitHub Container
 Registry and automatically applies required database migrations during container
@@ -428,16 +429,21 @@ shared reference data. There are no purge, alias-management, merge, or reference
 rename actions in this release.
 
 Announcements have a title, plain-text message, severity, enabled state and
-required start/end times. Enter schedule times in **UTC (UTC+00:00)** in the admin
-form. The API requires ISO 8601 timestamps with `Z` or an explicit UTC offset;
-timezone-free timestamps are rejected. Times are normalized to UTC. Enabled
+required start/end times. In v0.1.3 development, the admin form defaults to your
+browser timezone and accepts IANA zones such as `America/Chicago` or `UTC`, with
+server-validated UTC previews. Repeated fall-back times require an earlier/later
+choice; nonexistent spring-forward times are rejected. The API accepts explicit
+offset timestamps or local schedule objects with an IANA timezone; unqualified
+timezone-free timestamps are rejected. Storage remains UTC. See the
+[release-testing checklist](docs/V0.1.3-RELEASE-TESTING.md). Enabled
 announcements appear on authenticated pages when start <= now < end, evaluated
 when the page is requested. Already-open pages do not poll or update automatically.
 No scheduler or dismissal tracking is used.
 
 ### Optional instance/operator information
 
-The authenticated About / Privacy page is linked from the application footer.
+The public About / Privacy page is linked from both application and login footers.
+Configured operator/support information is visible to signed-out visitors as well.
 Software identity is separate from the identity of whoever operates an instance.
 These environment variables are optional and may be left blank:
 
@@ -462,3 +468,23 @@ inventory to a centralized service operated by the upstream developer.
 See [the v0.1.2 schema plan](docs/v0.1.2-schema-plan.md). No migration files are
 included for the new schema yet. Do not start this development version against
 the previous schema until the migrations have been created, reviewed and applied.
+
+### v0.1.3 date/time and release notes (unreleased)
+
+Development forms share a calendar with direct month/year selection and explicit
+24-hour time controls. Date-only records retain their calendar dates; announcement
+instants remain UTC with IANA-zone entry and DST validation. System timestamp
+presentation uses 24-hour time.
+
+The public `/changelog` page is linked in the footer. Its repository-managed source
+is `app/content/changelog.json`; release text is escaped, with no database or admin
+editor. The v0.1.3 entry remains an unreleased draft until release approval.
+
+## Maintainer release workflow
+
+Manual and scheduled release tooling is documented in
+[docs/RELEASE-WORKFLOW.md](docs/RELEASE-WORKFLOW.md). The wrappers share candidate
+validation, Changelog-derived notes and immutable publication/recovery logic.
+Scheduled jobs require explicit approval and separately configured systemd user
+lingering/credentials. No release is automatically scheduled by a Changelog date.
+Use `./release.sh --version 0.1.3 --dry-run` for a read-only notes preview.

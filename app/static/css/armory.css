@@ -1456,14 +1456,18 @@ body {
 }
 
 .record-back,
-.firearm-view-link {
+.record-back:visited,
+.firearm-view-link,
+.firearm-view-link:visited {
     font-weight: 700;
     text-decoration: none;
     color: var(--navy-muted);
 }
 
 .record-back:hover,
-.firearm-view-link:hover {
+.record-back:focus-visible,
+.firearm-view-link:hover,
+.firearm-view-link:focus-visible {
     text-decoration: underline;
 }
 
@@ -2180,3 +2184,41 @@ body {
 .announcement-danger { border-left-color: var(--crimson); }
 .about-section { padding: 1.5rem; margin-bottom: 1rem; }
 .about-section p { line-height: 1.6; }
+
+.record-back:focus-visible,
+.firearm-view-link:focus-visible {
+    outline: 2px solid var(--navy-muted);
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+/* Shared calendar: inline disclosure avoids clipping in responsive forms. */
+.date-picker { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; min-width: 0; }
+.date-picker > input:not([type="hidden"]) { flex: 1 1 10rem; min-width: 0; }
+.date-picker-panel { flex: 1 0 100%; padding: .75rem; border: 1px solid var(--navy-muted); border-radius: .35rem; }
+.date-picker-panel[hidden], .occurrence-field[hidden] { display: none; }
+.date-picker-navigation { display: flex; gap: .5rem; margin-bottom: .5rem; }
+.date-picker-navigation > * { min-width: 0; width: 50%; }
+.date-picker-days { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: .2rem; text-align: center; }
+.date-picker-days button { min-height: 2.75rem; border: 1px solid var(--navy-muted); background: var(--surface); color: var(--navy-muted); border-radius: .2rem; cursor: pointer; }
+.date-picker-days button[aria-pressed="true"] { background: var(--navy-muted); color: white; }
+.date-picker button:focus-visible, .date-picker select:focus-visible, .date-picker input:focus-visible { outline: 2px solid var(--navy-muted); outline-offset: 2px; }
+.date-picker-time { display: flex; flex: 1 0 100%; align-items: center; gap: .5rem; }
+.date-picker-time select { width: auto; flex: 1; min-width: 0; }
+.changelog-entry { padding: 1.25rem 0; border-bottom: 1px solid var(--navy-muted); overflow-wrap: anywhere; }
+.changelog-entry li { margin-bottom: .5rem; }
+
+.public-footer-container {
+    width: min(calc(100% - 64px), var(--content-width));
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+/* Public actions use button styles, not desktop navigation-link overrides. */
+.public-nav { margin-left: auto; display: flex; align-items: center; }
+.public-nav .button-primary { width: auto; white-space: nowrap; }
+.public-nav .button-primary:focus-visible {
+    outline: 2px solid var(--navy-muted);
+    outline-offset: 3px;
+}

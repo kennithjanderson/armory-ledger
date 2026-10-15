@@ -134,6 +134,58 @@ document.addEventListener("DOMContentLoaded", () => {
             selects.length >= availableFirearms.length;
     }
 
+    function lotMatchesFirearm(row, option) {
+        const firearm = row.closest(".range-firearm-card")
+            .querySelector(".range-firearm-select");
+        const caliber = firearm.selectedOptions[0]?.dataset.caliberId;
+        return Boolean(firearm.value && caliber &&
+            option?.dataset.caliberId === caliber && option.dataset.merged !== "true");
+    }
+
+    function historicalLotAllowed(row, option) {
+        const firearm = row.closest(".range-firearm-card")
+            .querySelector(".range-firearm-select");
+        return Boolean(row.dataset.usageId && option?.value &&
+            firearm.value === row.dataset.originalFirearmId &&
+            option.value === row.dataset.originalLotId &&
+            Number(row.querySelector(".range-ammo-quantity").value) ===
+                Number(row.dataset.originalQuantity));
+    }
+
+    function filterAmmoRow(row) {
+        const firearm = row.closest(".range-firearm-card")
+            .querySelector(".range-firearm-select");
+        const lot = row.querySelector(".range-ammo-lot");
+        const selectedValue = lot.value;
+        const options = [...ammoTemplate.content.querySelectorAll(
+            ".range-ammo-lot option"
+        )].filter(option => option.value && (
+            (lotMatchesFirearm(row, option) &&
+                (Number(option.dataset.onHand) > 0 ||
+                    option.value === row.dataset.originalLotId)) ||
+            historicalLotAllowed(row, option)
+        ));
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Select ammunition";
+        lot.replaceChildren(placeholder, ...options.map(option => option.cloneNode(true)));
+        lot.value = options.some(option => option.value === selectedValue)
+            ? selectedValue : "";
+
+        const historical = lot.value && !lotMatchesFirearm(row, lot.selectedOptions[0]);
+        row.querySelector(".range-ammo-hint").textContent = row.dataset.mergedHistory === "true"
+            ? "Merged lot: this historical firearm and ammunition usage is read-only. Notes and activity details may still be edited."
+            : historical
+            ? "Historical entry: caliber does not match. Keep firearm, lot and rounds unchanged, or select matching ammunition."
+            : !firearm.value ? "Select a firearm to see matching ammunition."
+            : !firearm.selectedOptions[0]?.dataset.caliberId
+                ? "This firearm has no recorded caliber. Use Other / Borrowed or update its caliber."
+            : !options.length
+                ? "No matching ammunition in inventory. You can use Other / Borrowed."
+            : "Inventory is matched by the firearm's recorded caliber.";
+        lot.dispatchEvent(new Event("change"));
+    }
+
 function configureAmmoRow(row) {
     const source =
         row.querySelector(".range-ammo-source");
@@ -182,7 +234,7 @@ function configureAmmoRow(row) {
         inventoryField.hidden = !inventory;
         otherField.hidden = inventory;
 
-        ammoLot.disabled = !inventory;
+        ammoLot.disabled = !inventory || row.dataset.mergedHistory === "true";
         description.disabled = inventory;
 
         if (inventory) {
@@ -204,14 +256,19 @@ function configureAmmoRow(row) {
     ammoLot.addEventListener(
         "change",
         () => {
-            updateInventoryMaximum();
+            if (source.value === "inventory") {
+                updateInventoryMaximum();
+            }
             validateForm();
         }
     );
 
     quantity.addEventListener(
         "input",
-        validateForm
+        () => {
+            filterAmmoRow(row);
+            validateForm();
+        }
     );
 
     description.addEventListener(
@@ -247,11 +304,11 @@ function addAmmoRow(card, initial = null) {
             initial.range_session_ammo_usage_id;
     }
 
-    configureAmmoRow(row);
-
     card.querySelector(
         ".range-ammo-rows"
     ).appendChild(fragment);
+
+    configureAmmoRow(row);
 
     if (initial) {
         const source =
@@ -270,6 +327,8 @@ function addAmmoRow(card, initial = null) {
             String(initial.quantity);
 
         if (initial.source_type === "inventory") {
+            row.dataset.originalFirearmId =
+                card.querySelector(".range-firearm-select").value;
             row.dataset.originalLotId =
                 initial.ammo_lot_id || "";
 
@@ -293,6 +352,16 @@ function addAmmoRow(card, initial = null) {
         }
     }
 
+    if (initial?.source_type === "inventory" &&
+        row.querySelector(".range-ammo-lot").selectedOptions[0]?.dataset.merged === "true") {
+        row.dataset.mergedHistory = "true";
+        for (const selector of [".range-ammo-source", ".range-ammo-lot", ".range-ammo-quantity", ".range-remove-ammo"]) {
+            row.querySelector(selector).disabled = true;
+        }
+        card.querySelector(".range-firearm-select").disabled = true;
+        card.querySelector(".range-remove-firearm").disabled = true;
+    }
+    filterAmmoRow(row);
     updateAmmoTitles(card);
     validateForm();
 }
@@ -321,6 +390,7 @@ function addAmmoRow(card, initial = null) {
             "change",
             () => {
                 updateFirearmOptions();
+                card.querySelectorAll(".range-ammo-row").forEach(filterAmmoRow);
                 validateForm();
             }
         );
@@ -397,6 +467,10 @@ function ammoRowIsValid(row) {
         const selected =
             ammoLot.options[ammoLot.selectedIndex];
 
+        if (!lotMatchesFirearm(row, selected) && !historicalLotAllowed(row, selected)) {
+            return false;
+        }
+
         const onHand = Number(
             selected?.dataset.onHand || 0
         );
@@ -463,12 +537,13 @@ function ammoRowIsValid(row) {
 
     addFirearmButton.addEventListener(
         "click",
-        addFirearmCard
+        () => addFirearmCard()
     );
 
     const initialData = window.rangeInitialData;
 
     if (initialData) {
+        document.getElementById("activity-type").value = initialData.activity_type || "range";
         occurredDate.value =
             initialData.occurred_date || "";
 
@@ -502,7 +577,7 @@ function ammoRowIsValid(row) {
 
     if (!occurredDate) {
         rangeFormError.textContent =
-            "Range date is required.";
+            "Activity date is required.";
         return;
     }
 
@@ -554,6 +629,11 @@ function ammoRowIsValid(row) {
         const ammoUsage = [];
 
         for (const row of ammoRows) {
+            if (!ammoRowIsValid(row)) {
+                rangeFormError.textContent =
+                    "Select matching ammunition and a valid available quantity, or use Other / Borrowed.";
+                return;
+            }
             const source =
                 row.querySelector(
                     ".range-ammo-source"
@@ -673,6 +753,7 @@ function ammoRowIsValid(row) {
                         "application/json",
                 },
                 body: JSON.stringify({
+                    activity_type: document.getElementById("activity-type").value,
                     occurred_date:
                         occurredDate,
                     location:
@@ -699,7 +780,7 @@ function ammoRowIsValid(row) {
             rangeFormError.textContent =
                 data.error ||
                 data.detail ||
-                "Unable to save range session.";
+                "Unable to save shooting activity.";
             return;
         }
 
@@ -714,14 +795,14 @@ function ammoRowIsValid(row) {
         console.error(error);
 
         rangeFormError.textContent =
-            "Unable to save range session.";
+            "Unable to save shooting activity.";
     } finally {
-        rangeSave.disabled = false;
+        validateForm();
 
         rangeSave.textContent =
             editMode
                 ? "Save Changes"
-                : "Save Range Session";
+                : "Save Shooting Activity";
     }
 }
     

@@ -234,16 +234,11 @@ def update_ammunition(
     notes: str | None,
     acquired_date: date | None,
 ) -> AmmoLot:
-    lot = db.scalar(
-        select(AmmoLot)
-        .where(
-            AmmoLot.id == lot_id,
-            AmmoLot.owner_id == owner_id,
-        )
-    )
+    from app.services.ammo_inventory_service import lock_owned_lots
 
-    if lot is None:
-        raise LookupError("Ammunition lot not found.")
+    lot = lock_owned_lots(db, owner_id=owner_id, lot_ids=[lot_id])[lot_id]
+    if lot.is_merged:
+        raise ValueError("Merged ammunition lots are read-only.")
 
     current_product = db.get(AmmoProduct, lot.ammo_product_id)
 

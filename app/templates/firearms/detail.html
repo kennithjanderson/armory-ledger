@@ -216,7 +216,11 @@
         <div class="record-detail-header">
             <div>
                 <div class="page-marker">ACTIVITY</div>
-                <h2>Range History</h2>
+                <h2>Shooting History</h2>
+            </div>
+            <div class="record-quantity">
+                <strong>{{ recorded_rounds | format_number }}</strong>
+                <span>Recorded Rounds Fired</span>
             </div>
         </div>
 
@@ -229,10 +233,11 @@
                         </span>
 
                         <span class="record-detail-value">
+                            {{ session.activity_type.label }} —
                             {% if session.location %}
                                 {{ session.location }}
                             {% else %}
-                                Location not specified
+                                Location unspecified
                             {% endif %}
                         </span>
 
@@ -249,7 +254,7 @@
                             href="/range/{{ session.session_id }}"
                             class="record-back"
                         >
-                            View Session →
+                            View Activity →
                         </a>
                     </div>
                 {% endfor %}
@@ -257,7 +262,7 @@
         {% else %}
             <div class="record-detail-notes">
                 <p class="record-empty-value">
-                    No range sessions have been recorded with this firearm.
+                    No shooting activities have been recorded with this firearm.
                 </p>
             </div>
         {% endif %}

@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Range | {{ app_name }}{% endblock %}
+{% block title %}Shooting Log | {{ app_name }}{% endblock %}
 
 {% block content %}
 <section class="page-heading page-heading--compact">
     <div>
-        <p class="page-marker">RANGE HISTORY</p>
+        <p class="page-marker">SHOOTING LOG</p>
 
         <h1>
-            Range sessions,<span>&nbsp;documented.</span>
+            Shooting activities,<span>&nbsp;documented.</span>
         </h1>
 
         <p class="page-heading__description">
-            Track firearm usage, ammunition expenditure, and range activity.
+            Track firearm usage, ammunition expenditure, and shooting activity.
         </p>
     </div>
 </section>
@@ -29,9 +29,9 @@
             {{ sessions | length }}
             <span class="inventory-count-label">
                 {% if sessions | length == 1 %}
-                    range session
+                    shooting activity
                 {% else %}
-                    range sessions
+                    shooting activities
                 {% endif %}
             </span>
         </div>
@@ -40,7 +40,7 @@
             href="/range/new"
             class="button-primary button-link"
         >
-            Add Range Session
+            Record Shooting Activity
         </a>
     </div>
 
@@ -51,7 +51,7 @@
                     <div class="firearm-card-main">
                         <div>
                             <div class="firearm-manufacturer">
-                                RANGE SESSION
+                                {{ session.activity_type.label }}
                             </div>
 
                             <h2>
@@ -84,7 +84,7 @@
                             href="/range/{{ session.id }}"
                             class="firearm-view-link"
                         >
-                            View record →
+                            View Activity →
                         </a>
                     </div>
                 </article>
@@ -92,10 +92,10 @@
         </div>
     {% else %}
         <div class="inventory-empty">
-            <h2>No range sessions recorded.</h2>
+            <h2>No shooting activities recorded.</h2>
 
             <p>
-                Record your first range session to begin tracking
+                Record your first shooting activity to begin tracking
                 firearm usage and ammunition expenditure.
             </p>
 
@@ -103,7 +103,7 @@
                 href="/range/new"
                 class="button-primary button-link"
             >
-                Add Range Session
+                Record Shooting Activity
             </a>
         </div>
     {% endif %}

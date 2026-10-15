@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from datetime import date
 from uuid import UUID
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.audit_event import AuditEvent
 from app.models.ammo_inventory_transaction import AmmoTransactionType
 from app.models.firearm import Firearm, FirearmStatus
-from app.models.range_session import RangeSession
+from app.models.range_session import RangeSession, ShootingActivityType
 from app.models.range_session_ammo_usage import (
     RangeAmmoSourceType,
     RangeSessionAmmoUsage,
@@ -16,6 +16,7 @@ from app.models.range_session_ammo_usage import (
 from app.models.range_session_firearm import RangeSessionFirearm
 from app.services.ammo_inventory_service import (
     record_inventory_activity,
+    lock_owned_lots,
 )
 
 from app.models.ammo_lot import AmmoLot
@@ -38,6 +39,33 @@ class RangeFirearmInput:
     range_session_firearm_id: UUID | None = None
 
 
+def validate_inventory_caliber(
+    db: Session,
+    *,
+    owner_id: UUID,
+    firearm: Firearm,
+    lot_id: UUID,
+    unchanged_history: bool = False,
+) -> None:
+    lot = db.scalar(
+        select(AmmoLot)
+        .options(joinedload(AmmoLot.ammo_product))
+        .where(AmmoLot.id == lot_id, AmmoLot.owner_id == owner_id)
+    )
+    if lot is None:
+        raise LookupError("Ammunition lot not found.")
+    if lot.is_merged and not unchanged_history:
+        raise ValueError("Merged ammunition cannot be used in new or changed shooting entries.")
+    if not unchanged_history and (
+        firearm.caliber_id is None
+        or firearm.caliber_id != lot.ammo_product.caliber_id
+    ):
+        raise ValueError(
+            "Inventory ammunition must match the firearm's recorded caliber. "
+            "Select matching inventory or use Other / Borrowed ammunition."
+        )
+
+
 def create_range_session(
     db: Session,
     *,
@@ -47,7 +75,9 @@ def create_range_session(
     location: str | None,
     notes: str | None,
     firearms: list[RangeFirearmInput],
+    activity_type: ShootingActivityType = ShootingActivityType.RANGE,
 ) -> RangeSession:
+    activity_type = ShootingActivityType(activity_type)
     if not firearms:
         raise ValueError(
             "A range session must include at least one firearm."
@@ -67,6 +97,10 @@ def create_range_session(
         )
 
     try:
+        lock_owned_lots(db, owner_id=owner_id, lot_ids=[
+            ammo.ammo_lot_id for item in firearms for ammo in (item.ammo_usage or [])
+            if ammo.ammo_lot_id is not None
+        ])
         owned_firearms = db.scalars(
             select(Firearm).where(
                 Firearm.id.in_(firearm_ids),
@@ -88,7 +122,10 @@ def create_range_session(
                 "to a new range session."
             )
 
+        owned_firearms_by_id = {item.id: item for item in owned_firearms}
+
         range_session = RangeSession(
+            activity_type=activity_type,
             owner_id=owner_id,
             occurred_date=occurred_date,
             location=location,
@@ -142,6 +179,13 @@ def create_range_session(
                             "Inventory ammo requires an ammunition lot."
                         )
 
+                    validate_inventory_caliber(
+                        db,
+                        owner_id=owner_id,
+                        firearm=owned_firearms_by_id[firearm_input.firearm_id],
+                        lot_id=ammo_input.ammo_lot_id,
+                    )
+
                     transaction = record_inventory_activity(
                         db,
                         lot_id=ammo_input.ammo_lot_id,
@@ -150,7 +194,7 @@ def create_range_session(
                         transaction_type=AmmoTransactionType.EXPENDED,
                         quantity=ammo_input.quantity,
                         occurred_date=occurred_date,
-                        notes="Range session expenditure.",
+                        notes=activity_type.expenditure_description,
                         commit=False,
                     )
 
@@ -198,6 +242,7 @@ def create_range_session(
                 entity_id=range_session.id,
                 action="created",
                 changes={
+                    "activity_type": activity_type.value,
                     "occurred_date": occurred_date.isoformat(),
                     "location": location,
                     "notes": notes,
@@ -228,7 +273,10 @@ def update_range_session(
     location: str | None,
     notes: str | None,
     firearms: list[RangeFirearmInput],
+    activity_type: ShootingActivityType | None = None,
 ) -> RangeSession:
+    if activity_type is not None:
+        activity_type = ShootingActivityType(activity_type)
     if not firearms:
         raise ValueError(
             "A range session must include at least one firearm."
@@ -252,7 +300,7 @@ def update_range_session(
             select(RangeSession).where(
                 RangeSession.id == range_session_id,
                 RangeSession.owner_id == owner_id,
-            )
+            ).with_for_update().execution_options(populate_existing=True)
         )
 
         if range_session is None:
@@ -305,6 +353,9 @@ def update_range_session(
             item.id: item
             for item in existing_firearms
         }
+        original_firearm_ids = {
+            item.id: item.firearm_id for item in existing_firearms
+        }
 
         existing_usage = db.scalars(
             select(RangeSessionAmmoUsage)
@@ -351,7 +402,29 @@ def update_range_session(
                 "One or more range ammunition records were not found."
             )
 
+        # Lock every affected lot before any correction, always in UUID order.
+        locked_lots = lock_owned_lots(db, owner_id=owner_id, lot_ids=[
+            *[usage.ammo_lot_id for usage in existing_usage if usage.ammo_lot_id],
+            *[ammo.ammo_lot_id for item in firearms for ammo in (item.ammo_usage or [])
+              if ammo.ammo_lot_id],
+        ])
+        submitted_ammo = [(item, ammo) for item in firearms for ammo in (item.ammo_usage or [])]
+        for usage in existing_usage:
+            if usage.ammo_lot_id and locked_lots[usage.ammo_lot_id].is_merged:
+                matches = [(item, ammo) for item, ammo in submitted_ammo
+                           if ammo.range_session_ammo_usage_id == usage.id]
+                if len(matches) != 1:
+                    raise ValueError("Usage of merged ammunition cannot be removed or duplicated.")
+                item, ammo = matches[0]
+                if (item.range_session_firearm_id != usage.range_session_firearm_id
+                        or item.firearm_id != original_firearm_ids[usage.range_session_firearm_id]
+                        or ammo.source_type != usage.source_type
+                        or ammo.ammo_lot_id != usage.ammo_lot_id
+                        or ammo.quantity != usage.quantity):
+                    raise ValueError("Usage of merged ammunition is read-only; notes and activity details may still be edited.")
+
         old_session_values = {
+            "activity_type": range_session.activity_type.value,
             "occurred_date": range_session.occurred_date.isoformat(),
             "location": range_session.location,
             "notes": range_session.notes,
@@ -484,19 +557,25 @@ def update_range_session(
                             "Inventory ammo requires an ammunition lot."
                         )
 
-                    owned_lot = db.scalar(
-                        select(AmmoLot).where(
-                            AmmoLot.id
-                            == ammo_input.ammo_lot_id,
-                            AmmoLot.owner_id
-                            == owner_id,
-                        )
+                    previous = existing_usage_by_id.get(
+                        ammo_input.range_session_ammo_usage_id
                     )
-
-                    if owned_lot is None:
-                        raise LookupError(
-                            "Ammunition lot not found."
-                        )
+                    unchanged_history = (
+                        previous is not None
+                        and previous.range_session_firearm_id == range_firearm.id
+                        and original_firearm_ids.get(range_firearm.id)
+                        == firearm_input.firearm_id
+                        and previous.source_type == RangeAmmoSourceType.INVENTORY
+                        and previous.ammo_lot_id == ammo_input.ammo_lot_id
+                        and previous.quantity == ammo_input.quantity
+                    )
+                    validate_inventory_caliber(
+                        db,
+                        owner_id=owner_id,
+                        firearm=owned_firearms_by_id[firearm_input.firearm_id],
+                        lot_id=ammo_input.ammo_lot_id,
+                        unchanged_history=unchanged_history,
+                    )
 
                 elif (
                     ammo_input.source_type
@@ -535,7 +614,7 @@ def update_range_session(
                                 quantity=ammo_input.quantity,
                                 occurred_date=occurred_date,
                                 notes=(
-                                    "Range session expenditure."
+                                    (activity_type or range_session.activity_type).expenditure_description
                                 ),
                                 audit_context={
                                     "source": "range_session",
@@ -690,6 +769,8 @@ def update_range_session(
                 usage.quantity = new_quantity
                 usage.description = description
 
+        if activity_type is not None:
+            range_session.activity_type = activity_type
         range_session.occurred_date = occurred_date
         range_session.location = location
         range_session.notes = notes
@@ -704,6 +785,7 @@ def update_range_session(
                 changes={
                     "before": old_session_values,
                     "after": {
+                        "activity_type": range_session.activity_type.value,
                         "occurred_date": (
                             occurred_date.isoformat()
                         ),
@@ -729,3 +811,20 @@ def update_range_session(
     except Exception:
         db.rollback()
         raise
+
+
+def get_firearm_recorded_rounds(db: Session, *, owner_id: UUID, firearm_id: UUID) -> int:
+    """Sum current usage rows, never inventory ledger transactions."""
+    return int(db.scalar(
+        select(func.coalesce(func.sum(RangeSessionAmmoUsage.quantity), 0))
+        .select_from(RangeSessionAmmoUsage)
+        .join(RangeSessionFirearm,
+              RangeSessionAmmoUsage.range_session_firearm_id == RangeSessionFirearm.id)
+        .join(RangeSession, RangeSessionFirearm.range_session_id == RangeSession.id)
+        .join(Firearm, RangeSessionFirearm.firearm_id == Firearm.id)
+        .where(
+            RangeSession.owner_id == owner_id,
+            Firearm.owner_id == owner_id,
+            Firearm.id == firearm_id,
+        )
+    ) or 0)

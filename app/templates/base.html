@@ -40,6 +40,8 @@
     href="{{ url_for('static', path='/css/armory.css') }}?v={{ app_version }}"
     >
 
+    <script src="{{ url_for('static', path='/js/date-time.js') }}?v={{ app_version }}" defer></script>
+
     {% block head %}{% endblock %}
 </head>
 
@@ -53,12 +55,13 @@
                 <span class="app-brand-subtitle">PERSONAL INVENTORY</span>
             </a>
 
+            {% if current_user %}
             <nav class="app-nav" aria-label="Main navigation">
                 <a href="/dashboard">Dashboard</a>
                 <a href="/firearms">Firearms</a>
                 <a href="/ammunition">Ammunition</a>
                 <a href="/accessories">Accessories</a>
-                <a href="/range">Range</a>
+                <a href="/range">Shooting Log</a>
 
                 <div class="user-menu">
                     <button
@@ -93,15 +96,19 @@
                 <span></span>
                 <span></span>
             </button>
+            {% else %}
+            <nav class="public-nav" aria-label="Main navigation"><a class="button-primary button-link" href="/auth/login">Sign in</a></nav>
+            {% endif %}
 
         </div>
 
+        {% if current_user %}
         <div class="mobile-navigation" id="mobile-navigation">
             <a href="/dashboard">Dashboard</a>
             <a href="/firearms">Firearms</a>
             <a href="/ammunition">Ammunition</a>
             <a href="/accessories">Accessories</a>
-            <a href="/range">Range</a>
+            <a href="/range">Shooting Log</a>
 
             {% if is_admin %}
             <a href="/admin">Administration</a>
@@ -110,6 +117,7 @@
             <a href="/settings">Settings</a>
             <a href="/auth/logout">Logout</a>
         </div>
+        {% endif %}
     </header>
 
     <main class="app-main">
@@ -117,11 +125,13 @@
         {% block content %}{% endblock %}
     </main>
 
+{% block footer %}
 <footer class="app-footer">
     <div class="app-footer-inner">
         <span class="app-footer-identity">
             PRIVATE &bull; SELF-HOSTED
             <a href="/about">About / Privacy</a>
+            <a href="/changelog">Changelog</a>
         </span>
 
         <span
@@ -147,6 +157,7 @@
         <span>ARMORY LEDGER &bull; v{{ app_version }}</span>
     </div>
 </footer>
+{% endblock %}
 <script
     src="{{ url_for('static', path='/js/armory.js') }}?v={{ app_version }}"
     defer

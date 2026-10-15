@@ -11,6 +11,14 @@ from app.db.base import Base
 class AmmoLot(Base):
     __tablename__ = "ammo_lots"
 
+    merged_into_lot_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ammo_lots.id"), nullable=True, index=True,
+    )
+
+    @property
+    def is_merged(self) -> bool:
+        return self.merged_into_lot_id is not None
+
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,

@@ -13,6 +13,7 @@ from app.models.caliber import Caliber
 from app.models.organization import ManufacturerProfile, Organization
 from app.models.user import User
 from app.schemas.announcement import AnnouncementRequest
+from app.schemas.announcement_schedule import SchedulePreview
 from app.services.announcement_service import save_announcement
 
 
@@ -79,6 +80,15 @@ def get_announcement(db, announcement_id):
     if announcement is None:
         raise HTTPException(status_code=404, detail="Announcement not found.")
     return announcement
+
+
+@router.post("/announcements/schedule-preview", dependencies=[Depends(require_csrf)])
+def announcement_schedule_preview(payload: SchedulePreview):
+    """Use the same server conversion as saves; never write an announcement."""
+    try:
+        return payload.preview()
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/announcements/{announcement_id}/edit")

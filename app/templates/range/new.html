@@ -1,36 +1,14 @@
 {% extends "base.html" %}
 
-<section class="page-heading">
-    <div class="page-marker">RANGE HISTORY</div>
-
-    <h1>
-        {% if edit_mode %}
-            Edit range session,<br>
-            <span>correct the record.</span>
-        {% else %}
-            Record a range session,<br>
-            <span>track every round.</span>
-        {% endif %}
-    </h1>
-
-    <p>
-        {% if edit_mode %}
-            Update the session details, firearms used,
-            and ammunition fired.
-        {% else %}
-            Record when and where you shot, the firearms used,
-            and the ammunition fired.
-        {% endif %}
-    </p>
-</section>
+{% block title %}{{ "Edit Shooting Activity" if edit_mode else "Record Shooting Activity" }} | {{ app_name }}{% endblock %}
 
 {% block content %}
 
 <section class="page-heading">
-    <div class="page-marker">RANGE HISTORY</div>
+    <div class="page-marker">SHOOTING LOG</div>
 
     <h1>
-        Record a range session,<br>
+        {{ "Edit shooting activity," if edit_mode else "Record shooting activity," }}<br>
         <span>track every round.</span>
     </h1>
 
@@ -56,8 +34,17 @@
 
     <div class="form-grid">
 
+        <div class="form-field form-field-wide">
+            <label for="activity-type">Activity Type</label>
+            <select id="activity-type" name="activity_type" required>
+                {% for activity in activity_types %}
+                    <option value="{{ activity.value }}"{% if (edit_mode and range_session.activity_type == activity) or (not edit_mode and activity.value == 'range') %} selected{% endif %}>{{ activity.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
         <div class="form-field">
-            <label for="occurred-date">Range Date</label>
+            <label for="occurred-date">Activity Date</label>
 
             <input
                 type="date"
@@ -76,7 +63,7 @@
                 name="location"
                 maxlength="255"
                 autocomplete="off"
-                placeholder="Optional range or property"
+                placeholder="Optional location"
             >
         </div>
 
@@ -87,7 +74,7 @@
                 id="notes"
                 name="notes"
                 rows="4"
-                placeholder="Optional notes about this range session"
+                placeholder="Optional notes about this shooting activity"
             ></textarea>
         </div>
 
@@ -132,7 +119,7 @@
             {% if edit_mode %}
                 Save Changes
             {% else %}
-                Save Range Session
+                Save Shooting Activity
             {% endif %}
         </button>
     </div>
@@ -167,7 +154,7 @@
                 <option value="">Select firearm</option>
 
                 {% for firearm in firearms %}
-                    <option value="{{ firearm.id }}">
+                    <option value="{{ firearm.id }}" data-caliber-id="{{ firearm.caliber_id or '' }}">
                         {% if firearm.manufacturer %}
                             {{ firearm.manufacturer.name }}
                         {% endif %}
@@ -263,6 +250,8 @@
                     {% for lot in ammo_lots %}
                         <option
                             value="{{ lot.id }}"
+                            data-caliber-id="{{ lot.ammo_product.caliber_id }}"
+                            data-merged="{{ 'true' if lot.is_merged else 'false' }}"
                             data-on-hand="{{ inventory_by_lot.get(lot.id, 0) }}"
                         >
                             {{ lot.ammo_product.brand.name }}
@@ -280,6 +269,7 @@
                         </option>
                     {% endfor %}
                 </select>
+                <small class="range-ammo-hint" aria-live="polite"></small>
             </div>
 
             <div

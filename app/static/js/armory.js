@@ -63,21 +63,12 @@ if (localClock) {
     const updateClock = () => {
         const now = new Date();
 
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, "0");
-        const day = String(now.getDate()).padStart(2, "0");
-        const hour = String(now.getHours()).padStart(2, "0");
-        const minute = String(now.getMinutes()).padStart(2, "0");
-        const second = String(now.getSeconds()).padStart(2, "0");
-
         const timeZone = timeZoneFormatter
             .formatToParts(now)
             .find(part => part.type === "timeZoneName")
             ?.value ?? "";
 
-        localClock.textContent =
-            `${year}-${month}-${day} ` +
-            `${hour}:${minute}:${second} ${timeZone}`.trim();
+        localClock.textContent = `${window.ArmoryDateTime.formatLocal(now, true)} ${timeZone}`.trim();
     };
 
     updateClock();
@@ -141,14 +132,6 @@ updateSystemStatus();
      * =========================================================
      */
 
-    const formatLocalDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-};
-
 document
     .querySelectorAll("[data-local-datetime]")
     .forEach(element => {
@@ -164,7 +147,8 @@ document
             return;
         }
 
-        element.textContent = formatLocalDate(date);
+        element.textContent = window.ArmoryDateTime.formatLocal(date, element.dataset.timeSeconds === "true");
+        element.title = "Browser local time";
     });
 
 });

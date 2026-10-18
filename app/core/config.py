@@ -7,7 +7,7 @@ from sqlalchemy import URL
 
 class Settings(BaseSettings):
     app_name: str = "Armory Ledger"
-    app_version: str = "0.1.4"
+    app_version: str = "0.1.5"
 
     armory_backup_dir: str = "/var/lib/armory/backups"
     armory_timezone: str = "UTC"

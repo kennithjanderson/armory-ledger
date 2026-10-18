@@ -1,13 +1,25 @@
 # Armory Ledger Implementation Status
 
-## Current release and branch state — 2026-10-17
+## Current release and development state — 2026-10-17
 
-Local `main` is fast-forwarded to the published v0.1.3 commit
-`614d4694bc4a2dec02630c5d50d02fd4d77ea877`. The v0.1.3 release date is
-2026-10-15. Historical status entries below retain the state recorded on their
-original dates and are superseded by this section. v0.1.4 remains development
-work with a planned release date of 2026-10-22; it has not been committed or
-published.
+The published v0.1.3 commit is `614d4694bc4a2dec02630c5d50d02fd4d77ea877`,
+dated 2026-10-15. The v0.1.4 release-preparation source is committed on local
+`main` at `72bedd4001dfd65583560fe681a4c8ede22897d7`. Its scheduled candidate is
+`0f2d189e1e7d044d831593b335d7ebd1e923edde`, parented by that source commit; both
+have tree `eadc271db7e65889d170a5713edd3ea29803ffd3`. The candidate remains
+unpublished and its planned release date remains 2026-10-22. Candidate state and
+host timer were not inspected or changed during v0.1.5 initialization.
+
+v0.1.5 development begins on `develop/v0.1.5`, based on local `main` at
+`002b51b831e41363fc9fd2dc0f0cc2435bbe91c2`. This is the v0.1.5 baseline, not a
+numbered feature checkpoint. `app/core/config.py` reports `0.1.5`; the changelog
+has a new undated Unreleased v0.1.5 section, while the v0.1.4 entry and its
+planned date are retained. At initialization, local `main` was three commits
+ahead of `origin/main`, with no remote-ahead commits or history divergence. The
+two existing untracked instruction files are preserved and remain untracked.
+
+Historical status entries below retain the state recorded on their original
+dates and are superseded by this section.
 
 ## Baseline and evidence
 

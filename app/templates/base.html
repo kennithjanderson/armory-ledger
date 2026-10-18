@@ -63,6 +63,20 @@
                 <a href="/accessories">Accessories</a>
                 <a href="/range">Shooting Log</a>
 
+                <div class="notification-bell">
+                    <button type="button" id="notification-toggle" class="notification-toggle" aria-label="Notifications, 0 unread" aria-expanded="false" aria-controls="notification-panel">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+                    </button>
+                    <section id="notification-panel" hidden aria-label="Recent notifications">
+                        <h2 class="notification-panel-heading">Recent notifications</h2>
+                        <div id="notification-items"></div>
+                        <div class="notification-panel-links" role="group" aria-label="Notification links">
+                            <a href="/notifications">Notification history</a>
+                            <a href="/settings">Settings</a>
+                        </div>
+                    </section>
+                </div>
+
                 <div class="user-menu">
                     <button
                         class="user-menu-button"
@@ -84,6 +98,7 @@
                     </div>
                 </div>
             </nav>
+            <script src="{{ url_for('static', path='/js/notifications.js') }}?v={{ app_version }}" defer></script>
 
             <button
                 class="mobile-menu-button"
@@ -109,6 +124,7 @@
             <a href="/ammunition">Ammunition</a>
             <a href="/accessories">Accessories</a>
             <a href="/range">Shooting Log</a>
+            <a href="/notifications" id="mobile-notifications-link">Notifications</a>
 
             {% if is_admin %}
             <a href="/admin">Administration</a>
@@ -140,19 +156,33 @@
             aria-label="Local date and time"
         ></span>
 
-        <span
-            id="system-status"
-            class="app-footer-status"
-            aria-label="System status"
-        >
-            <span
-                class="app-footer-status-dot"
-                aria-hidden="true"
-            ></span>
-            <span class="app-footer-status-text">
-                CHECKING
+        {% if current_user and current_user.is_admin %}
+        <span class="admin-status-popover">
+            <button
+                id="system-status"
+                class="app-footer-status admin-status-trigger"
+                type="button"
+                data-admin-status
+                aria-label="System operational status; hover or focus for details"
+                aria-expanded="false"
+                aria-controls="admin-status-tooltip"
+            >
+                <span class="app-footer-status-dot" aria-hidden="true"></span>
+                <span class="app-footer-status-text">CHECKING</span>
+            </button>
+            <span id="admin-status-tooltip" class="admin-status-tooltip" role="tooltip" hidden>
+                <strong>Operational status</strong>
+                <span><b>Database</b><span id="admin-status-database">Loading…</span></span>
+                <span><b>Backups / recovery</b><span id="admin-status-backups">Loading…</span></span>
+                <span><b>Email</b><span id="admin-status-email">Loading…</span></span>
             </span>
         </span>
+        {% else %}
+        <span id="system-status" class="app-footer-status" aria-label="System status">
+            <span class="app-footer-status-dot" aria-hidden="true"></span>
+            <span class="app-footer-status-text">CHECKING</span>
+        </span>
+        {% endif %}
 
         <span>ARMORY LEDGER &bull; v{{ app_version }}</span>
     </div>

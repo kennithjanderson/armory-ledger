@@ -101,6 +101,9 @@ def main():
         current = registry.image(alias)
         if may_promote(target, published, current, minor):
             run(['docker','buildx','imagetools','create','--tag',image+':'+alias,image+'@'+args.digest])
+    # This workflow is serialized across release versions. Never promote an older release.
+    if may_promote(target, published_versions(repository)):
+        run(['gh', 'release', 'edit', 'v'+target, '--repo', repository, '--latest'])
     Path('release-receipt.json').write_text(json.dumps({'version':target,'commit':sha,'digest':args.digest}) + '\n')
 
 

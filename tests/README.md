@@ -148,3 +148,25 @@ See docs/RELEASE-WORKFLOW.md for operator setup and read-only dry-run commands.
 Release validation-only tests cover selected tracked/untracked source, real-index/ref preservation, success/failure cleanup, no publication/state effects and cleanup failure reporting. Docker calls are mocked; these tests do not establish live Docker/PostgreSQL acceptance.
 
 Bulk release-selection tests cover modified, staged, deleted, renamed and untracked files, ignored exclusions, index preservation, cancellation, unsafe-file rejection and validation-only CLI enforcement. They use temporary Git repositories and do not start Docker.
+
+## v0.1.4 operations
+
+`test_operations.py` uses synthetic SQLite and private temporary archive stores,
+mocking PostgreSQL utilities and SMTP. It exercises AES-256-GCM backup creation,
+raw encrypted downloads, valid-key decryption, invalid/missing/wrong key failure,
+and verifies wrong-key restore rejection before any database restore or snapshot.
+Install the application requirements
+(including cryptography) in the test environment. `notifications.test.cjs` uses the
+existing jsdom setup; `admin-status.test.cjs` checks the administrator footer
+popover and confirms non-admin pages do not request its protected endpoint.
+Notification UI tests also cover unread bell state, mobile-link placement, Escape,
+and closing the popup by clicking outside. They verify that `/settings` hosts the
+signed-in user's backup notification preferences separately from notification
+history and that preference submissions carry the selected values.
+`recovery_exercise.py` is opt-in and must run only in newly created disposable
+PostgreSQL/application containers; it checks explicit database
+name/host/flag guards before running destructive clean-install recovery tests.
+Never point it at normal development or production databases.
+
+Notification email formatting is tested with constructed synthetic events; the
+test verifies the branded HTML/plain-text alternatives and escaping without SMTP.

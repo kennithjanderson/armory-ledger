@@ -69,6 +69,12 @@
 - The public Compose example pulls GHCR; local development Compose builds source
   and includes a tunnel. Verify the intended directory, Compose file, database
   and container target before any authorized operational command.
+- On Docker02, invoke authorized Docker operations as `sudo -n /usr/bin/docker`
+  (for example, `sudo -n /usr/bin/docker compose -f compose.yaml ps`). The
+  noninteractive flag avoids Linux password prompts and fails immediately if
+  this host's permission is unavailable. This is a Docker02 development-host
+  detail; do not copy it into shared Compose examples or generic deployment
+  templates. Never use sudo to run an entire script or arbitrary shell.
 - `docker-entrypoint.sh` runs `alembic upgrade head` before the requested command.
   A normal container start/run can therefore migrate a database. Do not treat a
   default Compose invocation as read-only inspection.

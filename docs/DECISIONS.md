@@ -202,6 +202,22 @@ Source: [merge polish task](../instructions/ammunition-merge-polish.md).
 These choices are implemented in the development working tree, not evidence of
 migration application, container deployment or release acceptance.
 
+## Notification inbox and history retention — 2026-10-17
+
+- The authenticated bell dropdown contains unread items only. Marking a notice
+  read removes it from the bell immediately; it remains available in the
+  recipient's history until severity-based cleanup.
+- Retain error history for 90 days, warnings for 30 days, and informational or
+  success notices for 7 days, measured from the latest event update. Unresolved
+  errors and warnings are retained until resolved. A successful backup resolves
+  earlier backup-failure incidents; successful cleanup already resolves cleanup
+  warnings.
+- Do not delete a notification while its email delivery is pending or retrying.
+  Read/unread status does not extend the history retention period.
+
+This decision is implemented in the development working tree; runtime deployment
+and browser acceptance remain separate.
+
 ## Date/time and Changelog decisions — 2026-10-14
 
 - Use a shared vanilla-JavaScript calendar instead of Safari/native date/time UI.
@@ -215,9 +231,10 @@ migration application, container deployment or release acceptance.
   Markdown. Plain strings rendered with Jinja escaping eliminate a Markdown HTML
   sanitization dependency. Support Added, Improvements, Bug fixes, Breaking changes
   and Important upgrade notes; unknown dates remain visibly unrecorded.
-- Historical release dates derive from local annotated tags: v0.1.0 (2026-09-24),
-  v0.1.1 (2026-09-25), v0.1.2 (2026-09-26). Notes are conservative summaries of
-  tagged source; v0.1.3 is an undated unreleased draft, not a release announcement.
+- Historical release dates derive from annotated tags: v0.1.0 (2026-09-24),
+  v0.1.1 (2026-09-25), v0.1.2 (2026-09-26), and v0.1.3 (2026-10-15). The
+  earlier undated v0.1.3 draft state was superseded by publication of commit
+  `614d4694bc4a2dec02630c5d50d02fd4d77ea877`.
 
 ## Release management decisions — 2026-10-14
 
@@ -250,3 +267,39 @@ Provide --validate-only as an independent manual CLI mode. Keep Git refs and the
 ## Reviewed bulk release preparation — 2026-10-14
 
 The owner approved extending bulk selection beyond validation-only. This supersedes the initial restriction above. Bulk selection retains all exclusions and explicit approval; expected-tree mismatches stop preparation instead of substituting another source tree.
+
+## v0.1.4 implementation — 2026-10-16
+
+Use independent MIT-compatible implementation; requested Dispatcharr raw sources were inaccessible and no code was copied. Preserve login-time OIDC role evaluation, persisting its result for background recipients and rechecking local authority. Whole-instance backup downloads explicitly elevate Armory Admin to trusted recovery operator; update privacy wording accordingly. Keep catalogue/schedule outside DB restores; disable schedules and cancel historical pending mail after recovery. Use exact-version recovery compatibility until older paths are tested. GitHub Latest is promoted only by serialized verified publication when no newer stable version exists.
+
+## Restore-initiated notices — 2026-10-17
+
+- Admins may independently opt into an in-app warning, email, or both when a
+  whole-instance restore is initiated. New preference columns default off; ordinary
+  users cannot write or view these admin-only preferences.
+- Snapshot opted-in admin UUIDs/channels into the persistent operations catalogue
+  before PostgreSQL replacement. After restore or successful rollback, persist the
+  notice to the resulting database only for recipients who remain administrators.
+  The warning records initiation and links to Backup & Recovery; it does not claim
+  that restoration succeeded. Its notification event is complete/resolved and thus
+  follows the warning history-retention period.
+- Queue email delivery only after the restore attempt, using the recovered database's
+  SMTP settings. A restored configuration with email disabled cannot deliver mail.
+
+Migration `a47c91e2d563` adds the two nullable-free Boolean preferences with false
+defaults. It follows the current notification migration and does not change restore
+or archive retention policy.
+
+## Upstream image update notices — 2026-10-17
+
+Poll the public upstream GHCR `latest` tag daily from the existing in-process
+worker. Compare the image's OCI version label with the running application's
+configured version; do not query GitHub release metadata, since a release may be
+published before the mutable image alias is promoted. Emit one informational
+admin-scoped notice per newer image version, with email through the existing
+outbox when SMTP is enabled. Resolve stale notices after the running version
+catches up or the latest image is no longer newer. The check is read-only and
+must never update the installation. Registry/network failures do not create user
+alerts and are retried on the next daily check. The request reveals the host's
+network address to GHCR but sends no account or inventory data. No schema change
+is needed; the existing `system_settings` table stores the last poll time.

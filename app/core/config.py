@@ -7,7 +7,14 @@ from sqlalchemy import URL
 
 class Settings(BaseSettings):
     app_name: str = "Armory Ledger"
-    app_version: str = "0.1.3"
+    app_version: str = "0.1.4"
+
+    armory_backup_dir: str = "/var/lib/armory/backups"
+    armory_timezone: str = "UTC"
+    armory_worker_enabled: bool = True
+    armory_secret_key: str | None = None
+    armory_backup_encryption_key: str | None = None
+    armory_backup_max_bytes: int = 2 * 1024 * 1024 * 1024
 
     # Optional identity of this installation, separate from upstream authorship.
     armory_operator_name: str | None = None

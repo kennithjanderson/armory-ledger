@@ -31,6 +31,7 @@ data under the control of the person hosting it.
 - GitHub Container Registry distribution
 - Reverse-proxy and Cloudflare Tunnel compatible
 - Application and database health monitoring
+- Admin-only informational notices when a newer GHCR `latest` image is available
 
 Armory Ledger does not maintain local user passwords. Authentication is handled
 through an external OpenID Connect identity provider.
@@ -54,7 +55,19 @@ curl -O https://raw.githubusercontent.com/kennithjanderson/armory-ledger/main/.e
 
 cp compose.example.yaml compose.yaml
 cp .env.example .env
+chmod 600 .env
 ```
+
+Generate a backup encryption key:
+
+```bash
+python3 -c 'import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())'
+```
+
+Copy the generated value into the blank `ARMORY_BACKUP_ENCRYPTION_KEY` entry in
+`.env`. It is a canonical URL-safe base64 key encoding exactly 32 random bytes.
+Keep a protected copy outside this server. Do not replace an existing key while
+backups encrypted with it may still be needed.
 
 Generate an application session signing secret:
 
@@ -97,7 +110,7 @@ A healthy installation returns information similar to:
   "status": "healthy",
   "application": "Armory Ledger",
   "database": "connected",
-  "version": "0.1.3"
+  "version": "0.1.4"
 }
 ```
 
@@ -124,9 +137,10 @@ stored in the persistent `postgres_data` Docker volume.
 Do not remove the PostgreSQL volume unless you intentionally want to delete the
 database.
 
-Database backup and restore tooling is planned for a future release. Operators
-should maintain appropriate backups of their PostgreSQL data before performing
-upgrades.
+Armory Ledger v0.1.4 provides encrypted backup and recovery tools. Before an
+upgrade, create and verify a backup and preserve its encryption key separately.
+See [Backup & Recovery](#v014-backup--recovery-email-and-notifications) for key,
+storage and restore requirements.
 
 ## Deployment Architecture
 
@@ -463,13 +477,14 @@ The page explains user isolation, shared reference data, infrastructure-level
 operator access, and record-keeping limitations. Armory Ledger does not send
 inventory to a centralized service operated by the upstream developer.
 
-### Pending schema work
+### v0.1.2 schema history
 
-See [the v0.1.2 schema plan](docs/v0.1.2-schema-plan.md). No migration files are
-included for the new schema yet. Do not start this development version against
-the previous schema until the migrations have been created, reviewed and applied.
+The [v0.1.2 schema plan](docs/v0.1.2-schema-plan.md) is retained as historical
+design context. Its firearm and announcement migrations are part of the released
+revision history; use the current migration chain and operations documentation
+when upgrading an installation.
 
-### v0.1.3 date/time and release notes (unreleased)
+### v0.1.3 date/time and release notes (released October 15, 2026)
 
 Development forms share a calendar with direct month/year selection and explicit
 24-hour time controls. Date-only records retain their calendar dates; announcement
@@ -478,7 +493,8 @@ presentation uses 24-hour time.
 
 The public `/changelog` page is linked in the footer. Its repository-managed source
 is `app/content/changelog.json`; release text is escaped, with no database or admin
-editor. The v0.1.3 entry remains an unreleased draft until release approval.
+editor. Version 0.1.3 was published on October 15, 2026; its release notes remain
+available on the public page.
 
 ## Maintainer release workflow
 
@@ -487,4 +503,41 @@ Manual and scheduled release tooling is documented in
 validation, Changelog-derived notes and immutable publication/recovery logic.
 Scheduled jobs require explicit approval and separately configured systemd user
 lingering/credentials. No release is automatically scheduled by a Changelog date.
-Use `./release.sh --version 0.1.3 --dry-run` for a read-only notes preview.
+Use `./release.sh --version 0.1.4 --dry-run` for a read-only notes preview.
+
+## v0.1.4 Backup & Recovery, email and notifications
+
+Admin now includes Backup & Recovery and Email tabs. Automatic backups are disabled
+initially (daily 03:00 UTC, retain 7 automatic archives when enabled); manual,
+pre-restore and imported archives require explicit deletion. Mount `./data/backups`
+at `/var/lib/armory/backups` as shown in the Compose files. Whole-instance downloads
+contain every user's records, so Armory Admin must be restricted to trusted operators.
+
+`ARMORY_BACKUP_ENCRYPTION_KEY` is required before creating, importing or restoring
+backups. It must be canonical URL-safe base64, including padding, encoding exactly
+32 random bytes. The service encrypts each archive with authenticated AES-256-GCM;
+downloads remain encrypted and restores reject a wrong key before changing
+application data. To generate a key for a new installation, run:
+
+```bash
+python3 -c 'import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())'
+```
+
+Put the result in `.env` and preserve it in a protected off-host secret store.
+Losing the key, or changing it while archives still depend on it, makes those
+archives unrecoverable. The Compose files persist backup archives and their
+catalogue under `./data/backups`, mounted at `/var/lib/armory/backups`; container
+recreation preserves them. Keep this directory protected and copy important
+archives to separate storage. Optional settings: `ARMORY_BACKUP_DIR`,
+`ARMORY_TIMEZONE`, `ARMORY_WORKER_ENABLED`, `ARMORY_BACKUP_MAX_BYTES`, and
+`ARMORY_SECRET_KEY` (a separate Fernet key for SMTP passwords).
+Email starts disabled; configure it under Admin, then explicitly request a test.
+The notification bell updates every 30 seconds. Successful-backup channels are
+personal opt-ins; failures and cleanup warnings target known administrators.
+The in-process worker checks the public Armory Ledger GHCR `latest` image once per
+day and compares its embedded version label with the running application version.
+It creates an informational notification for administrators only when the image
+tag points to a newer version. This check does not update the installation.
+
+Read [v0.1.4 operations](docs/V0.1.4-OPERATIONS.md) before enabling backups or recovery,
+including migration, re-login, external encryption-key and offline recovery steps.

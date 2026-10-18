@@ -1,5 +1,14 @@
 # Armory Ledger Implementation Status
 
+## Current release and branch state — 2026-10-17
+
+Local `main` is fast-forwarded to the published v0.1.3 commit
+`614d4694bc4a2dec02630c5d50d02fd4d77ea877`. The v0.1.3 release date is
+2026-10-15. Historical status entries below retain the state recorded on their
+original dates and are superseded by this section. v0.1.4 remains development
+work with a planned release date of 2026-10-22; it has not been committed or
+published.
+
 ## Baseline and evidence
 
 Reviewed 2026-10-12 at commit `1fc2edd` (README logo update), following `7c260aa`
@@ -79,7 +88,7 @@ has passed automated or runtime testing.
 
 | Finding | Evidence and impact |
 | --- | --- |
-| Settings navigation has no implementation | `base.html` links `/settings`, but no corresponding route exists. |
+| Settings scope is currently limited | `/settings` now manages each signed-in user's successful-backup notification preferences; broader account and application settings remain unimplemented. |
 | Stale model export | `app/models/__init__.py` lists `ManufactureDateConfidence` in `__all__` although the replacement type is `DatePrecision`; wildcard exports can fail. |
 | Model/migration constraint mismatch | Migration `ba5b6e5573c8` adds `ck_accessories_quantity_positive`; the Accessory ORM metadata does not declare that check. |
 
@@ -530,3 +539,262 @@ Python AST, changed-file whitespace and git diff --check passed.
 Implemented reviewed bulk selection for manual/scheduled preparation and optional full expected-tree SHA validation. No real candidate, timer, publication, Docker operation or application database change was performed for this task.
 
 All 35 release-workflow tests passed using temporary Git repositories and mocks. Coverage includes manual/scheduled bulk selection, matching/mismatching tree guards, source changes during review, approval gates, future scheduling, lingering rejection and no unintended publication/timer operations. Python AST, Bash wrapper syntax, changed/new-file whitespace and git diff --check passed. The previously user-validated tree is not evidence that these new edits have passed live release validation.
+
+## v0.1.4 implementation and verification — 2026-10-17
+
+Implemented Backup & Recovery, scheduler/retention, administrator health, encrypted
+system mail, persistent recipient-owned notifications and live polling bell.
+Application version is 0.1.4; the changelog entry remains unreleased, with a planned
+date of 2026-10-22. Added migration `d914b7ce203a` after `c7d2a960e148`; applied only
+to disposable PostgreSQL test data,
+not the normal development/production database. Existing users must reauthenticate
+to synchronize the new local admin membership field. Backup downloads are an
+explicit whole-instance operator privilege; privacy/security documentation updated.
+
+GitHub Latest promotion now occurs after image verification in the serialized
+publication workflow and only for the newest stable version. No existing release,
+saved scheduled runner, Git tag or active timer was changed.
+
+Verification evidence:
+
+- Full synthetic Python regression suite: prior baseline 107 tests, 105 passed, 2
+  existing opt-in PostgreSQL concurrency tests skipped. New encryption/date checks
+  are recorded below.
+- Node/jsdom suite: 30 passed; new bell test checks polling, escaping, unread state,
+  explicit read action and Escape/focus behavior.
+- A freshly built PostgreSQL-client-equipped image and two newly named disposable
+  Docker containers exercised actual migrations through the new head on PostgreSQL
+  17. Runtime app/tests were mounted read-only from this checkout; all data were
+  synthetic and separate from the normal development database.
+- `tests/recovery_exercise.py` passed archive round trip, inventory/account/settings
+  and Shooting Log relationship comparisons, retained pre-restore archives, injected
+  post-mutation failure with verified rollback, clean-install offline CLI recovery,
+  historical pending-mail cancellation, catalogue/connection reopening, health,
+  authenticated admin pages, non-admin rejection and CSRF rejection across the new
+  privileged mutation routes. No persistent uploads exist to restore in this version.
+- Temporary test containers/network/image removed. Base images/build cache were
+  not pruned. No real SMTP delivery occurred; SMTP tests used mocks.
+- Python ASTs, Jinja parsing, JavaScript syntax and whitespace checks passed.
+
+The final rerun used the existing temporary Python and jsdom test environments;
+no dependencies were installed into this checkout. The latest-release regression
+test verifies that image promotion invokes GitHub's `--latest` edit only when the
+target is the newest stable release. The scheduled release uses this same
+serialized publication workflow after image identity verification; no GitHub
+publication was performed.
+
+Remaining acceptance: manual browser/layout screenshots, real identity-provider
+role-change acceptance and operator-configured SMTP/TLS end-to-end delivery. These
+are not claimed by mocked SMTP/DOM tests. Restore supports exact v0.1.4/schema only,
+requires the external SMTP key to decrypt saved credentials, and requires a shared
+local backup volume with flock/SQLite support. Remote multi-host deployments are
+not supported by this coordination design. See V0.1.4-OPERATIONS.md.
+
+Files touched for this task (earlier uncommitted changes preserved):
+
+- `.dockerignore`, `.env.example`, `.github/workflows/docker-publish.yml`, `Dockerfile`,
+  `compose.example.yaml`, `requirements.txt`, `README.md`, `SECURITY.md`
+- `app/api/auth.py`, `app/api/operations.py`, `app/core/config.py`,
+  `app/core/dependencies.py`, `app/core/maintenance.py`, `app/main.py`, `app/recovery.py`
+- `app/models/__init__.py`, `app/models/user.py`, `app/models/notification.py`
+- `app/services/user_service.py`, `app/services/backup_service.py`,
+  `app/services/notification_service.py`, `app/services/worker.py`
+- `app/content/changelog.json`, `app/static/css/armory.css`,
+  `app/static/js/admin-operations.js`, `app/static/js/notifications.js`
+- `app/templates/base.html`, `app/templates/about.html`,
+  `app/templates/partials/admin_navigation.html`, `app/templates/admin/backups.html`,
+  `app/templates/admin/email.html`, `app/templates/notifications.html`
+- `migrations/versions/d914b7ce203a_notifications.py`, `tools/release/image_policy.py`
+- `tests/test_operations.py`, `tests/recovery_exercise.py`, `tests/notifications.test.cjs`,
+  `tests/test_announcement_schedule.py`, `tests/test_changelog.py`,
+  `tests/test_release_workflow.py`, `tests/README.md`
+- `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/IMPLEMENTATION_STATUS.md`,
+  `docs/ROADMAP.md`, `docs/RELEASE-WORKFLOW.md`, `docs/V0.1.4-OPERATIONS.md`
+
+### Backup encryption, persistent development storage and planned release date — 2026-10-17
+
+Inspection found that v0.1.4 archives were plaintext tar files; only stored SMTP
+passwords used encryption. Backup archives now use a streaming AES-256-GCM envelope
+with a URL-safe base64 32-byte key from `ARMORY_BACKUP_ENCRYPTION_KEY`. Missing or
+malformed keys stop creation before database dumping. Authentication and version
+validation happen before restore creates a pre-restore snapshot or mutates the DB.
+Downloads stream ciphertext unchanged. Plaintext dump/tar staging is restricted to
+private temporary directories and removed after operations. Added tests for
+encryption/decryption, raw downloads, wrong-key no-mutation, and malformed/missing
+key failure. No key history/rotation support was introduced.
+
+Both Compose files now bind `./data/backups` to `/var/lib/armory/backups`, and that
+host path is ignored by Git. The existing development Compose file was updated and
+the directory is private mode 0700. The development `.env` was inspected without
+printing values. Its original `ARMORY_BACKUP_ENCRYPTION_KEY` was malformed. After
+explicit administrator authorization on 2026-10-17, it was replaced with a newly
+generated, format-verified 32-byte key; the file is now mode 0600. Compose resolution
+was checked privately and the application receives the matching value. No old
+backup archives were present in the former ephemeral container store; its catalogue
+held only worker heartbeat and notification status. The rebuild preserved the
+PostgreSQL development volume.
+
+Changelog v0.1.4 now has planned date `2026-10-22` and remains marked unreleased. Its
+public page labels the date as planned. A uniqueness/date regression test was added.
+No release/tag was created.
+
+Verification for this update: the full Python suite passed **109 tests with 2
+existing opt-in PostgreSQL tests skipped**; all **30 JavaScript tests passed**.
+Both Compose configurations resolve the bind mount to `/var/lib/armory/backups`,
+and the host directory is mode 0700. The existing development rebuild completed;
+the application and PostgreSQL containers are running, `/health` reports healthy,
+and the app mount points to `/opt/armory-ledger-dev/data/backups`. The PostgreSQL
+volume was preserved. Backup health reports schema ready, storage writable and
+encryption ready. The operator must keep a protected copy of the key off-host.
+
+A separate disposable PostgreSQL 17 test passed encrypted backup creation, raw
+ciphertext download, correct-key decryption/restore, incorrect-key rejection before
+database mutation, recovery safeguards and recovery after application-container
+recreation. Five encrypted archives remained byte-for-byte unchanged and readable
+after recreation against the temporary bind mount. Disposable containers, network
+and files were removed. Neither development nor production application data was
+restored or used as test data. `git diff --check` passed. No release, tag, commit,
+push or production deployment was performed.
+
+### v0.1.4 interface polish — implemented 2026-10-17
+
+The desktop notification control is now an icon-only bell after Shooting Log and
+before the user menu; unread state changes its color. Mobile navigation has a
+Notifications link after Shooting Log. The notification panel now uses the site
+surface, border and navy link treatments and closes on outside click. Admins get an admin-only footer popover summarizing database,
+backup/recovery and email status; the backup page no longer displays a raw health
+JSON block. Backup and email settings use compact responsive sections. Heritage
+rules now render red, ivory and blue in that order.
+
+The authenticated `/settings` page now hosts each user's notification preferences;
+`/notifications` remains the separate notification history page. Preference writes
+are scoped to the signed-in user's own account record.
+
+Verification: the full Python suite passed **110 tests with 2 opt-in PostgreSQL
+tests skipped**; the full JavaScript suite passed **33 tests**. New coverage checks
+desktop/mobile notification placement, unread styling, outside-click dismissal,
+admin status popover loading, non-admin omission of the admin-status request, and
+sanitized status API output. Python AST, edited Jinja templates, changelog JSON,
+JavaScript syntax and `git diff --check` passed. The existing development
+`rebuild.sh` completed with exit status 0. The development database reported
+healthy, the application `/health` endpoint returned HTTP 200 with database
+connected on v0.1.4, and the backup service reported healthy. The app's persistent
+backup bind mount and development PostgreSQL named volume were present after
+recreation. The app container has no Docker healthcheck configured; startup logs
+contained no ERROR or Traceback markers. Manual browser acceptance remains with
+the owner.
+
+Follow-up Settings verification on 2026-10-17: all **21 operations tests** and
+all **4 notification UI tests** passed, including authenticated Settings rendering,
+per-user preference updates, separate history navigation and CSRF-bearing browser
+submissions. Python AST, affected Jinja templates and `git diff --check` passed.
+The development image was rebuilt successfully; the database was healthy, the
+application health endpoint reported v0.1.4 with database connected, and an
+unauthenticated `/settings` request followed the normal sign-in redirect.
+
+Email appearance follow-up on 2026-10-17: notification messages now include an
+inline-styled, responsive Armory Ledger HTML layout, severity accent, heritage
+colors, clear timestamp, and a branded action link, with an accessible plain-text
+alternative. User-provided title/message content is HTML-escaped. The focused
+message-construction test passed without sending mail. All **22 operations tests**
+
+Notification inbox/retention follow-up on 2026-10-17: the bell API now returns
+unread recipient notices only, so marking a notice read removes it from the
+dropdown while `/notifications` keeps it in history. Cleanup applies 90 days for
+errors, 30 days for warnings, and 7 days for info/success, measured from the last
+event update. Unresolved errors/warnings remain; successful backups resolve prior
+backup-failure notices, and successful cleanup resolves cleanup warnings. Pending
+or retrying email deliveries are retained. Focused tests cover unread/history
+separation, severity retention, and backup-failure resolution; runtime verification
+is pending.
+
+Restore-notice follow-up on 2026-10-17: administrators can opt in separately to
+in-app and email warnings when a whole-instance restore starts. The recipient
+selection is persisted in the external backup catalogue before PostgreSQL restore;
+the notice is written after restore or successful rollback for recipients who
+remain administrators. New preferences default off. Migration `a47c91e2d563`
+follows `d914b7ce203a`. Focused service, API and UI tests were added; migration
+application, runtime testing and development rebuild have not been performed.
+
+### GHCR latest-image update notices — 2026-10-17
+
+The existing application worker now checks the upstream public GHCR `latest` image
+once per day. It reads the OCI version label from the linux/amd64 manifest and
+compares it with the running version. When the image tag points to a newer version,
+the service creates one informational admin-only notification and queues email to
+administrators if SMTP is enabled. Notices are resolved when the running version
+catches up or the latest tag is no longer newer. Poll time is persisted in the
+existing `system_settings` table; there is no migration, new service/container,
+automatic pull or automatic update. Registry failures are recorded without exposing
+details to users and retried on the next daily interval. The registry request sends
+no account or inventory data.
+
+Added mocked tests for token/manifest/config lookup, linux/amd64 selection, daily
+throttling, admin-only recipients, deduplication, resolution, failures and equal
+versions. Python AST parsing and `git diff --check` passed. The focused tests could
+not run because the available host Python lacks SQLAlchemy; dependencies were not
+installed. Live GHCR polling, runtime notification delivery and browser acceptance
+have not been performed.
+
+## Git reconciliation and v0.1.4 review — 2026-10-17
+
+Before reconciliation, a mode-0700 snapshot under
+`/tmp/armory-ledger-reconcile.ChkWIs` captured 319 working-tree paths, including
+ignored local configuration, and its archive was independently extracted and
+verified against per-file SHA-256 hashes and symlink targets. A Git bundle also
+passed `git bundle verify`. Persistent `data/` was excluded because its
+root-owned backup archive could not be read by `homeadmin`; no secret values were
+printed. The published v0.1.3 commit was verified as the descendant of the former
+local `main`, and `main` was advanced with a fast-forward only. The snapshot overlay
+was then restored and verified byte-for-byte across all 319 captured paths.
+
+**Operational incident:** the first cleanup attempt removed the ignored `data/`
+directory after restoring the older `.gitignore`. The still-running development
+container retained the old bind mount, but its backup directory was empty when
+checked for recovery. The host `data/backups` path has been recreated and is empty;
+the deleted backup archive(s) were not recovered. The development and production
+databases were not accessed or modified, and no container was restarted. Treat
+the missing local backup archive as an outstanding data-loss incident; do not
+claim backup preservation for this reconciliation.
+
+The changelog now marks v0.1.4 as unreleased, retains its planned date
+`2026-10-22`, and includes the daily administrator-only GHCR `latest` image
+availability notice. README and roadmap current-state references now identify
+v0.1.3 as published. `.dockerignore` excludes `data/`, backup files and common
+local build/test artifacts. The release procedure below recommends verifying a
+published tag and advancing `main` with a fast-forward; automatic branch updates
+remain unimplemented.
+
+Verification after reconciliation used test-only Python and jsdom dependencies
+installed under `/tmp`. The full Python suite passed **120 tests**, with the two
+explicit disposable-PostgreSQL concurrency tests skipped; the full JavaScript suite
+passed **38 tests**. The restore-notice test now simulates PostgreSQL replacement
+inside the restore operation, and the jsdom notification fixtures use a visible
+document. The update-available notice links to the matching upstream GitHub release.
+Static checks passed: 96 Python files parsed, 38 Jinja templates parsed with
+application-specific filters stubbed, 200 candidate-source files passed the
+existing release scanner, JavaScript and release-wrapper syntax passed, and
+`git diff --check` passed. No Docker, Alembic or application database operation
+was run.
+
+The source changes are ready for a **reviewed development commit**, subject to
+excluding host-specific edits in `AGENTS.md`, reviewing the task-only
+`instructions/Armory_Ledger_v0.1.4_Codex_Instructions.md` separately, and keeping
+ignored local config out of the commit. This does not make the development
+environment ready: the deleted development backup archive remains an unresolved
+operational data-loss incident, and the container still has its pre-reconciliation
+bind mount until a separately reviewed rebuild/restart.
+
+### Recommended post-release `main` advancement
+
+After a release is published, fetch its tag and candidate ref, verify the peeled
+tag commit and publication identity against the approved release record, and
+confirm that commit is a descendant of the current local `main`. Preserve any
+working-tree changes in a separately verified snapshot first. Advance `main`
+with `git merge --ff-only <verified-release-commit>`; if Git refuses, stop and
+resolve overlaps from the snapshot rather than resetting or forcing. Restore
+normal development changes on top of the new release commit, verify the source
+and tests, and keep release candidate refs/tags reachable. Do not automatically
+advance branches as part of publication until separately designed and approved.
+passed; the dev app image was rebuilt, returned healthy on v0.1.4 and generated
+multipart HTML/plain-text output in a local formatting smoke check without delivery.

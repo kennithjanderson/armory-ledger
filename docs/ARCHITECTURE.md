@@ -10,7 +10,8 @@ database or deployment. See [implementation status](IMPLEMENTATION_STATUS.md),
 Armory Ledger is a self-hosted FastAPI monolith. It serves Jinja HTML pages and
 JSON mutation endpoints, uses synchronous SQLAlchemy sessions with PostgreSQL,
 and delegates authentication to an external OpenID Connect provider. It has no
-separate frontend application, task queue, or background scheduler.
+separate frontend application, task queue, or scheduler service; a small worker
+thread runs inside the application process for durable operations and daily checks.
 
 ```text
 Browser ── operator-provided HTTPS ingress ── FastAPI/Uvicorn
@@ -496,3 +497,18 @@ Validation-only bulk selection uses Git porcelain v2 NUL records and a private i
 ## Reviewed bulk release preparation — 2026-10-14
 
 Manual and scheduled preparation now reuse reviewed bulk selection. Optional --expected-tree gates validation and candidate creation; the private index and immediate pre-creation source/HEAD recheck remain in place.
+
+## v0.1.4 implementation — 2026-10-16
+
+v0.1.4 adds an in-process five-second worker with durable SQLite operational jobs/catalogue outside the restored PostgreSQL database. Shared-volume POSIX worker/maintenance locks coordinate requests and operations. PostgreSQL custom dumps and transactional restore preserve whole-instance records; no persistent user uploads exist. Notification events, recipient state, personal preferences and encrypted SMTP configuration live in PostgreSQL. A 30-second polling bell shows unread notifications only; marking an item read removes it from the bell while leaving it in `/notifications` history. History is retained for 90 days for errors, 30 days for warnings, and 7 days for informational/success notices. Unresolved errors and warnings remain until resolved; a successful backup resolves earlier backup-failure notices. `/settings` manages successful-backup preferences for all users and opt-in restore-initiated in-app/email notices for administrators. Restore notice recipients are queued in the external catalogue before database replacement and the warning is recorded afterward for admins still present. See V0.1.4-OPERATIONS.md for boundaries and recovery.
+
+The worker also polls the public upstream GHCR `latest` manifest once per day,
+reads the OCI version label from its `linux/amd64` image configuration, and
+compares it with `Settings.app_version`. A newer image creates a deduplicated
+informational, admin-scoped event and queues email for administrators when SMTP
+is enabled. It follows the mutable registry alias rather than GitHub release
+metadata, so notices wait until image promotion succeeds. The check does not send
+account or inventory data and never updates the local installation. Its attempt
+time is stored in `system_settings` so normal
+worker ticks do not poll repeatedly; failures are silent to end users and retried
+on the next daily interval.

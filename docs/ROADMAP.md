@@ -1,7 +1,8 @@
 # Armory Ledger Roadmap
 
-Baseline reviewed 2026-10-12 against `1fc2edd`. Release planning updated
-2026-10-14: v0.1.3 is planned for **October 15, 2026** (America/Chicago).
+Baseline reviewed 2026-10-12 against `1fc2edd`; v0.1.3 was subsequently published
+from commit `614d469` on **October 15, 2026** (America/Chicago). This roadmap was
+reconciled with that release on 2026-10-17.
 Other roadmap items have no assigned release dates or version commitments. Existing behavior is documented in [architecture](ARCHITECTURE.md)
 and [implementation status](IMPLEMENTATION_STATUS.md); open choices are in
 [decisions](DECISIONS.md).
@@ -170,43 +171,52 @@ console/network evidence if the originally reported success-warning recurs; its
 exact runtime trigger has not been reproduced from available evidence. This does
 not complete the release or supersede pending PostgreSQL concurrency verification.
 
-## v0.1.3 final polish — implemented, release testing pending
+## v0.1.3 final polish — included in the October 15, 2026 release
 
 The final planned feature work now includes styled merge-history record links
 and IANA-zone announcement scheduling with UTC previews and explicit DST handling.
-No new schema migration is needed. The version remains 0.1.3 and is **not released**.
+No new schema migration was needed. These changes are included in published v0.1.3.
 
-Use [V0.1.3-RELEASE-TESTING.md](V0.1.3-RELEASE-TESTING.md) for multi-day development
-acceptance, migration-state verification, browser coverage and release gates.
-Live PostgreSQL concurrency tests and the original merge-success browser incident
-remain verification concerns. No release, tag, deployment or production operation
-is authorized by completion of the source work.
+The [v0.1.3 release-testing checklist](V0.1.3-RELEASE-TESTING.md) is retained as a
+record of the release acceptance process. This reconciliation adds no new test
+evidence.
 
-## Final date/time and Changelog polish — implemented, acceptance pending
+## Final date/time and Changelog polish — included in published v0.1.3
 
 The [date/time task](../instructions/date-time-standardization-changelog.md) adds
 shared historical-date calendars, explicit 24-hour entry/display, conditional DST
 occurrence controls and public repository-managed release notes. This supersedes
 reliance on native date/time pickers. No new migration or dependency is introduced.
 
-Complete the expanded release checklist in Safari, Chrome, Firefox and mobile,
-including keyboard navigation, historical dates and unchanged announcement saves.
-Source and isolated DOM/ASGI checks are not real-browser acceptance. Version 0.1.3
-remains unreleased; commit/tag/publish/deploy remain separate approval boundaries.
+The changelog records v0.1.3 as published on October 15, 2026. The checklist remains
+available for historical reference; this update does not claim additional browser
+testing.
 
-## v0.1.3 release target — October 15, 2026
+## v0.1.3 release — October 15, 2026
 
-Target date approved by the owner on 2026-10-14. Release remains pending final
-acceptance of the [testing checklist](V0.1.3-RELEASE-TESTING.md). No release time
-or automated publishing job is set. Commit, push, tag, publication and deployment
-require separate explicit authorization; the target date does not execute them.
+The owner approved October 15, 2026 as the target date, and v0.1.3 was published
+from commit `614d4694bc4a2dec02630c5d50d02fd4d77ea877`. Its release tag remains
+reachable; this does not imply that production was deployed.
 
-## Release workflow — implemented, operational acceptance pending
+## Release workflow — implemented; v0.1.3 published
 
 The approved [release workflow task](../instructions/release-workflow.md) now has
 manual/scheduled wrappers, shared validation/notes/publication/recovery, immutable
-candidate retention, systemd user units and guarded container alias promotion.
-No publication or real schedule has been created. Host setup, credential checks,
-review of selected release files/scanner exceptions and authorized end-to-end
-validation remain required. Follow [RELEASE-WORKFLOW.md](RELEASE-WORKFLOW.md).
-The October 15 target does not create a timer or authorize a push by itself.
+candidate retention, systemd user units and guarded container alias promotion were
+used for the published v0.1.3 release. Host setup, credentials and authorized
+end-to-end validation remain release-specific checks for future versions. Follow
+[RELEASE-WORKFLOW.md](RELEASE-WORKFLOW.md); publication and deployment remain
+separate milestones.
+
+## Upstream image update notices — implemented, development acceptance pending
+
+The in-process worker checks the public upstream GHCR `latest` tag daily and
+compares the image's OCI version label with the running app version. Newer tags
+create deduplicated informational notices for administrators; notification email
+uses the existing mail outbox when enabled. No image is pulled automatically and
+no new migration or service is added. Verify daily scheduling, GHCR availability,
+notification deduplication/resolution and admin-only visibility in development.
+
+## v0.1.4 implementation — 2026-10-16
+
+v0.1.4 implements Backup & Recovery, health, system email and live notifications. v0.1.5 remains duplicate lot detection, enhanced merging, sorting and manufacturer/caliber aliases; v0.1.6 transfers and v0.1.7 sharing remain unimplemented. Firearm maintenance notifications have no assigned release. Live identity-provider revocation integration and multi-host operational coordination are not implemented.

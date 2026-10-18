@@ -6,7 +6,7 @@
 {% for release in releases %}
 <article class="changelog-entry">
     <h2>v{{ release.version }}{% if release.unreleased %} — Unreleased draft{% endif %}</h2>
-    <p>{% if release.unreleased %}Release date not set.{% elif release.date %}<time datetime="{{ release.date.isoformat() }}">{{ release.date.isoformat() }}</time>{% else %}Release date not recorded.{% endif %}</p>
+    <p>{% if release.unreleased and release.date %}Planned release: <time datetime="{{ release.date.isoformat() }}">{{ release.date.isoformat() }}</time>{% elif release.unreleased %}Release date not set.{% elif release.date %}<time datetime="{{ release.date.isoformat() }}">{{ release.date.isoformat() }}</time>{% else %}Release date not recorded.{% endif %}</p>
     {% for label, items in release.sections %}{% if items %}
     <h3>{{ label }}</h3><ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>
     {% endif %}{% else %}<p>Detailed release notes are not available.</p>{% endfor %}

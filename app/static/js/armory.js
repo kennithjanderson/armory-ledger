@@ -126,6 +126,79 @@ async function updateSystemStatus() {
 
 updateSystemStatus();
 
+function setupAdminOperationalTooltip() {
+    const wrapper = document.querySelector(".admin-status-popover");
+    const trigger = wrapper?.querySelector("[data-admin-status]");
+    const tooltip = document.getElementById("admin-status-tooltip");
+    if (!wrapper || !trigger || !tooltip) return;
+
+    const details = {
+        database: document.getElementById("admin-status-database"),
+        backups: document.getElementById("admin-status-backups"),
+        email: document.getElementById("admin-status-email"),
+    };
+    let pinned = false;
+    let loading = false;
+    let loadedAt = 0;
+
+    const open = () => {
+        tooltip.hidden = false;
+        trigger.setAttribute("aria-expanded", "true");
+        if (!loading && Date.now() - loadedAt > 15000) load();
+    };
+    const close = () => {
+        tooltip.hidden = true;
+        trigger.setAttribute("aria-expanded", "false");
+    };
+    const label = value => String(value ?? "unknown").replaceAll("_", " ");
+
+    async function load() {
+        loading = true;
+        Object.values(details).forEach(element => { element.textContent = "Checking…"; });
+        try {
+            const response = await fetch("/admin/operational-status", {cache: "no-store"});
+            if (!response.ok) throw new Error("Status unavailable");
+            const status = await response.json();
+            details.database.textContent = label(status.database);
+            details.backups.textContent = `${label(status.backups.status)} · storage ${label(status.backups.storage)} · encryption ${label(status.backups.encryption)} · scheduler ${label(status.backups.scheduler)} · recovery ${label(status.backups.recovery)}`;
+            details.email.textContent = label(status.email);
+            loadedAt = Date.now();
+        } catch (_) {
+            Object.values(details).forEach(element => { element.textContent = "Unavailable"; });
+        } finally {
+            loading = false;
+        }
+    }
+
+    wrapper.addEventListener("mouseenter", open);
+    wrapper.addEventListener("mouseleave", () => { if (!pinned) close(); });
+    wrapper.addEventListener("focusin", open);
+    wrapper.addEventListener("focusout", event => {
+        if (!pinned && !wrapper.contains(event.relatedTarget)) close();
+    });
+    trigger.addEventListener("click", event => {
+        event.stopPropagation();
+        pinned = !pinned;
+        if (pinned) open();
+        else close();
+    });
+    document.addEventListener("click", event => {
+        if (pinned && !wrapper.contains(event.target)) {
+            pinned = false;
+            close();
+        }
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !tooltip.hidden) {
+            pinned = false;
+            close();
+            trigger.focus();
+        }
+    });
+}
+
+setupAdminOperationalTooltip();
+
     /*
      * =========================================================
      * Browser-local system timestamps

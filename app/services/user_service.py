@@ -12,6 +12,7 @@ def sync_oidc_user(
     oidc_subject: str,
     email: str,
     display_name: str,
+    is_admin: bool = False,
 ) -> User:
     user = db.scalar(
         select(User).where(User.oidc_subject == oidc_subject)
@@ -32,6 +33,7 @@ def sync_oidc_user(
         user.display_name = display_name
         user.last_login_at = now
 
+    user.is_admin = is_admin
     db.commit()
     db.refresh(user)
 

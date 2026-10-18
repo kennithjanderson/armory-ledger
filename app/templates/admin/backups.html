@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Backup & Recovery · {{ app_name }}{% endblock %}
+{% block content %}
+<a href="/admin" class="record-back">← Administration</a>
+<h1>Backup & Recovery</h1>
+<div class="heritage-rule" aria-hidden="true"><span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span></div>
+{% include "partials/admin_navigation.html" %}
+<p class="operations-notice">Whole-instance backups contain every user's private data. Download only to trusted storage. Local backups share this host's failure domain.</p>
+<p class="operations-notice">Backup creation, import, and restore require a valid server-side <code>ARMORY_BACKUP_ENCRYPTION_KEY</code>. Configure it in the deployment environment; it is never shown or changed here. Administrators can hover over the footer status for health details.</p>
+<div id="operation-message" class="operation-message" role="status"></div>
+<section class="operations-card operations-action-bar backup-actions">
+<div><h2>Manual backup</h2><p>Create an encrypted whole-instance archive now.</p></div>
+<button class="button-primary" id="backup-now">Create Backup</button>
+</section>
+<form id="backup-schedule" class="operations-card operations-form">
+<div><h2>Automatic backups</h2><p>Choose the local schedule and automatic archive retention.</p></div>
+<div class="operations-grid">
+<label class="operations-inline-check"><input type="checkbox" name="enabled"> Enable automatic backups</label>
+<label>Daily hour (24-hour)<input type="number" name="hour" min="0" max="23" required></label>
+<label>Minute<input type="number" name="minute" min="0" max="59" required></label>
+<label>IANA timezone<input name="timezone" required></label>
+<label>Automatic backups to retain<input type="number" name="retention" min="0" required></label>
+<p class="operations-notice">0 means unlimited. Retention never removes manual, imported or pre-restore archives.</p>
+</div>
+<div class="operations-actions"><button class="button-primary">Save schedule</button></div>
+</form>
+<section class="operations-card"><h2>Recent operations</h2><div id="backup-jobs"></div></section>
+<section class="operations-card"><h2>Stored backups</h2><div id="backup-list"></div></section>
+<section class="operations-card"><h2>Import encrypted archive</h2><p>Only import archives from a trusted operator. Authentication detects modification, and the configured key must match.</p>
+<div class="backup-upload-row"><input id="backup-upload" type="file" accept=".armorybackup"><button id="backup-import" class="button-secondary">Upload and validate</button></div></section>
+<script>window.armoryOperationToken={{ csrf_token|tojson }};</script>
+<script src="/static/js/admin-operations.js?v={{ app_version }}" defer></script>
+{% endblock %}

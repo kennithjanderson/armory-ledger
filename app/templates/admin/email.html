@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}System email · {{ app_name }}{% endblock %}
+{% block content %}
+<a href="/admin" class="record-back">← Administration</a>
+<h1>System email</h1>
+<div class="heritage-rule" aria-hidden="true"><span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span></div>
+{% include "partials/admin_navigation.html" %}
+<div id="operation-message" class="operation-message" role="status"></div>
+<form id="email-settings" class="operations-form">
+    <section class="operations-card">
+        <h2>SMTP connection</h2>
+        <p class="operations-notice">Choose the relay host, connection security, and timeout. Email remains disabled until enabled below.</p>
+        <div class="operations-grid">
+            <label><span>SMTP host</span><input name="host" autocomplete="off"></label>
+            <label><span>Port</span><input name="port" type="number" min="1" max="65535"></label>
+            <label><span>Transport security</span><select name="security"><option value="starttls">STARTTLS</option><option value="tls">Implicit TLS</option><option value="plain">Unencrypted relay (explicit)</option></select></label>
+            <label><span>Connection timeout (seconds)</span><input name="timeout" type="number" min="1" max="30"></label>
+        </div>
+    </section>
+    <section class="operations-card">
+        <h2>Authentication</h2>
+        <div class="operations-grid">
+            <label><span>Username (optional)</span><input name="username" autocomplete="off"></label>
+            <label><span>Replace password (blank keeps the stored password)</span><input name="password" type="password" autocomplete="new-password"></label>
+        </div>
+        <div class="operations-actions">
+            <label class="operations-inline-check"><input name="clear_password" type="checkbox"> Clear stored password</label>
+            <p id="password-state" class="operations-notice"></p>
+        </div>
+    </section>
+    <section class="operations-card">
+        <h2>Message identity</h2>
+        <div class="operations-grid">
+            <label><span>From name</span><input name="from_name"></label>
+            <label><span>From email</span><input name="from_address" type="email"></label>
+            <label><span>Reply-To (optional)</span><input name="reply_to" type="email"></label>
+            <label><span>Public application origin</span><input name="base_url" type="url" placeholder="https://armory.example.org"></label>
+        </div>
+    </section>
+    <section class="operations-card operations-email-enable">
+        <label class="operations-inline-check"><input type="checkbox" name="enabled"> Enable system email</label>
+        <p class="operations-notice">Saving settings never sends a message. SMTP acceptance does not guarantee inbox delivery.</p>
+        <div class="operations-actions"><button class="button-primary">Save email settings</button></div>
+    </section>
+</form>
+<section class="operations-card">
+    <h2>Send test email</h2>
+    <p class="operations-notice">A test is sent only after you confirm the recipient.</p>
+    <div class="email-test-row"><label><span>Recipient</span><input id="test-recipient" type="email" autocomplete="email"></label><button id="send-test" class="button-secondary">Send Test Email</button></div>
+</section>
+<section class="operations-card">
+    <h2>Recent delivery attempts</h2>
+    <pre id="email-deliveries" class="operations-deliveries"></pre>
+</section>
+<script>window.armoryOperationToken={{ csrf_token|tojson }};</script>
+<script src="/static/js/admin-operations.js?v={{ app_version }}" defer></script>
+{% endblock %}

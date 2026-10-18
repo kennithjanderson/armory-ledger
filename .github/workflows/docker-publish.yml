@@ -11,7 +11,7 @@ concurrency:
   queue: max
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 env:

@@ -58,6 +58,10 @@ def get_current_user(
             detail="User account no longer exists.",
         )
 
+    from app.services.backup_service import store
+    if request.session.get("recovery_epoch", "initial") != store().get("epoch", "initial"):
+        request.session.clear()
+        raise HTTPException(status_code=401, detail="Recovery completed; sign in again.")
     return user
 
 
@@ -66,6 +70,6 @@ def require_admin(
     current_user: User = Depends(get_current_user),
 ) -> User:
     # Login already requires Armory User. Armory Admin is additional authority.
-    if request.session.get("user", {}).get("is_admin") is not True:
+    if request.session.get("user", {}).get("is_admin") is not True or not current_user.is_admin:
         raise HTTPException(status_code=403, detail="Armory Admin access required.")
     return current_user

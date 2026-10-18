@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import Boolean, DateTime, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -39,6 +39,12 @@ class User(Base):
         server_default=func.now(),
         nullable=False,
     )
+
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    backup_success_in_app: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    backup_success_email: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    restore_initiated_in_app: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    restore_initiated_email: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

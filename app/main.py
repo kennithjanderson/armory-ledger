@@ -20,6 +20,9 @@ from app.api.about import router as about_router
 from app.api.changelog import router as changelog_router
 
 from app.core.admin_access import AdminAccessMiddleware
+from app.core.maintenance import MaintenanceMiddleware
+from app.services.worker import lifespan
+from app.api.operations import admin as operations_router, user_routes as notifications_router
 from app.core.config import settings
 from app.core.dependencies import get_current_user, get_db
 from app.db.session import engine
@@ -35,6 +38,7 @@ from app.services.ammo_inventory_service import get_physical_inventory
 
 
 app = FastAPI(
+    lifespan=lifespan,
     title=settings.app_name,
     version=settings.app_version,
 )
@@ -42,6 +46,7 @@ app = FastAPI(
 
 # SessionMiddleware is added last so the admin guard can read signed sessions.
 app.add_middleware(AdminAccessMiddleware)
+app.add_middleware(MaintenanceMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.session_secret,
@@ -95,6 +100,8 @@ app.include_router(reference_router)
 app.include_router(admin_router)
 app.include_router(about_router)
 app.include_router(changelog_router)
+app.include_router(operations_router)
+app.include_router(notifications_router)
 
 
 @app.get("/")

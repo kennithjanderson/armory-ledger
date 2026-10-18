@@ -78,6 +78,12 @@ class AnnouncementRouteTests(unittest.TestCase):
         self.f.make_engine = lambda: create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
         self.f.setUp()
         self.addCleanup(self.f.doCleanups)
+        self.f.owner.is_admin = True
+        self.f.db.commit()
+        recovery = ModuleType("app.services.backup_service")
+        recovery.store = lambda: SimpleNamespace(get=lambda *args: "initial")
+        recovery_patch = patch.dict(sys.modules, {"app.services.backup_service": recovery})
+        recovery_patch.start(); self.addCleanup(recovery_patch.stop)
         self.session_user = {"id": str(self.f.owner.id), "is_admin": True}
         config = ModuleType("app.core.config")
         config.settings = SimpleNamespace(app_name="Test", app_version="test")

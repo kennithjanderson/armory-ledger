@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Settings · {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+<div class="heritage-rule" aria-hidden="true"><span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span></div>
+
+<section class="operations-card" aria-labelledby="notification-settings-heading">
+    <h2 id="notification-settings-heading">Notification settings</h2>
+    <p>Choose whether you receive notices when an instance backup completes successfully. Backup failures and cleanup warnings remain enabled whenever their channel is operational.</p>
+    <form id="notification-preferences" class="operations-form">
+        <label class="operations-inline-check"><input type="checkbox" name="success_in_app"> In-app successful-backup notices</label>
+        <label class="operations-inline-check"><input type="checkbox" name="success_email"> Successful-backup emails</label>
+        {% if is_admin %}
+        <fieldset class="operations-preference-group">
+            <legend>Database restore initiated</legend>
+            <p>This warning is saved after the restore attempt finishes, so the database replacement cannot erase it. It records that a restore was started and does not mean the restore succeeded.</p>
+            <label class="operations-inline-check"><input type="checkbox" name="restore_initiated_in_app"> In-app restore-initiated notices</label>
+            <label class="operations-inline-check"><input type="checkbox" name="restore_initiated_email"> Restore-initiated emails</label>
+        </fieldset>
+        {% endif %}
+        <div class="operations-actions"><button class="button-primary">Save notification settings</button><span role="status" id="preferences-result" aria-live="polite"></span></div>
+    </form>
+    <p><a class="record-back" href="/notifications">View notification history →</a></p>
+</section>
+{% endblock %}

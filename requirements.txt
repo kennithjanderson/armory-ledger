@@ -9,3 +9,4 @@ httpx
 itsdangerous
 jinja2
 tzdata
+cryptography

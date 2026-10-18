@@ -394,3 +394,14 @@ is installed only after final approval. An expected tree does not bypass validat
 Any selected source edits, including release tooling or documentation edits, change
 the tree hash. Revalidate and review the new identity before using it as the expected
 tree; the engine never updates or silently replaces the supplied hash.
+
+## GitHub Latest designation — v0.1.4
+
+Both manual and scheduled publication initially create the GitHub release without
+promoting Latest. After immutable image identity verification, the serialized
+publication workflow promotes the GitHub release using `gh release edit --latest`
+only when no newer stable semantic version has been published. The workflow needs
+`contents: write` for this designation. Container alias guards remain unchanged.
+This fixes scheduled releases remaining unmarked; GitHub publication and verified
+container completion remain distinct milestones. Existing saved scheduled runners
+and workflows at older tags are immutable and are not rewritten by this change.

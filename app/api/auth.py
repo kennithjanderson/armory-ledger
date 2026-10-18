@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
+from sqlalchemy import select
 from fastapi.responses import HTMLResponse
 from starlette.responses import RedirectResponse
 
@@ -50,6 +51,13 @@ async def callback(request: Request):
         )
 
     if "Armory User" not in groups:
+        # A verified denied login also revokes known background-admin eligibility.
+        with SessionLocal() as db:
+            existing = db.scalar(select(User).where(User.oidc_subject == oidc_subject))
+            if existing is not None:
+                existing.is_admin = False
+                db.commit()
+        request.session.clear()
         raise HTTPException(
             status_code=403,
             detail="User is not authorized to access Armory Ledger.",
@@ -61,12 +69,15 @@ async def callback(request: Request):
             oidc_subject=oidc_subject,
             email=email,
             display_name=display_name,
+            is_admin="Armory Admin" in groups,
         )
 
         user_id = str(user.id)
 
     # A new authenticated session must not reuse a previous CSRF token.
     request.session.pop("csrf_token", None)
+    from app.services.backup_service import store
+    request.session["recovery_epoch"] = store().get("epoch", "initial")
     request.session["user"] = {
         "id": user_id,
         "email": email,

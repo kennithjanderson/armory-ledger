@@ -1,5 +1,31 @@
 [
   {
+    "version": "0.1.4",
+    "date": "2026-10-22",
+    "unreleased": true,
+    "added": [
+      "Admin Backup & Recovery with manual and scheduled backups, restore safeguards, health reporting and offline recovery.",
+      "Backups are encrypted with authenticated AES-256-GCM and stored on a configurable persistent local backup directory.",
+      "System email notifications with independent administrator preferences and delivery diagnostics.",
+      "A persistent in-app notification center with unread tracking and severity-based colors."
+    ],
+    "improved": [
+      "Automatic backup scheduling, automatic-only retention and cleanup reporting protect recovery archives.",
+      "Personal successful-backup notification preferences are available from the Settings page, with notification history kept separately.",
+      "System email notifications use Armory Ledger branding with a responsive HTML layout and plain-text fallback.",
+      "Release automation verifies the published container identity before marking the newest stable GitHub release as Latest.",
+      "A daily check notifies administrators when the public GHCR latest image contains a newer Armory Ledger version."
+    ],
+    "fixed": [
+      "Notification controls fit desktop and mobile navigation; the notification popover matches the site palette, and closes when clicking outside it.",
+      "Administrators can inspect database, backup/recovery and email status from the footer; backup and email settings pages use more compact layouts.",
+      "Heritage rule colors now appear in red, ivory and blue order."
+    ],
+    "upgrade_notes": [
+      "Apply the v0.1.4 migration, mount persistent backup storage, configure and preserve ARMORY_BACKUP_ENCRYPTION_KEY outside the server, provision a separate SMTP encryption key if needed, and sign in again to synchronize administrator membership."
+    ]
+  },
+  {
     "version": "0.1.3",
     "date": "2026-10-15",
     "unreleased": false,
@@ -33,19 +59,31 @@
       "Scheduled server announcements.",
       "About / Privacy page with optional instance contact information."
     ],
-    "improved": ["Optional firearm serial numbers and optional USD purchase prices."],
-    "upgrade_notes": ["Includes firearm and announcement database migrations. Release date follows the repository's v0.1.2 tag."]
+    "improved": [
+      "Optional firearm serial numbers and optional USD purchase prices."
+    ],
+    "upgrade_notes": [
+      "Includes firearm and announcement database migrations. Release date follows the repository's v0.1.2 tag."
+    ]
   },
   {
     "version": "0.1.1",
     "date": "2026-09-25",
-    "improved": ["Container publication, startup migration handling and deployment documentation."],
-    "upgrade_notes": ["Release date follows the v0.1.1 tag. Historical notes summarize the tagged source changes; a complete original release narrative is not available here."]
+    "improved": [
+      "Container publication, startup migration handling and deployment documentation."
+    ],
+    "upgrade_notes": [
+      "Release date follows the v0.1.1 tag. Historical notes summarize the tagged source changes; a complete original release narrative is not available here."
+    ]
   },
   {
     "version": "0.1.0",
     "date": "2026-09-24",
-    "added": ["Initial tagged release with firearm, ammunition and accessory records, range-session logging and ownership-aware record keeping."],
-    "upgrade_notes": ["Release date follows the v0.1.0 tag. Historical notes summarize the tagged application; a complete original release narrative is not available here."]
+    "added": [
+      "Initial tagged release with firearm, ammunition and accessory records, range-session logging and ownership-aware record keeping."
+    ],
+    "upgrade_notes": [
+      "Release date follows the v0.1.0 tag. Historical notes summarize the tagged application; a complete original release narrative is not available here."
+    ]
   }
 ]

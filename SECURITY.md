@@ -43,3 +43,14 @@ database/network access and backups, managing identity-provider membership, and
 reviewing logs before sharing them. Never commit deployment secrets or private
 inventory data. Announcement text is rendered as plain text, and administrative
 announcement mutations require a session-bound CSRF token.
+
+## v0.1.4 recovery privilege
+
+The earlier statement about account-only administration is superseded for backup
+operations: Armory Admin can now download and restore whole-instance archives that
+contain private inventory and audit data for every user. This is an explicit
+operator recovery privilege, not a user-inventory browsing API. Grant this role
+only to trusted operators. Protect the private persistent backup volume and keep
+the SMTP encryption key separately. See docs/V0.1.4-OPERATIONS.md for recovery and
+mail replay protections. OIDC admin membership is synchronized at login; local
+revocation is checked again for notices, admin requests and queued mail.

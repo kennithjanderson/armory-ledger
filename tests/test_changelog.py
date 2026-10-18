@@ -20,9 +20,12 @@ ROOT = Path(__file__).resolve().parents[1]
 class ChangelogTests(unittest.TestCase):
     def test_source_order_release_date_and_missing_metadata(self):
         records = load_changelog()
-        self.assertEqual([r['version'] for r in records], ['0.1.3','0.1.2','0.1.1','0.1.0'])
-        self.assertFalse(records[0]['unreleased'])
-        self.assertEqual(records[0]['date'].isoformat(), '2026-10-15')
+        self.assertEqual([r['version'] for r in records], ['0.1.4','0.1.3','0.1.2','0.1.1','0.1.0'])
+        self.assertEqual(sum(r['version']=='0.1.4' for r in records), 1)
+        self.assertTrue(records[0]['unreleased'])
+        self.assertEqual(records[0]['date'].isoformat(), '2026-10-22')
+        self.assertFalse(records[1]['unreleased'])
+        self.assertEqual(records[1]['date'].isoformat(), '2026-10-15')
         with TemporaryDirectory() as folder:
             path=Path(folder)/'notes.json'
             self.assertEqual(load_changelog(path),[])
@@ -55,9 +58,9 @@ class ChangelogTests(unittest.TestCase):
                 return await client.get(path)
         response=asyncio.run(request())
         self.assertEqual(response.status_code,200)
-        self.assertNotIn('Unreleased draft',response.text)
+        self.assertIn('Unreleased draft',response.text)
         self.assertIn('<time datetime="2026-10-15">2026-10-15</time>',response.text)
-        self.assertNotIn('This version is not released.',response.text)
+        self.assertIn('Planned release: <time datetime="2026-10-22">2026-10-22</time>',response.text)
         self.assertIn('href="/changelog"',response.text)
         self.assertIn('Sign in',response.text);self.assertNotIn('Logout',response.text)
         self.assertIn('href="/auth/login">Sign in</a>',response.text)

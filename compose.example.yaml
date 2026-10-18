@@ -5,8 +5,14 @@ services:
     container_name: armory-ledger
     restart: unless-stopped
 
+    volumes:
+      - ./data/backups:/var/lib/armory/backups
+
     env_file:
       - .env
+
+    environment:
+      ARMORY_BACKUP_ENCRYPTION_KEY: ${ARMORY_BACKUP_ENCRYPTION_KEY:-}
 
     depends_on:
       db:

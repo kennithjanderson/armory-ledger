@@ -18,6 +18,21 @@ import validation
 
 
 class PrimitiveTests(unittest.TestCase):
+    def test_verified_publication_marks_only_newest_github_release_latest(self):
+        target='0.1.4'; digest='sha256:'+'a'*64; sha='a'*40
+        for newer in (False, True):
+            with tempfile.TemporaryDirectory() as folder, \
+                 patch.dict(os.environ,{'GITHUB_REPOSITORY':'owner/repo','RELEASE_TAG':'v'+target,'RELEASE_SHA':sha}), \
+                 patch.object(sys,'argv',['policy','promote','--digest',digest]), \
+                 patch.object(image_policy,'Registry') as registry, \
+                 patch.object(image_policy,'published_versions',return_value=['0.1.5' if newer else target]), \
+                 patch.object(image_policy,'run') as commands, \
+                 patch.object(image_policy.Path,'write_text'):
+                registry.return_value.image.side_effect=lambda ref: {'version':target,'commit':sha,'digest':digest} if ref==target else None
+                image_policy.main()
+                latest=[call.args[0] for call in commands.call_args_list if call.args[0][0]=='gh']
+                self.assertEqual(latest,[] if newer else [['gh','release','edit','v'+target,'--repo','owner/repo','--latest']])
+
     def test_version_and_dst_and_past(self):
         self.assertEqual(common.version('v0.1.3'), '0.1.3')
         for value in ['1.2', '01.2.3', '1.2.3;echo', '../1.2.3']:

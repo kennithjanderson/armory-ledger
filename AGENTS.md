@@ -102,10 +102,148 @@
   deleting or rewriting project history. Keep relative links and file paths valid.
 - Documentation-only work must not alter application code, migrations or runtime
   configuration. Report inconsistencies rather than expanding task scope.
-- Do not commit, push, tag, publish, deploy, or change an external application
-  without explicit authorization. Stop at the requested review boundary with a
-  concrete diff/report; do not rerun permission questions for already authorized
-  actions within the same scope.
+- Codex may create local development and documentation commits only under the
+  verification and staging rules in the Git Development, Checkpoint & Release
+  Policy below. Explicit authorization is still required for the external or
+  history-changing operations listed there.
+
+## Git Development, Checkpoint & Release Policy
+
+### Development baseline
+
+Every new development version must begin from a verified, committed Git baseline.
+Before changing source code for a new version, inspect and report the current
+branch, full `HEAD` SHA, working-tree status, application version, latest committed
+development checkpoint, relationship to the previous release baseline, and
+upstream tracking status including ahead/behind counts.
+
+- A local branch ahead of its remote is expected during development. Report the
+  number of unpushed commits; being ahead alone is not a reason to stop.
+- Stop and investigate if the branch is unexpected, the remote is unexpectedly
+  ahead, histories have diverged, the baseline is incorrect, or the source version
+  does not match the intended work. Do not silently continue from stale history.
+- Never automatically pull, rebase, merge, reset, or force-push to resolve a
+  discrepancy. Explain the evidence and wait for direction where a corrective
+  history operation or remote change is needed.
+- Do not switch branches as part of baseline repair unless explicitly requested.
+
+### Development checkpoint numbering
+
+Use sequential development checkpoint numbers in local commit messages, in the
+form `vMAJOR.MINOR.PATCH-dev.N`. For example, v0.1.5 development may begin from a
+verified v0.1.5 baseline, followed by `v0.1.5-dev.1: Duplicate ammunition
+detection` and `v0.1.5-dev.2: Enhanced ammunition lot merging`.
+
+Assign numbers in the order features are completed and verified, not by a stale
+roadmap order. Do not skip or reuse numbers. These are commit-message labels, not
+application versions or Git tags; the app version can remain `0.1.5` throughout
+development. Do not create development tags. Documentation-only commits do not
+consume a feature checkpoint number. Work in progress may be committed with a
+clear WIP message when needed, but it does not consume a verified checkpoint number
+or count as known-good.
+
+### Local commits and known-good checkpoints
+
+Codex is authorized to create local development and documentation commits without
+asking for separate commit approval once the relevant work is complete and its
+applicable verification gates pass. This includes verified feature checkpoints
+and documentation-only changes. It does not authorize remote pushes, release
+candidate commits outside their approval flow, or any other operation requiring
+approval below.
+
+Before a verified feature checkpoint, run applicable automated tests, check for
+regressions, complete required functional verification, review the final diff, and
+confirm that only intended files are staged. For schema work, review migration
+compatibility and perform only separately authorized database checks. For
+documentation-only changes, verify content and links as appropriate and run
+`git diff --check`; do not claim application tests were needed or run when they
+were not.
+
+When manual browser or user acceptance testing is required, wait for that
+confirmation before describing the feature as known-good or assigning its
+verified checkpoint. If verification fails, do not advance the checkpoint number.
+Incomplete work may be preserved as a clearly identified WIP commit when useful.
+
+Stage exact reviewed paths. Never use blanket staging such as `git add -A` or
+`git add .`. Preserve unrelated staged, modified, untracked, ignored, and local
+deployment files; never commit secrets, local configuration, databases, backup
+archives, or persistent application data. Do not automatically commit unrelated
+changes.
+
+### Git safety and remote synchronization
+
+Codex may inspect remotes and report ahead/behind status. At the end of each
+completed milestone, report the branch, `HEAD`, working-tree state, commit created
+or reason none was created, and the number of unpushed commits.
+
+Explicit user authorization is required before pushing commits to GitHub, merging
+development branches into `main`, creating or changing release tags, scheduling or
+publishing a release, deploying, destructive cleanup, or rewriting Git history.
+Restricted destructive/history operations include `git clean`, `git reset --hard`,
+`git push --force`, `git branch -D`, and `git tag -d`, as well as equivalent file
+deletion or history-rewrite operations. Never assume ignored or untracked paths are
+disposable. Protect `data/`, `data/backups/`, `.env`, and all configured database,
+backup, upload, key, and application-storage paths. Never delete or recreate Docker
+volumes for routine Git maintenance.
+
+Before cleanup, identify affected paths and obtain explicit approval. Never
+automatically pull, rebase, merge, reset, or force-push to resolve remote
+divergence. A local-ahead branch is acceptable; a remote-ahead or diverged branch
+requires investigation and must not be silently reconciled.
+
+### Release requirements and history
+
+Every release must originate from committed source. Before scheduling, verify the
+application version, intended committed source, baseline ancestry, exact candidate
+tree, release validation results, candidate SHA, and notes. Require the release
+workflow's explicit approval before candidate creation, scheduling, or publication
+as specified by that workflow. Do not schedule directly from uncommitted
+application changes or use a release candidate as a substitute for committing
+development work.
+
+Approved candidates, notes, saved release state, timers, and frozen runners are
+immutable. Do not modify, replace, cancel, reschedule, or execute an approved
+scheduled release unless explicitly authorized. Scheduled releases remain pinned
+to their approved source independently of subsequent development.
+
+Before beginning a new development version, verify that the committed history
+contains the complete source baseline of the preceding release. If a release has a
+separate candidate commit, compare its source tree with the intended committed
+tree and review any difference. Publishing does not imply that `main` was updated.
+Reconcile any missing release history only through an explicitly authorized,
+reviewed history operation; never reset, rebase, or force-push published history.
+
+### Database and rollback safety
+
+Git commits recover source code; they are not database backups and do not reverse
+migrations or persistent-data changes. Review migration compatibility, data
+preservation, and rollback limits for schema or data work. Require explicit
+authorization for destructive recovery. Never automatically restore or overwrite
+a production database during Git rollback.
+
+### Required development status report
+
+At the end of each development task, report:
+
+```text
+Armory Ledger Development Status
+
+Application Version:
+Development Checkpoint:
+Git Branch:
+HEAD Commit:
+Working Tree:
+Commits Created:
+Automated Tests:
+Functional Verification:
+Database Migrations:
+Remote Status:
+Known-Good Checkpoint:
+Outstanding Issues:
+```
+
+If no commit was created, explain why. Report failed tests and pending manual
+acceptance explicitly. Identify unpushed commits; do not imply they were pushed.
 
 ## Release tooling
 

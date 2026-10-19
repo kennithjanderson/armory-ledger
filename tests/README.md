@@ -168,5 +168,22 @@ PostgreSQL/application containers; it checks explicit database
 name/host/flag guards before running destructive clean-install recovery tests.
 Never point it at normal development or production databases.
 
+## Duplicate ammunition lot suggestions
+
+`test_ammunition_suggestions.py` checks exact owner-scoped matching, caliber,
+grain and projectile distinctions, manufacturer identity, depleted candidates,
+and exclusions for numbered or merged lots using synthetic SQLite. The route
+cases in `test_merge_routes.py` verify that a suggestion does not create a lot or
+ledger transaction, canonical/alias manufacturer lookup works, explicit
+Create New Lot and known lot-number submissions retain acquisition behavior, and
+the existing activity route remains owner-scoped. These tests do not exercise
+PostgreSQL query plans or a live browser.
+
+`ammunition-suggestions.test.cjs` uses jsdom with the actual form and scripts. It
+covers cancel-with-values-retained, explicit separate-lot submission, the
+session-storage handoff to Acquired activity without putting quantity in the
+URL, one-time prefill consumption, and escaped suggestion labels. Manual browser
+acceptance remains necessary for visual and native interaction review.
+
 Notification email formatting is tested with constructed synthetic events; the
 test verifies the branded HTML/plain-text alternatives and escaping without SMTP.

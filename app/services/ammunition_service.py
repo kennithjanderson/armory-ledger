@@ -6,7 +6,7 @@ from typing import Any
 
 from app.models.audit_event import AuditEvent
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.ammo_brand import AmmoBrand
@@ -21,10 +21,56 @@ from app.services.manufacturer_service import (
     create_manufacturer,
     find_exact_manufacturer,
 )
+from app.services.ammo_inventory_service import get_physical_inventory
 
 
 def normalize_text(value: str) -> str:
     return " ".join(value.strip().split())
+
+
+def find_duplicate_ammunition_lots(
+    db: Session,
+    *,
+    owner_id: UUID,
+    manufacturer_id: UUID,
+    caliber_id: UUID,
+    grain_weight: Decimal | None,
+    projectile_type: str | None,
+) -> list[tuple[AmmoLot, int]]:
+    """Find exact, owner-scoped lots that can be replenished without a lot number.
+
+    Product name and SKU are intentionally ignored: suggestions follow the four
+    ammunition characteristics used by the acquisition workflow. Whitespace-only
+    manufacturer lot numbers count as absent, and depleted lots remain eligible.
+    """
+    conditions = [
+        AmmoLot.owner_id == owner_id,
+        AmmoLot.merged_into_lot_id.is_(None),
+        AmmoProduct.caliber_id == caliber_id,
+        AmmoBrand.manufacturer_id == manufacturer_id,
+        or_(AmmoLot.lot_number.is_(None), func.trim(AmmoLot.lot_number) == ""),
+    ]
+    if grain_weight is None:
+        conditions.append(AmmoProduct.grain_weight.is_(None))
+    else:
+        conditions.append(AmmoProduct.grain_weight == grain_weight)
+
+    candidates = db.scalars(
+        select(AmmoLot)
+        .join(AmmoProduct, AmmoProduct.id == AmmoLot.ammo_product_id)
+        .join(AmmoBrand, AmmoBrand.id == AmmoProduct.brand_id)
+        .where(*conditions)
+        .order_by(AmmoLot.created_at, AmmoLot.id)
+    ).all()
+    expected_projectile = normalize_text(projectile_type or "").casefold()
+    matches: list[tuple[AmmoLot, int]] = []
+    for lot in candidates:
+        actual_projectile = normalize_text(
+            lot.ammo_product.projectile_type or ""
+        ).casefold()
+        if actual_projectile == expected_projectile:
+            matches.append((lot, get_physical_inventory(db, lot_id=lot.id)))
+    return matches
 
 
 def acquire_ammunition(

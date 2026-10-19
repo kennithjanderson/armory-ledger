@@ -8,8 +8,10 @@ from datetime import date
 
 from app.services.ammunition_service import (
     acquire_ammunition,
+    find_duplicate_ammunition_lots,
     update_ammunition,
 )
+from app.services.manufacturer_service import find_exact_manufacturer
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user, get_db
@@ -76,6 +78,7 @@ class AmmunitionAcquisitionRequest(BaseModel):
         max_length=255,
     )
     notes: str | None = None
+    create_separate_lot: bool = False
 
 class AmmunitionUpdateRequest(BaseModel):
     caliber_id: UUID
@@ -569,6 +572,40 @@ async def ammunition_acquire(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # A known manufacturer lot number identifies a separate physical lot. When
+    # absent, offer exact matches before creating anything; this lookup is read-only.
+    cleaned_lot_number = (payload.lot_number or "").strip()
+    if not cleaned_lot_number and not payload.create_separate_lot:
+        manufacturer = find_exact_manufacturer(db, payload.brand_name)
+        if manufacturer is not None:
+            matches = find_duplicate_ammunition_lots(
+                db,
+                owner_id=current_user.id,
+                manufacturer_id=manufacturer.id,
+                caliber_id=payload.caliber_id,
+                grain_weight=payload.grain_weight,
+                projectile_type=payload.projectile_type,
+            )
+            if matches:
+                return {
+                    "success": False,
+                    "duplicate_suggestions": [
+                        {
+                            "id": str(lot.id),
+                            "brand": lot.ammo_product.brand.name,
+                            "caliber": lot.ammo_product.caliber.name,
+                            "grain_weight": (
+                                str(lot.ammo_product.grain_weight)
+                                if lot.ammo_product.grain_weight is not None
+                                else None
+                            ),
+                            "projectile_type": lot.ammo_product.projectile_type,
+                            "quantity_on_hand": quantity_on_hand,
+                            "created_at": lot.created_at.isoformat(),
+                        }
+                        for lot, quantity_on_hand in matches
+                    ],
+                }
     try:
         lot = acquire_ammunition(
             db,

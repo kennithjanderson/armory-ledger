@@ -16,6 +16,11 @@ from httpx import ASGITransport, AsyncClient
 from jinja2 import ChoiceLoader, DictLoader, Environment, FileSystemLoader
 
 import test_ammo_merging as fixtures
+from app.models.ammo_inventory_transaction import AmmoInventoryTransaction
+from app.models.ammo_lot import AmmoLot
+from app.models.organization import ManufacturerProfile
+from app.models.organization_alias import OrganizationAlias
+from sqlalchemy import select
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -25,6 +30,15 @@ class MergeRouteTests(unittest.TestCase):
         self.fixture = fixtures.AmmoMergeTests()
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
+        self.fixture.db.add(ManufacturerProfile(
+            organization_id=self.fixture.source.ammo_product.brand.manufacturer_id,
+            is_selectable=True,
+        ))
+        self.fixture.db.add(OrganizationAlias(
+            organization_id=self.fixture.source.ammo_product.brand.manufacturer_id,
+            alias="Test Mfr",
+        ))
+        self.fixture.db.commit()
         self.authenticated = True
         self.current_user = self.fixture.f.owner
         async def get_user():
@@ -130,3 +144,53 @@ class MergeRouteTests(unittest.TestCase):
         template = (ROOT / "app/templates/ammunition/detail.html").read_text()
         title = template.split("{% block title %}")[1].split("{% endblock %}")[0]
         self.assertNotIn("Merge History", title)
+
+    def test_acquisition_suggestions_are_read_only_owner_scoped_and_explicit(self):
+        payload = {
+            "brand_name": "Test Mfr",
+            "caliber_id": str(self.fixture.f.nine.id),
+            "grain_weight": None,
+            "projectile_type": None,
+            "quantity": 25,
+            "acquired_date": "2026-10-19",
+        }
+        before_lots = len(self.fixture.db.scalars(select(AmmoLot)).all())
+        before_transactions = len(self.fixture.db.scalars(select(AmmoInventoryTransaction)).all())
+        result = self.request("POST", "/ammunition/", json=payload).json()
+        self.assertFalse(result["success"])
+        self.assertEqual(
+            {item["id"] for item in result["duplicate_suggestions"]},
+            {str(self.fixture.source.id), str(self.fixture.destination.id)},
+        )
+        self.assertTrue(all(item["quantity_on_hand"] > 0 for item in result["duplicate_suggestions"]))
+        self.assertNotIn(str(self.fixture.f.foreign_lot.id), str(result))
+        self.assertEqual(len(self.fixture.db.scalars(select(AmmoLot)).all()), before_lots)
+        self.assertEqual(len(self.fixture.db.scalars(select(AmmoInventoryTransaction)).all()), before_transactions)
+
+        # Explicit New Lot and a supplied manufacturer lot number bypass suggestions.
+        created = self.request("POST", "/ammunition/", json={
+            **payload, "create_separate_lot": True,
+        })
+        self.assertTrue(created.json()["success"])
+        with_number = self.request("POST", "/ammunition/", json={
+            **payload, "lot_number": "maker-lot-9",
+        })
+        self.assertTrue(with_number.json()["success"])
+
+    def test_activity_prefill_handoff_endpoint_remains_owner_scoped(self):
+        initial = self.fixture.f.balance(self.fixture.source)
+        self.assertEqual(
+            self.request("GET", f"/ammunition/{self.fixture.source.id}/activity/new").status_code,
+            200,
+        )
+        self.assertEqual(
+            self.request("GET", f"/ammunition/{self.fixture.f.foreign_lot.id}/activity/new").status_code,
+            404,
+        )
+        posted = self.request("POST", f"/ammunition/{self.fixture.source.id}/activity", json={
+            "transaction_type": "acquired", "quantity": 25,
+            "occurred_date": "2026-10-19", "notes": None,
+        })
+        self.assertEqual(posted.status_code, 200)
+        self.assertTrue(posted.json()["success"])
+        self.assertEqual(self.fixture.f.balance(self.fixture.source), initial + 25)

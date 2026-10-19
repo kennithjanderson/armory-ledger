@@ -1,5 +1,39 @@
 # Armory Ledger Implementation Status
 
+## v0.1.5-dev.2 — duplicate ammunition lot suggestions (2026-10-19)
+
+Implemented in the development working tree. When an acquisition omits a
+manufacturer lot number, the server resolves a shared manufacturer name or alias
+and looks for the signed-in owner's unmerged lots matching manufacturer,
+caliber, grain weight and projectile type exactly. Matching lots without a
+manufacturer lot number are suggested, including depleted lots. Product name and
+SKU do not affect matching. The query is read-only and owner-scoped.
+
+The user can cancel with the form values intact, explicitly create a separate
+lot, or open the selected lot's existing activity form. That handoff pre-fills an
+Acquired activity and requested quantity in short-lived session storage; the
+activity page consumes the value once, and the lot ID is still checked by the
+owner-scoped route. The user reviews and submits the normal activity form before
+inventory or ledger history changes. No schema change or migration is required.
+
+Focused synthetic SQLite and jsdom tests were added for exact criteria, owner
+isolation, aliases, lot-number and merged-lot exclusions, depleted candidates,
+read-only suggestions, create-new behavior, safe text rendering, cancellation,
+prefill handoff and the existing activity endpoint. The four jsdom tests passed.
+Four synthetic SQLite service tests and five ASGI route tests also passed in
+temporary no-network containers with the repository mounted read-only. Python
+AST parsing, changelog JSON parsing, JavaScript syntax checks, template rendering
+and `git diff --check` passed. Manual browser acceptance remains pending; this is
+not yet a known-good `v0.1.5-dev.2` checkpoint.
+
+Development rebuild completed on 2026-10-19 with the existing `rebuild.sh`.
+PostgreSQL 17 reported healthy, the application and tunnel containers were
+running, and the local `/health` response reported `healthy`, database connected,
+version `0.1.5`. The entrypoint reported that database migrations completed; this
+feature adds no migration. Application startup completed without errors; the log
+contained a non-fatal Authlib/httpx deprecation warning. Owner browser acceptance
+is still pending.
+
 ## v0.1.5 development — scheduled release status
 
 Added a read-only `./schedule-release.sh --status` report to the release engine.

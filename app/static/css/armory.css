@@ -1026,6 +1026,36 @@ body {
     font-weight: 700;
 }
 
+.duplicate-ammunition-list {
+    display: grid;
+    gap: 0.75rem;
+    max-height: min(45vh, 24rem);
+    overflow-y: auto;
+}
+
+.duplicate-ammunition-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border);
+    background: rgba(241, 237, 227, 0.58);
+}
+
+.duplicate-ammunition-option p {
+    margin: 0.25rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+}
+
+@media (max-width: 600px) {
+    .duplicate-ammunition-option {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+
 .modal-actions {
     display: flex;
     justify-content: flex-end;

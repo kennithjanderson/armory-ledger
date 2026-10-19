@@ -14,6 +14,25 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     const dateInput = document.getElementById("occurred_date");
 
+    try {
+        const rawPrefill = sessionStorage.getItem("armoryAmmoActivityPrefill");
+        if (rawPrefill) {
+            sessionStorage.removeItem("armoryAmmoActivityPrefill");
+            const prefill = JSON.parse(rawPrefill);
+            if (
+                prefill.lotId === lotId &&
+                prefill.expiresAt > Date.now() &&
+                Number.isInteger(prefill.quantity) && prefill.quantity > 0 &&
+                prefill.transactionType === "acquired"
+            ) {
+                document.getElementById("transaction_type").value = "acquired";
+                document.getElementById("quantity").value = String(prefill.quantity);
+            }
+        }
+    } catch {
+        // Session storage may be disabled; the standard activity form remains usable.
+    }
+
     if (!dateInput.value) {
         const now = new Date();
 

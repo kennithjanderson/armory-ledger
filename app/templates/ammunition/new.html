@@ -189,6 +189,28 @@
     </form>
 </section>
 
+<div class="modal-backdrop" id="duplicate-ammunition-modal" hidden>
+    <div class="modal-panel" role="dialog" aria-modal="true"
+         aria-labelledby="duplicate-ammunition-title"
+         aria-describedby="duplicate-ammunition-description">
+        <div class="modal-header">
+            <div>
+                <div class="page-marker">EXISTING INVENTORY</div>
+                <h2 id="duplicate-ammunition-title">Similar ammunition lots found</h2>
+            </div>
+            <button type="button" class="modal-close" id="duplicate-modal-close" aria-label="Close">×</button>
+        </div>
+        <p class="modal-description" id="duplicate-ammunition-description">
+            Add this acquisition to one of your existing lots, or create a separate lot. No inventory changes until you submit an activity.
+        </p>
+        <div id="duplicate-ammunition-list" class="duplicate-ammunition-list"></div>
+        <div class="modal-actions">
+            <button type="button" class="button-secondary" id="duplicate-modal-cancel">Cancel</button>
+            <button type="button" class="button-primary" id="duplicate-create-new">Create New Lot</button>
+        </div>
+    </div>
+</div>
+
 <div
     class="modal-backdrop"
     id="caliber-modal"
@@ -267,7 +289,7 @@
 </div>
 
 <script
-    src="{{ url_for('static', path='/js/ammunition-form.js') }}?v={{ app_version }}"
+    src="{{ url_for('static', path='/js/ammunition-form.js') }}?v={{ app_version }}-duplicates1"
     defer
 ></script>
 <script

@@ -219,4 +219,11 @@ notification deduplication/resolution and admin-only visibility in development.
 
 ## v0.1.4 implementation — 2026-10-16
 
-v0.1.4 implements Backup & Recovery, health, system email and live notifications. v0.1.5 remains duplicate lot detection, enhanced merging, sorting and manufacturer/caliber aliases; v0.1.6 transfers and v0.1.7 sharing remain unimplemented. Firearm maintenance notifications have no assigned release. Live identity-provider revocation integration and multi-host operational coordination are not implemented.
+v0.1.4 implements Backup & Recovery, health, system email and live notifications.
+v0.1.5 development includes the scheduled-release status command (`dev.1`) and
+duplicate ammunition lot suggestions (`dev.2`, implementation present; automated
+and browser verification pending). Enhanced merging, manufacturer grouping,
+ammunition lot notifications and manufacturer/caliber aliases remain planned.
+v0.1.6 transfers and v0.1.7 sharing remain unimplemented. Firearm maintenance
+notifications have no assigned release. Live identity-provider revocation
+integration and multi-host operational coordination are not implemented.

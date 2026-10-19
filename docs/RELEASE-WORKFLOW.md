@@ -202,6 +202,23 @@ Service failures retry after five minutes. No input, git add, new commit or note
 regeneration occurs in unattended execution. Revalidation failure stops before any
 new publication operation, retaining the candidate and approved notes.
 
+Check saved schedule timing and local systemd timer health without starting the
+release workflow:
+
+```bash
+./schedule-release.sh --status
+```
+
+The report includes the release version, scheduled time in the host's local zone
+and UTC, saved candidate SHA, release stage, and timer state. `On-Target` means the
+saved timer unit matches the approved UTC time and systemd reports it enabled and
+active; `Delayed` means the due time has passed or the local timer is missing,
+disabled, inactive, mismatched, or unavailable. Completed and cancelled releases
+are labeled separately. This is a local read-only check: it does not contact
+GitHub, inspect image publication, run Docker, modify release state, or change
+systemd units. GitHub release and container publication status still require the
+release state inspection/recovery workflow after execution.
+
 Verify a real approved job after scheduling:
 
 ```bash

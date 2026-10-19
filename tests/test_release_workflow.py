@@ -107,6 +107,52 @@ class PrimitiveTests(unittest.TestCase):
                 with self.assertRaises(common.ReleaseError):
                     with common.locked(root): pass
 
+    def test_scheduled_release_status_reports_timer_health_read_only(self):
+        with tempfile.TemporaryDirectory() as root:
+            state_dir=Path(root)/'state'; folder=state_dir/'v0.1.4-test'; folder.mkdir(parents=True)
+            when='2099-10-22T06:00:00+00:00'
+            payload={'id':folder.name,'version':'0.1.4','sha':'a'*40,'notes_sha256':common.sha256(b'notes'),
+                     'engine_sha256':{name:common.sha256(b'runner') for name in engine.ENGINE_FILES}}
+            # frozen_payload validates runner snapshots, so create the minimum valid record.
+            (folder/'engine').mkdir()
+            for name in engine.ENGINE_FILES:
+                (folder/'engine'/name).write_bytes(b'runner')
+            payload['engine_sha256']={name:common.sha256((folder/'engine'/name).read_bytes()) for name in engine.ENGINE_FILES}
+            (folder/'notes.md').write_text('notes')
+            engine.save_json(folder/'approval.json',{'payload':payload,'sha256':common.sha256(common.canonical(payload))})
+            timer='armory-release-'+folder.name
+            engine.save_json(folder/'status.json',{'stage':'scheduled','scheduled':True,'approved':True,
+                'cancelled':False,'when':when,'timer':timer})
+            user_home=Path(root)/'home'; unit_dir=user_home/'.config/systemd/user'; unit_dir.mkdir(parents=True)
+            _, timer_text=engine.timer_units(folder,when)
+            (unit_dir/f'{timer}.timer').write_text(timer_text)
+            healthy='ActiveState=active\nUnitFileState=enabled\nNextElapseUSecRealtime=Thu 2099-10-22 01:00:00 CDT\n'
+            with patch.object(engine,'run',return_value=healthy) as command:
+                rows=engine.scheduled_release_rows(state_dir,now=datetime(2026,10,19,tzinfo=timezone.utc),home=user_home)
+            self.assertEqual(len(rows),1)
+            self.assertEqual(rows[0]['version'],'0.1.4')
+            self.assertEqual(rows[0]['timing'],'On-Target')
+            self.assertEqual(rows[0]['timer'],'active and enabled')
+            self.assertIn('2099-10-22',rows[0]['when_local'])
+            command.assert_called_once()
+            self.assertIn('show',command.call_args.args[0])
+
+            overdue=engine.scheduled_release_rows(state_dir,now=datetime(2099,10,23,tzinfo=timezone.utc),home=user_home)
+            self.assertEqual(overdue[0]['timing'],'Delayed')
+            self.assertEqual(overdue[0]['status'],'Scheduled; execution overdue')
+
+            with patch.object(engine,'run',side_effect=common.ReleaseError('systemd unavailable')):
+                degraded=engine.scheduled_release_rows(state_dir,now=datetime(2026,10,19,tzinfo=timezone.utc),home=user_home)
+            self.assertEqual(degraded[0]['timing'],'Delayed')
+            self.assertEqual(degraded[0]['timer'],'unavailable or missing')
+
+    def test_schedule_status_cli_does_not_enter_preparation(self):
+        with patch.object(sys,'argv',['engine.py','schedule','--status','--state-dir','/tmp/no-release-state']), \
+             patch.object(engine,'print_scheduled_release_status') as report, \
+             patch.object(engine,'interactive',side_effect=AssertionError('must not prepare')):
+            engine.main()
+        report.assert_called_once_with(Path('/tmp/no-release-state'))
+
 
 class CandidateTests(unittest.TestCase):
     def setUp(self):

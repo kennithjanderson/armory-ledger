@@ -1,5 +1,21 @@
 # Armory Ledger Implementation Status
 
+## v0.1.5 development — scheduled release status
+
+Added a read-only `./schedule-release.sh --status` report to the release engine.
+It displays each saved scheduled release's version, local and UTC schedule,
+candidate SHA, current stage, and local systemd timer health. It labels pending
+jobs `On-Target` only when their timer unit matches the approved time and systemd
+reports the timer active and enabled; overdue or unhealthy timers are `Delayed`.
+The command does not contact GitHub, use Docker, change release state, or modify
+systemd units. GitHub publication and container verification remain separate
+release milestones.
+
+Verification: all 38 release workflow unit tests passed; `git diff --check`
+passed. Running `./schedule-release.sh --status` reported v0.1.4 as Scheduled /
+On-Target with the expected October 22, 2026 01:00 CDT timer trigger. The command
+did not modify the scheduled v0.1.4 candidate, state or installed timer.
+
 ## Current release and development state — 2026-10-17
 
 The published v0.1.3 commit is `614d4694bc4a2dec02630c5d50d02fd4d77ea877`,

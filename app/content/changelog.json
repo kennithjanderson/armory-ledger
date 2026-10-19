@@ -3,7 +3,9 @@
     "version": "0.1.5",
     "unreleased": true,
     "added": [],
-    "improved": [],
+    "improved": [
+      "The scheduled release script reports release timing, saved status and local timer health without executing or changing a release."
+    ],
     "fixed": [],
     "upgrade_notes": []
   },

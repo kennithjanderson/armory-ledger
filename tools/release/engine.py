@@ -193,6 +193,102 @@ def status(folder):
     return json.loads((Path(folder) / 'status.json').read_text())
 
 
+def scheduled_release_rows(state_dir, now=None, home=None):
+    """Read saved schedule and user-timer health without changing release state."""
+    now = now or datetime.now(timezone.utc)
+    home = Path(home or Path.home())
+    rows = []
+    for approval in sorted(Path(state_dir).expanduser().glob('*/approval.json')):
+        folder = approval.parent
+        payload = frozen_payload(folder)
+        state = status(folder)
+        if not state.get('scheduled') and not state.get('when'):
+            continue
+
+        when = datetime.fromisoformat(state['when']) if state.get('when') else None
+        timer = state.get('timer')
+        stage = state.get('stage', 'unknown')
+        timer_state = 'not configured'
+        timer_next = None
+        timer_matches = False
+        if timer:
+            unit_path = home / '.config/systemd/user' / f'{timer}.timer'
+            expected_calendar = (when.astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+                                 if when else None)
+            try:
+                unit_text = unit_path.read_text()
+                calendar_matches = any(
+                    line.strip() == f'OnCalendar={expected_calendar}'
+                    for line in unit_text.splitlines()
+                ) if expected_calendar else False
+                properties = run(['systemctl', '--user', 'show', '--no-pager',
+                                  '--property=ActiveState', '--property=UnitFileState',
+                                  '--property=NextElapseUSecRealtime', f'{timer}.timer'])
+                values = dict(line.split('=', 1) for line in properties.splitlines() if '=' in line)
+                active = values.get('ActiveState') == 'active'
+                enabled = values.get('UnitFileState') == 'enabled'
+                timer_next = values.get('NextElapseUSecRealtime') or None
+                expected_next = (when.astimezone().strftime('%Y-%m-%d %H:%M:%S %Z')
+                                 if when and when > now else None)
+                next_matches = (expected_next in timer_next if expected_next and timer_next else
+                                bool(when and when <= now))
+                timer_matches = calendar_matches and active and enabled and next_matches
+                timer_state = ('active and enabled' if timer_matches else
+                               f"needs attention (active={values.get('ActiveState', 'unknown')}, "
+                               f"enabled={values.get('UnitFileState', 'unknown')}, "
+                               f"schedule_matches={'yes' if calendar_matches else 'no'}, "
+                               f"next_trigger_matches={'yes' if next_matches else 'no'})")
+            except (OSError, ReleaseError):
+                timer_state = 'unavailable or missing'
+
+        if state.get('cancelled') or stage == 'cancelled':
+            release_status, timing = 'Cancelled', 'N/A'
+        elif stage == 'complete':
+            release_status, timing = 'Complete', 'N/A'
+        elif stage == 'failed':
+            release_status, timing = 'Failed; review required', 'Delayed'
+        elif state.get('github_published') or stage.startswith('container_'):
+            release_status = 'Published; container verification pending'
+            timing = 'Delayed' if when and now >= when else 'On-Target'
+        elif stage in {'validating', 'publication_started', 'candidate_pushed',
+                       'main_pushed', 'tag_pushed', 'github_published'}:
+            release_status = 'In progress'
+            timing = 'On-Target' if timer_matches or (when and now <= when) else 'Delayed'
+        elif when and now >= when:
+            release_status, timing = 'Scheduled; execution overdue', 'Delayed'
+        elif timer_matches:
+            release_status, timing = 'Scheduled', 'On-Target'
+        else:
+            release_status, timing = 'Schedule needs attention', 'Delayed'
+
+        local_when = when.astimezone().strftime('%Y-%m-%d %H:%M %Z') if when else 'Not set'
+        utc_when = when.astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M UTC') if when else 'Not set'
+        rows.append({
+            'version': payload['version'], 'sha': payload['sha'], 'when_local': local_when,
+            'when_utc': utc_when, 'status': release_status, 'timing': timing,
+            'timer': timer_state, 'timer_next': timer_next,
+        })
+    return rows
+
+
+def print_scheduled_release_status(state_dir, now=None, home=None):
+    rows = scheduled_release_rows(state_dir, now=now, home=home)
+    print('Armory Ledger Scheduled Release Status')
+    if not rows:
+        print('No saved scheduled releases found.')
+        return
+    for row in rows:
+        print(f"\nRelease version: v{row['version']}")
+        print(f"Scheduled date/time: {row['when_local']} ({row['when_utc']})")
+        print(f"Status: {row['status']}")
+        print(f"Timing: {row['timing']}")
+        print(f"Timer: {row['timer']}")
+        if row['timer_next']:
+            print(f"Timer next trigger: {row['timer_next']}")
+        print(f"Candidate: {row['sha']}")
+    print('\nTiming reports local schedule/timer health only; it does not contact GitHub or verify image publication.')
+
+
 def update(folder, stage, **extra):
     data = status(folder); data.update(stage=stage, **extra); save_json(Path(folder) / 'status.json', data)
     event(folder, stage, **extra)
@@ -541,15 +637,22 @@ def main():
     parser.add_argument('--expected-tree', type=expected_tree_sha, help='Require this exact selected Git tree before validation/candidate creation')
     parser.add_argument('--state', type=Path)
     parser.add_argument('--state-dir', type=Path, default=Path.home()/'.local/state/armory-ledger/releases')
+    parser.add_argument('--status', action='store_true', help='Show scheduled release timing and local timer health; read-only')
     parser.add_argument('--local'); parser.add_argument('--timezone', default=default_zone())
     parser.add_argument('--occurrence', choices=['earlier','later'])
     args = parser.parse_args()
+    if args.status and (args.command != 'schedule' or args.dry_run or args.validate_only
+                        or args.version or args.include_all_changes or args.expected_tree
+                        or args.state or args.local or args.occurrence):
+        parser.error('--status is a read-only schedule query; do not combine it with preparation or recovery options')
     if (args.include_all_changes or args.expected_tree) and (args.command not in ('manual', 'schedule') or args.dry_run):
         parser.error('--include-all-changes / --expected-tree require validation or release preparation, not dry-run or recovery')
     if args.validate_only and args.command != 'manual':
         parser.error('--validate-only is supported only by the manual command / release.sh')
     try:
-        if args.command in ('manual','schedule'):
+        if args.status:
+            print_scheduled_release_status(args.state_dir)
+        elif args.command in ('manual','schedule'):
             interactive(args)
         elif args.command == 'list':
             for path in sorted(args.state_dir.glob('*/approval.json')):

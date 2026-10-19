@@ -4,11 +4,13 @@ Does not import Settings, the production session factory, OIDC, or app.main.
 """
 import asyncio
 import importlib.util
+from datetime import datetime, timezone
 from pathlib import Path
 import sys
 from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import patch
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.templating import Jinja2Templates
@@ -16,9 +18,11 @@ from httpx import ASGITransport, AsyncClient
 from jinja2 import ChoiceLoader, DictLoader, Environment, FileSystemLoader
 
 import test_ammo_merging as fixtures
-from app.models.ammo_inventory_transaction import AmmoInventoryTransaction
+from app.models.ammo_inventory_transaction import AmmoInventoryTransaction, AmmoTransactionType
 from app.models.ammo_lot import AmmoLot
-from app.models.organization import ManufacturerProfile
+from app.models.ammo_brand import AmmoBrand
+from app.models.ammo_product import AmmoProduct
+from app.models.organization import ManufacturerProfile, Organization
 from app.models.organization_alias import OrganizationAlias
 from sqlalchemy import select
 
@@ -194,3 +198,74 @@ class MergeRouteTests(unittest.TestCase):
         self.assertEqual(posted.status_code, 200)
         self.assertTrue(posted.json()["success"])
         self.assertEqual(self.fixture.f.balance(self.fixture.source), initial + 25)
+
+    def test_caliber_inventory_groups_active_and_depleted_lots_without_mutation(self):
+        db = self.fixture.db
+        owner_id = self.fixture.f.owner.id
+        nine_id = self.fixture.f.nine.id
+        depleted = AmmoLot(
+            id=uuid4(), owner_id=owner_id,
+            ammo_product_id=self.fixture.source.ammo_product_id,
+        )
+        alpha = Organization(id=uuid4(), name="Alpha Ordnance")
+        alpha_brand = AmmoBrand(
+            id=uuid4(), manufacturer=alpha, name="Alpha Target Loads",
+        )
+        alpha_product = AmmoProduct(
+            id=uuid4(), brand=alpha_brand, caliber_id=nine_id,
+            grain_weight=124, projectile_type="JHP",
+        )
+        alpha_lot = AmmoLot(
+            id=uuid4(), owner_id=owner_id, ammo_product=alpha_product,
+        )
+        db.add_all([depleted, alpha, alpha_brand, alpha_product, alpha_lot])
+        db.flush()
+        db.add_all([
+            AmmoInventoryTransaction(
+                ammo_lot_id=depleted.id, transaction_type=AmmoTransactionType.ACQUIRED,
+                quantity=10, occurred_at=datetime.now(timezone.utc),
+            ),
+            AmmoInventoryTransaction(
+                ammo_lot_id=depleted.id, transaction_type=AmmoTransactionType.EXPENDED,
+                quantity=10, occurred_at=datetime.now(timezone.utc),
+            ),
+            AmmoInventoryTransaction(
+                ammo_lot_id=alpha_lot.id, transaction_type=AmmoTransactionType.ACQUIRED,
+                quantity=50, occurred_at=datetime.now(timezone.utc),
+            ),
+        ])
+        db.commit()
+        original_balances = {
+            lot.id: self.fixture.f.balance(lot)
+            for lot in [self.fixture.source, self.fixture.destination, depleted, alpha_lot]
+        }
+        original_transaction_count = len(db.scalars(select(AmmoInventoryTransaction)).all())
+
+        response = self.request("GET", f"/ammunition/calibers/{nine_id}")
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn("Active Inventory", html)
+        self.assertIn("450", html)
+        self.assertIn("4", html)
+        self.assertIn('summary>Depleted Lots (1)</summary>', html)
+        self.assertNotRegex(html, r'<details[^>]*\bopen(?:\s|>)')
+        self.assertLess(
+            html.index('class="ammunition-manufacturer-heading">Alpha Ordnance'),
+            html.index('class="ammunition-manufacturer-heading">Test maker'),
+        )
+        self.assertIn(f'href="/ammunition/{depleted.id}"', html)
+        self.assertEqual(
+            {lot.id: self.fixture.f.balance(lot)
+             for lot in [self.fixture.source, self.fixture.destination, depleted, alpha_lot]},
+            original_balances,
+        )
+        self.assertEqual(len(db.scalars(select(AmmoInventoryTransaction)).all()), original_transaction_count)
+
+        replenished = self.request("POST", f"/ammunition/{depleted.id}/activity", json={
+            "transaction_type": "acquired", "quantity": 30,
+            "occurred_date": "2026-10-19", "notes": None,
+        })
+        self.assertTrue(replenished.json()["success"])
+        after = self.request("GET", f"/ammunition/calibers/{nine_id}").text
+        self.assertIn("Depleted Lots (0)", after)
+        self.assertEqual(self.fixture.f.balance(depleted), 30)

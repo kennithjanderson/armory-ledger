@@ -1281,6 +1281,53 @@ body {
     color: var(--text-muted);
 }
 
+.inventory-subheading {
+    margin: 0 0 1.25rem;
+    color: var(--gunmetal);
+    font-size: 1.35rem;
+}
+
+.ammunition-manufacturer-group + .ammunition-manufacturer-group {
+    margin-top: 1.75rem;
+}
+
+.ammunition-manufacturer-heading {
+    margin: 0 0 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--navy-muted);
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.depleted-ammunition-section {
+    margin-top: 2rem;
+    border: 1px solid var(--border);
+    background: rgba(241, 237, 227, 0.32);
+}
+
+.depleted-ammunition-section > summary {
+    padding: 1rem 1.25rem;
+    color: var(--navy-muted);
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.depleted-ammunition-section[open] > summary {
+    border-bottom: 1px solid var(--border);
+}
+
+.depleted-ammunition-section > .ammunition-manufacturer-group,
+.depleted-ammunition-empty {
+    margin: 1rem 1.25rem;
+}
+
+.depleted-ammunition-empty {
+    color: var(--text-muted);
+}
+
 .firearm-list {
     display: grid;
     gap: 1rem;

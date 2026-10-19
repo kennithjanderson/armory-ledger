@@ -25,6 +25,7 @@ from app.models.ammo_inventory_transaction import (
 )
 from app.models.ammo_lot import AmmoLot
 from app.models.ammo_lot_merge import AmmoLotMerge
+from app.models.organization import Organization
 from app.services.ammo_merge_service import merge_candidates, merge_lots
 from app.core.csrf import csrf_token, require_csrf
 from app.models.user import User
@@ -48,6 +49,38 @@ router = APIRouter(
     prefix="/ammunition",
     tags=["ammunition"],
 )
+
+
+def _group_lots_by_manufacturer(lots: list[AmmoLot]) -> list[dict]:
+    grouped: dict[str, dict] = {}
+    for lot in lots:
+        manufacturer = lot.ammo_product.brand.manufacturer
+        group = grouped.setdefault(
+            str(manufacturer.id),
+            {"manufacturer": manufacturer.name, "lots": []},
+        )
+        group["lots"].append(lot)
+
+    def lot_key(lot: AmmoLot):
+        product = lot.ammo_product
+        return (
+            product.grain_weight is None,
+            product.grain_weight or Decimal("0"),
+            (product.projectile_type or "").casefold(),
+            (lot.lot_number or "").casefold(),
+            str(lot.id),
+        )
+
+    groups = list(grouped.values())
+    for group in groups:
+        group["lots"].sort(key=lot_key)
+    return sorted(
+        groups,
+        key=lambda group: (
+            group["manufacturer"].casefold(),
+            group["manufacturer"],
+        ),
+    )
 
 
 class AmmunitionAcquisitionRequest(BaseModel):
@@ -109,7 +142,8 @@ async def ammunition_list(
         .join(AmmoProduct.caliber)
         .options(
             joinedload(AmmoLot.ammo_product)
-            .joinedload(AmmoProduct.brand),
+            .joinedload(AmmoProduct.brand)
+            .joinedload(AmmoBrand.manufacturer),
             joinedload(AmmoLot.ammo_product)
             .joinedload(AmmoProduct.caliber),
         )
@@ -278,9 +312,11 @@ async def ammunition_caliber_detail(
         select(AmmoLot)
         .join(AmmoLot.ammo_product)
         .join(AmmoProduct.brand)
+        .join(AmmoBrand.manufacturer)
         .options(
             joinedload(AmmoLot.ammo_product)
-            .joinedload(AmmoProduct.brand),
+            .joinedload(AmmoProduct.brand)
+            .joinedload(AmmoBrand.manufacturer),
             joinedload(AmmoLot.ammo_product)
             .joinedload(AmmoProduct.caliber),
         )
@@ -290,7 +326,7 @@ async def ammunition_caliber_detail(
             AmmoProduct.caliber_id == caliber_id,
         )
         .order_by(
-            AmmoBrand.name.asc(),
+            Organization.name.asc(),
             AmmoProduct.grain_weight.asc().nulls_last(),
             AmmoProduct.projectile_type.asc().nulls_last(),
             AmmoLot.id.asc(),
@@ -306,6 +342,8 @@ async def ammunition_caliber_detail(
     inventory_by_lot = {}
     acquired_at_by_lot = {}
     total_quantity = 0
+    active_lots = []
+    depleted_lots = []
 
     for lot in lots:
         physical_inventory = get_physical_inventory(
@@ -315,6 +353,7 @@ async def ammunition_caliber_detail(
 
         inventory_by_lot[lot.id] = physical_inventory
         total_quantity += physical_inventory
+        (depleted_lots if physical_inventory == 0 else active_lots).append(lot)
 
         initial_acquisition = db.scalar(
             select(AmmoInventoryTransaction)
@@ -348,6 +387,9 @@ async def ammunition_caliber_detail(
             ),
             "caliber": caliber,
             "lots": lots,
+            "active_groups": _group_lots_by_manufacturer(active_lots),
+            "depleted_groups": _group_lots_by_manufacturer(depleted_lots),
+            "depleted_lot_count": len(depleted_lots),
             "inventory_by_lot": inventory_by_lot,
             "acquired_at_by_lot": acquired_at_by_lot,
             "total_quantity": total_quantity,

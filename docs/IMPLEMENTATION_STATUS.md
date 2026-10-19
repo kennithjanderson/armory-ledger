@@ -23,8 +23,10 @@ prefill handoff and the existing activity endpoint. The four jsdom tests passed.
 Four synthetic SQLite service tests and five ASGI route tests also passed in
 temporary no-network containers with the repository mounted read-only. Python
 AST parsing, changelog JSON parsing, JavaScript syntax checks, template rendering
-and `git diff --check` passed. Manual browser acceptance remains pending; this is
-not yet a known-good `v0.1.5-dev.2` checkpoint.
+and `git diff --check` passed. The owner confirmed successful manual browser
+acceptance on 2026-10-19: an exact manufacturer/caliber/grain/projectile match
+prompted for an existing lot, while a one-grain difference did not prompt. This
+verifies the `v0.1.5-dev.2` checkpoint.
 
 Development rebuild completed on 2026-10-19 with the existing `rebuild.sh`.
 PostgreSQL 17 reported healthy, the application and tunnel containers were
@@ -32,7 +34,35 @@ running, and the local `/health` response reported `healthy`, database connected
 version `0.1.5`. The entrypoint reported that database migrations completed; this
 feature adds no migration. Application startup completed without errors; the log
 contained a non-fatal Authlib/httpx deprecation warning. Owner browser acceptance
-is still pending.
+is complete for dev.2.
+
+## v0.1.5-dev.3 — manufacturer-grouped ammunition lots (2026-10-19)
+
+Caliber inventory pages now group active lots under their global manufacturer
+name, with lots ordered by grain, projectile, lot number and stable ID. Zero-round
+lots are separated into a collapsed `Depleted Lots` section; they remain
+accessible and can become active again automatically when inventory is acquired.
+The page continues to calculate balances from the transaction ledger, includes
+active and depleted lots in its total, and preserves each lot's detail link.
+No model, schema or migration change is involved.
+
+The public changelog now labels a dated unreleased entry as `Scheduled`, including
+v0.1.4 with its planned October 22, 2026 date; it does not claim publication.
+
+Focused ASGI tests cover manufacturer ordering, active/depleted grouping, collapsed
+state, lot links, unchanged balances and transactions on page view, and
+reclassification after a new acquisition. The route suite passed **6 tests** and
+the changelog suite passed **2 tests** in temporary no-network containers. All
+**22 relevant JavaScript tests** passed using the existing temporary jsdom
+installation. Python AST parsing, changelog JSON parsing and `git diff --check`
+passed. The development rebuild completed on 2026-10-19. PostgreSQL 17 is
+healthy; the app and tunnel containers are running; `/health` reports healthy,
+database connected and version `0.1.5`. Startup logs show migrations completed
+and the application started, with only the existing non-fatal Authlib/httpx
+deprecation warning. The PostgreSQL named volume and `./data/backups` bind mount
+remain attached. The owner confirmed successful browser acceptance on 2026-10-19.
+This verifies the `v0.1.5-dev.3` checkpoint. No migration was added for this
+feature.
 
 ## v0.1.5 development — scheduled release status
 

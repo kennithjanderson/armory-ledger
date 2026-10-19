@@ -185,5 +185,12 @@ session-storage handoff to Acquired activity without putting quantity in the
 URL, one-time prefill consumption, and escaped suggestion labels. Manual browser
 acceptance remains necessary for visual and native interaction review.
 
+Caliber inventory route coverage checks manufacturer ordering, active versus
+zero-round grouping, collapsed depleted-lot markup, preserved detail links and
+ledger balances. A subsequent acquisition is checked to move a depleted lot back
+to active inventory without changing prior transaction history. Changelog route
+coverage verifies that entries with a planned date are labeled Scheduled while
+undated unreleased entries remain drafts and published entries retain their date.
+
 Notification email formatting is tested with constructed synthetic events; the
 test verifies the branded HTML/plain-text alternatives and escaping without SMTP.

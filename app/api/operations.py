@@ -191,10 +191,17 @@ def settings_page(request: Request,user=Depends(get_current_user)):
 @user_routes.get('/api/notifications')
 def list_notices(request: Request,offset: int=0,unread_only: bool=False,user=Depends(get_current_user),db=Depends(get_db)):
     if not 0<=offset<=100000: raise HTTPException(422,'Invalid page offset')
-    preferences={'success_in_app':user.backup_success_in_app,'success_email':user.backup_success_email}
+    preferences={
+        'ammo_notifications_in_app':user.ammo_notifications_in_app,
+        'ammo_notifications_email':user.ammo_notifications_email,
+    }
     if user.is_admin:
-        preferences.update(restore_initiated_in_app=user.restore_initiated_in_app,
-                           restore_initiated_email=user.restore_initiated_email)
+        preferences.update(
+            success_in_app=user.backup_success_in_app,
+            success_email=user.backup_success_email,
+            restore_initiated_in_app=user.restore_initiated_in_app,
+            restore_initiated_email=user.restore_initiated_email,
+        )
     return {**notices.notices(db,user,offset,unread_only=unread_only),'csrf_token':csrf_token(request),
             'preferences':preferences}
 
@@ -209,12 +216,22 @@ def read_notices(payload: dict,user=Depends(get_current_user),db=Depends(get_db)
 
 @user_routes.put('/api/notifications/preferences',dependencies=[Depends(require_csrf)])
 def preferences(payload: dict,user=Depends(get_current_user),db=Depends(get_db)):
-    basic={'success_in_app','success_email'}
+    ammo={'ammo_notifications_in_app','ammo_notifications_email'}
+    success={'success_in_app','success_email'}
     restore={'restore_initiated_in_app','restore_initiated_email'}
-    allowed=(basic,basic|restore) if user.is_admin else (basic,)
-    if not any(set(payload)==keys for keys in allowed) or any(type(v) is not bool for v in payload.values()):
-        raise HTTPException(422,'Expected success preferences as booleans')
-    user.backup_success_in_app=payload['success_in_app']; user.backup_success_email=payload['success_email']
+    allowed = ({frozenset(ammo)} if not user.is_admin else {
+        frozenset(ammo), frozenset(success), frozenset(success | restore),
+        frozenset(ammo | success), frozenset(ammo | success | restore),
+    })
+    keys=frozenset(payload)
+    if keys not in allowed or any(type(v) is not bool for v in payload.values()):
+        raise HTTPException(422,'Invalid notification preferences for this account')
+    if ammo.issubset(payload):
+        user.ammo_notifications_in_app=payload['ammo_notifications_in_app']
+        user.ammo_notifications_email=payload['ammo_notifications_email']
+    if success.issubset(payload):
+        user.backup_success_in_app=payload['success_in_app']
+        user.backup_success_email=payload['success_email']
     if user.is_admin and restore.issubset(payload):
         user.restore_initiated_in_app=payload['restore_initiated_in_app']
         user.restore_initiated_email=payload['restore_initiated_email']

@@ -86,8 +86,9 @@ test('Settings hosts personal notification preferences and history links back to
     const settings=fs.readFileSync('app/templates/settings.html','utf8');
     const history=fs.readFileSync('app/templates/notifications.html','utf8');
     assert.match(settings,/id="notification-preferences"/);
-    assert.match(settings,/name="success_in_app"/);
-    assert.match(settings,/name="success_email"/);
+    assert.match(settings,/name="ammo_notifications_in_app"/);
+    assert.match(settings,/name="ammo_notifications_email"/);
+    assert.match(settings,/{% if is_admin %}[\s\S]*name="success_in_app"[\s\S]*name="success_email"[\s\S]*{% endif %}/);
     assert.match(settings,/name="restore_initiated_in_app"/);
     assert.match(settings,/name="restore_initiated_email"/);
     assert.match(settings,/{% if is_admin %}[\s\S]*restore_initiated_in_app[\s\S]*{% endif %}/);
@@ -96,28 +97,28 @@ test('Settings hosts personal notification preferences and history links back to
     assert.doesNotMatch(history,/id="notification-preferences"/);
 });
 
-test('notification settings persist current-user backup success preferences',async () => {
-    const dom=new JSDOM('<button id="notification-toggle"></button><section id="notification-panel"><div id="notification-items"></div></section><form id="notification-preferences"><input type="checkbox" name="success_in_app" checked><input type="checkbox" name="success_email"><button>Save</button></form><span id="preferences-result"></span>',{runScripts:'outside-only',url:'https://example.test'});
+test('standard-user Settings persist only personal ammunition channels',async () => {
+    const dom=new JSDOM('<button id="notification-toggle"></button><section id="notification-panel"><div id="notification-items"></div></section><form id="notification-preferences"><input type="checkbox" name="ammo_notifications_in_app" checked><input type="checkbox" name="ammo_notifications_email"><button>Save</button></form><span id="preferences-result"></span>',{runScripts:'outside-only',url:'https://example.test'});
     let saved;
     dom.window.fetch=async (url,options={})=>{
         if(options.method==='PUT') saved=JSON.parse(options.body);
-        return {ok:true,json:async()=>({csrf_token:'user-token',unread:0,preferences:{success_in_app:true,success_email:false},items:[]})};
+        return {ok:true,json:async()=>({csrf_token:'user-token',unread:0,preferences:{ammo_notifications_in_app:true,ammo_notifications_email:false},items:[]})};
     };
     dom.window.setInterval=()=>1;
     dom.window.eval(source);await tick();
     dom.window.document.getElementById('notification-preferences').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
     await tick();
-    assert.deepEqual(saved,{success_in_app:true,success_email:false});
+    assert.deepEqual(saved,{ammo_notifications_in_app:true,ammo_notifications_email:false});
     assert.equal(dom.window.document.getElementById('preferences-result').textContent,'Preferences saved.');
     dom.window.close();
 });
 
 test('admin Settings loads and saves restore-initiated channel preferences',async () => {
-    const dom=new JSDOM('<button id="notification-toggle"></button><section id="notification-panel"><div id="notification-items"></div></section><form id="notification-preferences"><input type="checkbox" name="success_in_app"><input type="checkbox" name="success_email"><input type="checkbox" name="restore_initiated_in_app"><input type="checkbox" name="restore_initiated_email"><button>Save</button></form><span id="preferences-result"></span>',{runScripts:'outside-only',url:'https://example.test',pretendToBeVisual:true});
+    const dom=new JSDOM('<button id="notification-toggle"></button><section id="notification-panel"><div id="notification-items"></div></section><form id="notification-preferences"><input type="checkbox" name="ammo_notifications_in_app"><input type="checkbox" name="ammo_notifications_email"><input type="checkbox" name="success_in_app"><input type="checkbox" name="success_email"><input type="checkbox" name="restore_initiated_in_app"><input type="checkbox" name="restore_initiated_email"><button>Save</button></form><span id="preferences-result"></span>',{runScripts:'outside-only',url:'https://example.test',pretendToBeVisual:true});
     let saved;
     dom.window.fetch=async (url,options={})=>{
         if(options.method==='PUT') saved=JSON.parse(options.body);
-        return {ok:true,json:async()=>({csrf_token:'admin-token',unread:0,items:[],preferences:{success_in_app:false,success_email:false,restore_initiated_in_app:true,restore_initiated_email:false}})};
+        return {ok:true,json:async()=>({csrf_token:'admin-token',unread:0,items:[],preferences:{ammo_notifications_in_app:false,ammo_notifications_email:false,success_in_app:false,success_email:false,restore_initiated_in_app:true,restore_initiated_email:false}})};
     };
     dom.window.setInterval=()=>1;
     dom.window.eval(source);await tick();
@@ -125,6 +126,31 @@ test('admin Settings loads and saves restore-initiated channel preferences',asyn
     assert.equal(form.elements.restore_initiated_in_app.checked,true);
     assert.equal(form.elements.restore_initiated_email.checked,false);
     form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));await tick();
-    assert.deepEqual(saved,{success_in_app:false,success_email:false,restore_initiated_in_app:true,restore_initiated_email:false});
+    assert.deepEqual(saved,{ammo_notifications_in_app:false,ammo_notifications_email:false,success_in_app:false,success_email:false,restore_initiated_in_app:true,restore_initiated_email:false});
+    dom.window.close();
+});
+
+test('lot notification form validates threshold and saves owned settings with CSRF',async () => {
+    const html='<form id="ammunition-notification-settings" data-endpoint="/ammunition/lot/notifications" data-csrf-token="lot-token"><input type="checkbox" name="low_inventory_notifications_enabled" checked><input type="number" name="low_inventory_threshold"><input type="checkbox" name="depleted_notifications_enabled" checked><button>Save</button></form><span id="ammunition-notification-result"></span>';
+    const dom=new JSDOM(html,{runScripts:'outside-only',url:'https://example.test'});
+    let saved;
+    dom.window.fetch=async (url,options)=>{saved={url,options};return {ok:true};};
+    dom.window.eval(fs.readFileSync('app/static/js/ammunition-notifications.js','utf8'));
+    const form=dom.window.document.getElementById('ammunition-notification-settings');
+    form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
+    assert.equal(saved,undefined);
+    assert.match(dom.window.document.getElementById('ammunition-notification-result').textContent,/positive round threshold/);
+    form.elements.low_inventory_threshold.value='50';
+    form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
+    await tick();
+    assert.equal(saved.url,'/ammunition/lot/notifications');
+    assert.equal(saved.options.method,'PUT');
+    assert.equal(saved.options.headers['X-CSRF-Token'],'lot-token');
+    assert.deepEqual(JSON.parse(saved.options.body),{
+        low_inventory_notifications_enabled:true,
+        low_inventory_threshold:50,
+        depleted_notifications_enabled:true,
+    });
+    assert.equal(dom.window.document.getElementById('ammunition-notification-result').textContent,'Lot notification settings saved.');
     dom.window.close();
 });

@@ -49,8 +49,10 @@
             }
             const prefs = document.getElementById('notification-preferences');
             if (prefs && !preferencesLoaded) {
-                prefs.elements.success_in_app.checked = data.preferences.success_in_app;
-                prefs.elements.success_email.checked = data.preferences.success_email;
+                if (prefs.elements.ammo_notifications_in_app) prefs.elements.ammo_notifications_in_app.checked = data.preferences.ammo_notifications_in_app;
+                if (prefs.elements.ammo_notifications_email) prefs.elements.ammo_notifications_email.checked = data.preferences.ammo_notifications_email;
+                if (prefs.elements.success_in_app) prefs.elements.success_in_app.checked = data.preferences.success_in_app;
+                if (prefs.elements.success_email) prefs.elements.success_email.checked = data.preferences.success_email;
                 if (prefs.elements.restore_initiated_in_app) prefs.elements.restore_initiated_in_app.checked = data.preferences.restore_initiated_in_app;
                 if (prefs.elements.restore_initiated_email) prefs.elements.restore_initiated_email.checked = data.preferences.restore_initiated_email;
                 preferencesLoaded = true;
@@ -77,7 +79,13 @@
     });
     document.getElementById('notification-preferences')?.addEventListener('submit', async event => {
         event.preventDefault(); const form = event.target, result = document.getElementById('preferences-result');
-        const payload={success_in_app:form.elements.success_in_app.checked,success_email:form.elements.success_email.checked};
+        const payload={};
+        if (form.elements.ammo_notifications_in_app) payload.ammo_notifications_in_app=form.elements.ammo_notifications_in_app.checked;
+        if (form.elements.ammo_notifications_email) payload.ammo_notifications_email=form.elements.ammo_notifications_email.checked;
+        if (form.elements.success_in_app) {
+            payload.success_in_app=form.elements.success_in_app.checked;
+            payload.success_email=form.elements.success_email.checked;
+        }
         if (form.elements.restore_initiated_in_app) {
             payload.restore_initiated_in_app=form.elements.restore_initiated_in_app.checked;
             payload.restore_initiated_email=form.elements.restore_initiated_email.checked;

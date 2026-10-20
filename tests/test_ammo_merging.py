@@ -14,6 +14,7 @@ from app.models.ammo_lot import AmmoLot
 from app.models.ammo_lot_merge import AmmoLotMerge
 from app.models.ammo_product import AmmoProduct
 from app.models.audit_event import AuditEvent
+from app.models.notification import NotificationEvent, NotificationRecipient
 from app.models.range_session_ammo_usage import RangeAmmoSourceType, RangeSessionAmmoUsage
 from app.services.ammo_inventory_service import record_inventory_activity, lock_owned_lots, shooting_expenditure_descriptions
 from app.services.ammo_merge_service import compatible_lots, merge_candidates, merge_lots
@@ -202,6 +203,54 @@ class AmmoMergeTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Invalid inventory"):
                 record_inventory_activity(self.db, lot_id=self.destination.id, owner_id=self.f.owner.id,
                     actor_user_id=self.f.owner.id, transaction_type=kind, quantity=1, occurred_date=date.today())
+
+    def test_low_inventory_crossing_rearms_and_stays_private_to_lot_owner(self):
+        self.f.owner.ammo_notifications_in_app = True
+        self.source.low_inventory_notifications_enabled = True
+        self.source.low_inventory_threshold = 50
+        self.db.commit()
+        def activity(kind, quantity):
+            return record_inventory_activity(
+                self.db, lot_id=self.source.id, owner_id=self.f.owner.id,
+                actor_user_id=self.f.owner.id, transaction_type=kind,
+                quantity=quantity, occurred_date=date.today(),
+            )
+
+        activity(AmmoTransactionType.EXPENDED, 151)  # 200 -> 49
+        activity(AmmoTransactionType.EXPENDED, 1)    # Still below: no repeat.
+        events = self.db.scalars(select(NotificationEvent)).all()
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].kind, "ammo_low_inventory")
+        self.assertIn("50-round threshold", events[0].message)
+        self.assertIn("49 rounds", events[0].message)
+        self.assertEqual(events[0].scope, "user")
+        self.assertEqual(events[0].severity, "info")
+
+        activity(AmmoTransactionType.ACQUIRED, 20)   # 48 -> 68 rearms.
+        activity(AmmoTransactionType.EXPENDED, 20)   # 68 -> 48 alerts again.
+        events = self.db.scalars(select(NotificationEvent).order_by(NotificationEvent.created_at)).all()
+        self.assertEqual(len(events), 2)
+        recipients = self.db.scalars(select(NotificationRecipient)).all()
+        self.assertEqual(len(recipients), 2)
+        self.assertEqual({row.user_id for row in recipients}, {self.f.owner.id})
+        from app.services.notification_service import notices
+        self.f.other.is_admin = True
+        self.assertEqual(notices(self.db, self.f.other)["items"], [])
+
+    def test_email_only_preference_queues_existing_outbox_without_in_app_copy(self):
+        self.f.owner.ammo_notifications_email = True
+        self.source.depleted_notifications_enabled = True
+        self.db.commit()
+        from app.services import notification_service
+        with patch.object(notification_service, "mail_config", return_value={"enabled": True}):
+            record_inventory_activity(
+                self.db, lot_id=self.source.id, owner_id=self.f.owner.id,
+                actor_user_id=self.f.owner.id, transaction_type=AmmoTransactionType.EXPENDED,
+                quantity=200, occurred_date=date.today(),
+            )
+        recipient = self.db.scalars(select(NotificationRecipient)).one()
+        self.assertFalse(recipient.in_app)
+        self.assertEqual(recipient.email_state, "pending")
 
     def test_lock_query_orders_rows_and_refreshes_identity_map(self):
         statements = []

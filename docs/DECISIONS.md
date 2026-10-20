@@ -303,3 +303,22 @@ must never update the installation. Registry/network failures do not create user
 alerts and are retried on the next daily check. The request reveals the host's
 network address to GHCR but sends no account or inventory data. No schema change
 is needed; the existing `system_settings` table stores the last poll time.
+
+## Ammunition lot alerts — v0.1.5-dev.5
+
+Reuse the existing notification event, per-recipient, history and email outbox
+systems. Per-user in-app and email ammunition channels both default off; each lot
+independently stores disabled-by-default low-inventory and depleted triggers.
+Low inventory is a downward crossing from at/above the positive threshold to
+below it; depletion is a transition from positive quantity to zero. If both are
+enabled for a direct transition to zero, emit only depletion. Evaluate the final
+balance once per lot inside the inventory transaction, including a Shooting Log
+create/edit, so rollback removes the associated alert and intermediate range
+corrections do not generate false notifications. A private event has exactly one
+recipient, its lot owner, and uses informational severity. The standard-user
+Settings API accepts only ammunition channel fields; system notification
+preferences remain admin-only in both rendering and server validation. Revision
+`6ec8a2f145bd` adds the two user channel flags and three per-lot trigger fields;
+the migration is applied in the development database. The owner confirmed
+successful in-app and email browser acceptance for both alert types on
+2026-10-20.

@@ -135,6 +135,33 @@ class MergeRouteTests(unittest.TestCase):
                                       headers={"X-CSRF-Token": "test-token"}).status_code, 404)
         self.assertNotIn(str(self.fixture.source.id), self.request("GET", "/ammunition/archive").text)
 
+    def test_lot_notification_settings_are_csrf_protected_and_owner_scoped(self):
+        lot_id = self.fixture.source.id
+        detail = self.request("GET", f"/ammunition/{lot_id}")
+        self.assertEqual(detail.status_code, 200)
+        self.assertIn('id="ammunition-notification-settings"', detail.text)
+        self.assertIn('data-csrf-token="test-token"', detail.text)
+
+        endpoint = f"/ammunition/{lot_id}/notifications"
+        settings = {
+            "low_inventory_notifications_enabled": True,
+            "low_inventory_threshold": 50,
+            "depleted_notifications_enabled": True,
+        }
+        self.assertEqual(self.request("PUT", endpoint, json=settings).status_code, 403)
+        headers = {"X-CSRF-Token": "test-token"}
+        invalid = {**settings, "low_inventory_threshold": None}
+        self.assertEqual(self.request("PUT", endpoint, json=invalid, headers=headers).status_code, 422)
+        saved = self.request("PUT", endpoint, json=settings, headers=headers)
+        self.assertEqual(saved.status_code, 200)
+        self.assertTrue(self.fixture.source.low_inventory_notifications_enabled)
+        self.assertEqual(self.fixture.source.low_inventory_threshold, 50)
+        self.assertTrue(self.fixture.source.depleted_notifications_enabled)
+
+        foreign = self.request("PUT", f"/ammunition/{self.fixture.f.foreign_lot.id}/notifications",
+                               json=settings, headers=headers)
+        self.assertEqual(foreign.status_code, 404)
+
     def test_record_link_visited_and_keyboard_focus_styles(self):
         import re
         css = (ROOT / "app/static/css/armory.css").read_text()

@@ -1,20 +1,22 @@
 [
   {
     "version": "0.1.5",
-    "unreleased": true,
     "added": [],
     "improved": [
       "The scheduled release script reports release timing, saved status and local timer health without executing or changing a release.",
       "Ammunition acquisition suggests exact matching owned lots before creating a new lot, while preserving an explicit create-new option.",
-      "Ammunition caliber pages group active lots by manufacturer and keep depleted lots accessible in a collapsed section."
+      "Ammunition caliber pages group active lots by manufacturer and keep depleted lots accessible in a collapsed section.",
+      "Ammunition lot alerts can be configured for low inventory or depletion and delivered through each user's selected in-app and email channels."
     ],
-    "fixed": [],
+    "fixed": [
+      "Standard users can no longer see or change administrator-only backup and restore notification preferences."
+    ],
     "upgrade_notes": []
   },
   {
     "version": "0.1.4",
-    "date": "2026-10-22",
-    "unreleased": true,
+    "date": "2026-10-20",
+    "unreleased": false,
     "added": [
       "Admin Backup & Recovery with manual and scheduled backups, restore safeguards, health reporting and offline recovery.",
       "Backups are encrypted with authenticated AES-256-GCM and stored on a configurable persistent local backup directory.",

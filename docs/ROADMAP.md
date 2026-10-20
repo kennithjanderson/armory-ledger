@@ -225,8 +225,9 @@ dev.2, duplicate ammunition lot suggestions; and dev.3, manufacturer grouping
 and depleted-lot presentation. Dev.4 adds the installation experience and
 `get-started.sh`, plus README/configuration documentation. The pending
 ammunition-notification and admin-preference work is renumbered to dev.5; its
-existing implementation and acceptance criteria are preserved, but browser
-acceptance remains pending. Enhanced ammunition merging moves from dev.5 to dev.6,
+existing implementation and acceptance criteria are preserved. The owner
+confirmed in-app and email notification browser acceptance on 2026-10-20, so
+dev.5 is verified. Enhanced ammunition merging moves from dev.5 to dev.6,
 manufacturer aliases from dev.6 to dev.7, and caliber aliases from dev.7 to dev.8.
 These assignments follow completion order; they do not alter completed commits.
 v0.1.6 transfers and v0.1.7 sharing remain unimplemented. Firearm maintenance

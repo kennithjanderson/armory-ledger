@@ -6,11 +6,20 @@
 
 <section class="operations-card" aria-labelledby="notification-settings-heading">
     <h2 id="notification-settings-heading">Notification settings</h2>
-    <p>Choose whether you receive notices when an instance backup completes successfully. Backup failures and cleanup warnings remain enabled whenever their channel is operational.</p>
     <form id="notification-preferences" class="operations-form">
-        <label class="operations-inline-check"><input type="checkbox" name="success_in_app"> In-app successful-backup notices</label>
-        <label class="operations-inline-check"><input type="checkbox" name="success_email"> Successful-backup emails</label>
+        <fieldset class="operations-preference-group">
+            <legend>Ammunition notifications</legend>
+            <p>Choose where to receive alerts configured on your individual ammunition lots. Both channels are off until you enable them here.</p>
+            <label class="operations-inline-check"><input type="checkbox" name="ammo_notifications_in_app"> In-app ammunition notifications</label>
+            <label class="operations-inline-check"><input type="checkbox" name="ammo_notifications_email"> Ammunition notification emails</label>
+        </fieldset>
         {% if is_admin %}
+        <fieldset class="operations-preference-group">
+            <legend>System notifications</legend>
+            <p>Backup failures and cleanup warnings remain enabled while their channels are operational. Choose whether to receive optional success and restore-start notices.</p>
+            <label class="operations-inline-check"><input type="checkbox" name="success_in_app"> In-app successful-backup notices</label>
+            <label class="operations-inline-check"><input type="checkbox" name="success_email"> Successful-backup emails</label>
+        </fieldset>
         <fieldset class="operations-preference-group">
             <legend>Database restore initiated</legend>
             <p>This warning is saved after the restore attempt finishes, so the database replacement cannot erase it. It records that a restore was started and does not mean the restore succeeded.</p>

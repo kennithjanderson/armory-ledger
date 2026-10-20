@@ -158,6 +158,41 @@
     </article>
 </section>
 
+{% if not lot.is_merged %}
+<section class="range-detail-section operations-card" aria-labelledby="ammunition-notifications-heading">
+    <h2 id="ammunition-notifications-heading">Lot notifications</h2>
+    <p>Choose which inventory changes create an alert for this lot. Delivery channels are controlled separately in Settings.</p>
+    <form id="ammunition-notification-settings" class="operations-form"
+          data-endpoint="/ammunition/{{ lot.id }}/notifications"
+          data-csrf-token="{{ csrf_token }}">
+        <fieldset class="operations-preference-group">
+            <legend>Low inventory</legend>
+            <label class="operations-inline-check">
+                <input type="checkbox" name="low_inventory_notifications_enabled"
+                       {% if lot.low_inventory_notifications_enabled %}checked{% endif %}>
+                Alert when remaining inventory falls below the threshold
+            </label>
+            <label for="low-inventory-threshold">Threshold in rounds</label>
+            <input id="low-inventory-threshold" type="number" name="low_inventory_threshold"
+                   min="1" step="1" max="2147483647"
+                   value="{{ lot.low_inventory_threshold or '' }}">
+        </fieldset>
+        <fieldset class="operations-preference-group">
+            <legend>Depleted inventory</legend>
+            <label class="operations-inline-check">
+                <input type="checkbox" name="depleted_notifications_enabled"
+                       {% if lot.depleted_notifications_enabled %}checked{% endif %}>
+                Alert when remaining inventory reaches zero
+            </label>
+        </fieldset>
+        <div class="operations-actions">
+            <button class="button-primary" type="submit">Save lot notifications</button>
+            <span id="ammunition-notification-result" role="status" aria-live="polite"></span>
+        </div>
+    </form>
+</section>
+{% endif %}
+
 <section class="range-detail-section">
 
         <div class="page-marker">
@@ -297,4 +332,5 @@
     {% endfor %}
 </section>
 {% endif %}
+<script src="{{ url_for('static', path='/js/ammunition-notifications.js') }}?v={{ app_version }}" defer></script>
 {% endblock %}

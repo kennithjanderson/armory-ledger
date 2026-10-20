@@ -512,3 +512,21 @@ account or inventory data and never updates the local installation. Its attempt
 time is stored in `system_settings` so normal
 worker ticks do not poll repeatedly; failures are silent to end users and retried
 on the next daily interval.
+
+## v0.1.5-dev.5 ammunition notifications — verified in development
+
+User channel preferences (`ammo_notifications_in_app` and
+`ammo_notifications_email`) default off. Each owned ammunition lot separately
+stores an optional positive low-inventory threshold and disabled-by-default low
+and depleted triggers. Inventory activity creates a private, informational
+`NotificationEvent` only when a committed balance crosses from at/above the
+threshold to below it, or from positive to zero. Shooting Log create/edit checks
+the final balance once per lot so intermediate corrections do not emit multiple
+or misleading alerts; depletion takes precedence when both triggers are enabled.
+The event has one recipient: the lot owner. Existing notification history,
+unread delivery, and email outbox handle the channels. Standard users can update
+only their personal ammunition channels; backup/restore preferences and
+administrator-scoped notices remain server-side administrator-only. The new
+schema revision is `6ec8a2f145bd` after `a47c91e2d563`; it is applied to the
+development database. The owner confirmed in-app and email browser acceptance
+for low-inventory and reached-zero triggers on 2026-10-20.

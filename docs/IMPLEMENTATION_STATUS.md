@@ -3,10 +3,11 @@
 ## v0.1.5-dev.4 — installation experience and documentation (2026-10-20)
 
 The installer and documentation work takes dev.4 because dev.1–dev.3
-are the completed, committed checkpoints and the existing ammunition-notification
-implementation is still awaiting browser acceptance. That pending work is moved to
-dev.5 without changing its requirements; later uncompleted lot merging and alias
-work move to dev.6–dev.8. No completed checkpoint or commit was renumbered.
+were the completed, committed checkpoints and ammunition notifications were
+still awaiting browser acceptance when the checkpoint was assigned. The owner
+subsequently confirmed in-app and email notification acceptance for low-inventory
+and depletion alerts, completing dev.5. Later uncompleted lot merging and alias
+work remain dev.6–dev.8. No completed checkpoint or commit was renumbered.
 
 This checkpoint adds a first-run `get-started.sh` that prepares either the
 published GHCR configuration or a local source-build override, validates
@@ -919,7 +920,7 @@ advance branches as part of publication until separately designed and approved.
 passed; the dev app image was rebuilt, returned healthy on v0.1.4 and generated
 multipart HTML/plain-text output in a local formatting smoke check without delivery.
 
-### v0.1.5-dev.5 — ammunition notifications and system preference authorization
+### v0.1.5-dev.5 — ammunition notifications and system preference authorization — verified
 
 Implemented in the development worktree: per-user ammunition delivery channels
 default off; per-lot low-inventory thresholds and depleted triggers default off;
@@ -952,6 +953,8 @@ the development host timezone. All eight notification JavaScript tests, Python
 AST parsing, JavaScript syntax checks, changelog JSON parsing, template parsing,
 and `git diff --check` passed. The broader JavaScript suite was stopped because
 its announcement tests invoke the host Python, which lacks Pydantic; the focused
-notification suite passed. Manual browser acceptance and the verified
-`v0.1.5-dev.5` checkpoint remain pending. The app version remains 0.1.5. The
+notification suite passed. On 2026-10-20, the owner confirmed browser acceptance:
+both in-app and email alerts worked and looked correct for low-inventory and
+reached-zero triggers. This completes the `v0.1.5-dev.5` checkpoint. The app
+version remains 0.1.5. The
 approved v0.1.4 candidate, release timer and saved notes were not changed.

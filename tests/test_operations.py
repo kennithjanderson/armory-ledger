@@ -427,19 +427,32 @@ class OperationsTests(unittest.TestCase):
         self.assertEqual(render.call_args.kwargs['name'],'settings.html')
         self.assertTrue(any(dependency.dependency is api.get_current_user for dependency in api.user_routes.dependencies))
 
-        payload={'success_in_app':True,'success_email':True}
+        payload={'ammo_notifications_in_app':True,'ammo_notifications_email':True}
         with self.factory() as db:
             ordinary=db.get(User,self.ordinary.id)
+            standard_payload=api.list_notices(SimpleNamespace(session={}),0,False,ordinary,db)
+            self.assertEqual(set(standard_payload['preferences']),
+                {'ammo_notifications_in_app','ammo_notifications_email'})
             api.preferences(payload,ordinary,db)
-            self.assertTrue(ordinary.backup_success_in_app)
-            self.assertTrue(ordinary.backup_success_email)
+            self.assertTrue(ordinary.ammo_notifications_in_app)
+            self.assertTrue(ordinary.ammo_notifications_email)
+            with self.assertRaises(api.HTTPException):
+                api.preferences({'success_in_app':True,'success_email':True},ordinary,db)
+            self.assertFalse(ordinary.backup_success_in_app)
+            self.assertFalse(ordinary.backup_success_email)
             self.assertFalse(db.get(User,self.admin.id).backup_success_in_app)
             with self.assertRaises(api.HTTPException):
-                api.preferences({**payload,'restore_initiated_in_app':True,
-                    'restore_initiated_email':True},ordinary,db)
+                api.preferences({**payload,'success_in_app':True,'success_email':True},ordinary,db)
             admin=db.get(User,self.admin.id)
-            api.preferences({**payload,'restore_initiated_in_app':True,
+            admin_payload=api.list_notices(SimpleNamespace(session={}),0,False,admin,db)
+            self.assertIn('success_in_app',admin_payload['preferences'])
+            self.assertIn('restore_initiated_email',admin_payload['preferences'])
+            api.preferences({**payload,'success_in_app':True,'success_email':True,
+                'restore_initiated_in_app':True,
                 'restore_initiated_email':False},admin,db)
+            self.assertTrue(admin.ammo_notifications_in_app)
+            self.assertTrue(admin.ammo_notifications_email)
+            self.assertTrue(admin.backup_success_in_app)
             self.assertTrue(admin.restore_initiated_in_app)
             self.assertFalse(admin.restore_initiated_email)
 

@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from sqlalchemy import JSON, MetaData, create_engine, event, select, text
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.db.base import Base
 from app.models.user import User
@@ -19,6 +20,7 @@ from app.models.ammo_brand import AmmoBrand
 from app.models.ammo_product import AmmoProduct
 from app.models.ammo_lot import AmmoLot
 from app.models.ammo_inventory_transaction import AmmoInventoryTransaction, AmmoTransactionType
+from app.models.notification import NotificationEvent, NotificationRecipient
 from app.models.range_session import RangeSession, ShootingActivityType
 from app.models.range_session_firearm import RangeSessionFirearm
 from app.models.range_session_ammo_usage import RangeSessionAmmoUsage, RangeAmmoSourceType
@@ -132,6 +134,45 @@ class RangeServiceTests(unittest.TestCase):
         self.assertEqual(sorted(u.quantity for u in usages), [10, 20, 40])
         self.assertTrue(all(u.inventory_transaction_id for u in usages))
         self.assertEqual(session.owner_id, self.owner.id)
+
+    def test_range_activity_queues_one_owner_only_depletion_notice_for_final_balance(self):
+        self.owner.ammo_notifications_in_app = True
+        self.lot.low_inventory_notifications_enabled = True
+        self.lot.low_inventory_threshold = 60
+        self.lot.depleted_notifications_enabled = True
+        self.db.commit()
+
+        self.create([RangeFirearmInput(self.firearm.id, ammo_usage=[
+            self.ammo(quantity=50), self.ammo(quantity=50),
+        ])])
+
+        events = self.db.scalars(select(NotificationEvent)).all()
+        self.assertEqual(len(events), 1)
+        event = events[0]
+        self.assertEqual(event.kind, "ammo_depleted")
+        self.assertEqual(event.scope, "user")
+        self.assertEqual(event.severity, "info")
+        self.assertIn("Test maker", event.message)
+        self.assertIn("9mm Luger", event.message)
+        self.assertIn("0 rounds", event.message)
+        self.assertEqual(event.action, f"/ammunition/{self.lot.id}")
+        recipients = self.db.scalars(select(NotificationRecipient).where(
+            NotificationRecipient.event_id == event.id)).all()
+        self.assertEqual(len(recipients), 1)
+        self.assertEqual(recipients[0].user_id, self.owner.id)
+        self.assertTrue(recipients[0].in_app)
+        self.assertEqual(recipients[0].email_state, "disabled")
+
+    def test_lot_notification_threshold_database_checks(self):
+        for enabled, threshold in ((False, 0), (True, None)):
+            lot = AmmoLot(id=uuid4(), owner_id=self.owner.id,
+                          ammo_product_id=self.lot.ammo_product_id,
+                          low_inventory_notifications_enabled=enabled,
+                          low_inventory_threshold=threshold)
+            self.db.add(lot)
+            with self.assertRaises(IntegrityError):
+                self.db.flush()
+            self.db.rollback()
 
     def test_mismatch_rolls_back_whole_create(self):
         with self.assertRaisesRegex(ValueError, "recorded caliber"):

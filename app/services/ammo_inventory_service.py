@@ -115,6 +115,19 @@ def get_physical_inventory(
     return int(quantity or 0)
 
 
+def queue_inventory_transition(
+    db: Session, *, lot_id: UUID, transaction_id: UUID, before: int, after: int,
+) -> None:
+    """Add any qualifying private notice to the caller's transaction."""
+    lot = db.get(AmmoLot, lot_id)
+    if lot is None:
+        return
+    from app.services.notification_service import ammunition_inventory_transition
+    ammunition_inventory_transition(
+        db, lot=lot, transaction_id=transaction_id, before=before, after=after,
+    )
+
+
 def record_inventory_activity(
     db: Session,
     *,
@@ -127,6 +140,7 @@ def record_inventory_activity(
     notes: str | None = None,
     audit_context: dict | None = None,
     commit: bool = True,
+    notify_transition: bool = True,
 ) -> AmmoInventoryTransaction:
     lot = lock_owned_lots(db, owner_id=owner_id, lot_ids=[lot_id])[lot_id]
     if lot.is_merged:
@@ -191,6 +205,13 @@ def record_inventory_activity(
     )
 
     db.add(audit_event)
+
+    if notify_transition:
+        queue_inventory_transition(
+            db, lot_id=lot.id, transaction_id=transaction.id,
+            before=physical_on_hand,
+            after=get_physical_inventory(db, lot_id=lot.id),
+        )
 
     if commit:
         try:

@@ -15,6 +15,8 @@ from app.models.range_session_ammo_usage import (
 )
 from app.models.range_session_firearm import RangeSessionFirearm
 from app.services.ammo_inventory_service import (
+    get_physical_inventory,
+    queue_inventory_transition,
     record_inventory_activity,
     lock_owned_lots,
 )
@@ -97,10 +99,16 @@ def create_range_session(
         )
 
     try:
-        lock_owned_lots(db, owner_id=owner_id, lot_ids=[
+        affected_lot_ids = {
             ammo.ammo_lot_id for item in firearms for ammo in (item.ammo_usage or [])
             if ammo.ammo_lot_id is not None
-        ])
+        }
+        locked_lots = lock_owned_lots(db, owner_id=owner_id, lot_ids=affected_lot_ids)
+        balances_before = {
+            lot_id: get_physical_inventory(db, lot_id=lot_id)
+            for lot_id in affected_lot_ids
+        }
+        transition_transactions = {}
         owned_firearms = db.scalars(
             select(Firearm).where(
                 Firearm.id.in_(firearm_ids),
@@ -196,7 +204,9 @@ def create_range_session(
                         occurred_date=occurred_date,
                         notes=activity_type.expenditure_description,
                         commit=False,
+                        notify_transition=False,
                     )
+                    transition_transactions[ammo_input.ammo_lot_id] = transaction.id
 
                     db.add(
                         RangeSessionAmmoUsage(
@@ -253,6 +263,13 @@ def create_range_session(
                 },
             )
         )
+
+        for lot_id, transaction_id in transition_transactions.items():
+            queue_inventory_transition(
+                db, lot_id=lot_id, transaction_id=transaction_id,
+                before=balances_before[lot_id],
+                after=get_physical_inventory(db, lot_id=lot_id),
+            )
 
         db.commit()
         db.refresh(range_session)
@@ -408,6 +425,11 @@ def update_range_session(
             *[ammo.ammo_lot_id for item in firearms for ammo in (item.ammo_usage or [])
               if ammo.ammo_lot_id],
         ])
+        balances_before = {
+            lot_id: get_physical_inventory(db, lot_id=lot_id)
+            for lot_id in locked_lots
+        }
+        transition_transactions = {}
         submitted_ammo = [(item, ammo) for item in firearms for ammo in (item.ammo_usage or [])]
         for usage in existing_usage:
             if usage.ammo_lot_id and locked_lots[usage.ammo_lot_id].is_merged:
@@ -458,7 +480,9 @@ def update_range_session(
                     ),
                 },
                 commit=False,
+                notify_transition=False,
             )
+            transition_transactions[lot_id] = transaction.id
 
             correction_transaction_ids.append(
                 str(transaction.id)
@@ -623,8 +647,10 @@ def update_range_session(
                                     ),
                                 },
                                 commit=False,
+                                notify_transition=False,
                             )
                         )
+                        transition_transactions[ammo_input.ammo_lot_id] = inventory_transaction.id
 
                     new_usage = RangeSessionAmmoUsage(
                         range_session_firearm_id=(
@@ -802,6 +828,13 @@ def update_range_session(
                 },
             )
         )
+
+        for lot_id, transaction_id in transition_transactions.items():
+            queue_inventory_transition(
+                db, lot_id=lot_id, transaction_id=transaction_id,
+                before=balances_before[lot_id],
+                after=get_physical_inventory(db, lot_id=lot_id),
+            )
 
         db.commit()
         db.refresh(range_session)

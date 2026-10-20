@@ -129,6 +129,11 @@ class AmmunitionActivityRequest(BaseModel):
     occurred_date: date
     notes: str | None = None
 
+class AmmunitionNotificationSettingsRequest(BaseModel):
+    low_inventory_notifications_enabled: bool
+    low_inventory_threshold: int | None = Field(default=None, gt=0, le=2_147_483_647)
+    depleted_notifications_enabled: bool
+
 @router.get("/")
 async def ammunition_list(
     request: Request,
@@ -457,6 +462,33 @@ async def ammunition_edit(
         },
     )
 
+
+@router.put("/{ammo_lot_id}/notifications", dependencies=[Depends(require_csrf)])
+async def ammunition_notification_settings(
+    ammo_lot_id: UUID,
+    payload: AmmunitionNotificationSettingsRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    lot = db.scalar(
+        select(AmmoLot).where(
+            AmmoLot.id == ammo_lot_id,
+            AmmoLot.owner_id == current_user.id,
+        ).with_for_update()
+    )
+    if lot is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ammunition lot not found.")
+    if lot.is_merged:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Merged ammunition lots are read-only.")
+    if payload.low_inventory_notifications_enabled and payload.low_inventory_threshold is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="Enter a positive round threshold when low-inventory alerts are enabled.")
+    lot.low_inventory_notifications_enabled = payload.low_inventory_notifications_enabled
+    lot.low_inventory_threshold = payload.low_inventory_threshold
+    lot.depleted_notifications_enabled = payload.depleted_notifications_enabled
+    db.commit()
+    return {"success": True}
+
 @router.get("/{ammo_lot_id}/activity/new")
 async def ammunition_activity_new(
     ammo_lot_id: UUID,
@@ -596,6 +628,7 @@ async def ammunition_detail(
             "app_version": settings.app_version,
             "current_user": current_user,
             "is_admin": request.session["user"].get("is_admin", False),
+            "csrf_token": csrf_token(request),
             "lot": lot,
             "transactions": transactions,
             "expenditure_descriptions": shooting_expenditure_descriptions(

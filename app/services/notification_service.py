@@ -120,6 +120,76 @@ def backup_event(kind, key):
         db.commit()
 
 
+def ammunition_inventory_transition(db, *, lot, transaction_id, before, after):
+    """Queue a private lot alert for a committed-in-this-session crossing."""
+    if lot.is_merged or before <= after:
+        return None
+
+    depleted = lot.depleted_notifications_enabled and before > 0 and after == 0
+    low = (
+        lot.low_inventory_notifications_enabled
+        and lot.low_inventory_threshold is not None
+        and before >= lot.low_inventory_threshold > after
+    )
+    if depleted:
+        kind = 'ammo_depleted'
+        title = 'Ammunition depleted'
+        condition = 'has reached zero rounds'
+    elif low and (after > 0 or not lot.depleted_notifications_enabled):
+        kind = 'ammo_low_inventory'
+        title = 'Ammunition below its low-inventory threshold'
+        condition = f'is below its {lot.low_inventory_threshold}-round threshold'
+    else:
+        return None
+
+    owner = db.get(User, lot.owner_id)
+    if owner is None:
+        return None
+    in_app = owner.ammo_notifications_in_app
+    email = owner.ammo_notifications_email
+    if not in_app and not email:
+        return None
+
+    product = lot.ammo_product
+    manufacturer = product.brand.manufacturer.name
+    caliber = product.caliber.name
+    grain = ''
+    if product.grain_weight is not None:
+        grain_value = format(product.grain_weight, 'f')
+        if '.' in grain_value:
+            grain_value = grain_value.rstrip('0').rstrip('.')
+        grain = f' — {grain_value} gr'
+    projectile = product.projectile_type or 'Unknown projectile'
+    description = f'{manufacturer} — {caliber}{grain} — {projectile}'
+    message = f'{description} {condition}. Current quantity: {after} rounds.'
+    event_key = f'{kind}:{transaction_id}'
+    if db.scalar(select(NotificationEvent.id).where(NotificationEvent.event_key == event_key)):
+        return None
+
+    event = NotificationEvent(
+        event_key=event_key, kind=kind, scope='user', severity='info',
+        title=title, message=message, action=f'/ammunition/{lot.id}', updated_at=utcnow(),
+    )
+    db.add(event)
+    db.flush()
+
+    email_state = 'disabled'
+    diagnostic = None
+    if email:
+        if not mail_config(db)['enabled']:
+            diagnostic = 'System email is not enabled'
+        elif not owner.email:
+            email_state = 'failed'
+            diagnostic = 'Account has no email; update identity-provider claims'
+        else:
+            email_state = 'pending'
+    db.add(NotificationRecipient(
+        event_id=event.id, user_id=owner.id, in_app=in_app,
+        email_state=email_state, diagnostic=diagnostic,
+    ))
+    return event
+
+
 def restore_recipients():
     """Snapshot opt-in admin recipients before PostgreSQL is replaced."""
     with SessionLocal() as db:
@@ -334,6 +404,16 @@ def deliver_pending():
             user=db.get(User,delivery.user_id); event=db.get(NotificationEvent,delivery.event_id)
             if not user or (event.scope=='admin' and not user.is_admin):
                 delivery.email_state='cancelled'; delivery.diagnostic='Recipient no longer authorized'; db.commit(); continue
+            if event.scope == 'user':
+                recipients = db.scalars(select(NotificationRecipient).where(
+                    NotificationRecipient.event_id == event.id)).all()
+                if len(recipients) != 1 or recipients[0].user_id != user.id:
+                    delivery.email_state='cancelled'; delivery.diagnostic='Private notice recipient mismatch'; db.commit(); continue
+            if (event.kind == 'backup_completed' and not user.backup_success_email
+                    or event.kind == 'restore_initiated' and not user.restore_initiated_email
+                    or event.kind in ('ammo_low_inventory', 'ammo_depleted')
+                    and not user.ammo_notifications_email):
+                delivery.email_state='cancelled'; delivery.diagnostic='Recipient preference is disabled'; db.commit(); continue
             if not config['enabled']:
                 delivery.email_state='disabled'; delivery.diagnostic='Email disabled'; db.commit(); continue
             delivery.attempts+=1; delivery.email_state='sending'; db.commit()

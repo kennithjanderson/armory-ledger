@@ -1,6 +1,7 @@
 # Armory Ledger Decisions
 
-Reviewed 2026-10-12 against `1fc2edd`. This is a decision register, not a claim
+Reviewed 2026-10-20 against `develop/v0.1.5` baseline `625524e` and the
+manufacturer-alias implementation in the working tree. This is a decision register, not a claim
 that every implementation detail was previously approved in a formal ADR.
 Evidence is identified for each entry. See [architecture](ARCHITECTURE.md),
 [status](IMPLEMENTATION_STATUS.md), and [roadmap](ROADMAP.md).
@@ -17,7 +18,9 @@ proof of completion.
 | Self-hosted application with external OIDC | [README](../README.md), `app/core/auth.py`, `app/api/auth.py` | No local passwords; the instance operator controls hosting and identity-provider configuration. Upstream software identity is separate from instance ownership. |
 | Armory User required; Armory Admin is additional login-time privilege | [SECURITY](../SECURITY.md), auth callback, admin middleware/dependency | Server-side admin enforcement without live group refresh in v0.1.2. Revoking a provider group does not immediately revoke an existing session. |
 | Administrators cannot browse other users' private inventory | Admin router, owner-filtered inventory routers, SECURITY | Admin account identity fields are permitted, but counts, prices, records, usage summaries and private audit data are excluded. Infrastructure operator access is a separate boundary. |
-| Manufacturers and calibers remain shared | Models, reference services, README | Avoids manufacturer ownership migration. Multiple users share identifiers; new reference names are discoverable by other users. Admin views remain read-only. |
+| Manufacturers and calibers remain shared | Models, reference services, README | Avoids manufacturer ownership migration. Multiple users share identifiers; new reference names are discoverable by other users. Canonical manufacturer/caliber fields remain unchanged by alias administration; the admin-only manufacturer alias workflow manages lookup terms, not primary records. |
+| Manufacturer aliases resolve to canonical shared records; only admins manage them | Owner direction on 2026-10-20; `app/services/manufacturer_service.py`, `/admin/manufacturers/{id}/aliases` | Aliases are lookup shortcuts such as `S&W` for `Smith & Wesson`, not alternate records or a rename tool. Exact alias searches return the canonical ID/name. Reject canonical-name and alias conflicts. Add/remove is server-side admin-only, CSRF-protected, and actor-audited; changing an alias means removing and re-adding it. Existing inventory foreign keys remain unchanged. Caliber alias management remains a separate admin-only dev.7 feature. |
+| Ammunition entry selects from the shared manufacturer catalog | Owner direction on 2026-10-20; `app/templates/ammunition/new.html`, `app/services/ammunition_service.py` | Reuse the manufacturer catalog already referenced by `AmmoBrand`; do not create a second ammo-only manufacturer list. Search aliases resolve to the canonical ID/name. Unknown names require an explicit create action. Store the canonical manufacturer name on the new ammo brand record; caliber, grain weight, projectile type and product details remain separate. No schema migration is required. |
 | Optional serial and purchase price | Firearm model/API and migration `f57a288ed6ed` | Unknown is represented by NULL, not fabricated serials or zero prices. Decimal/Numeric avoids binary floating-point storage. |
 | Store currency separately; current UI writes USD | Firearm model/API/templates and schema plan | Existing USD amounts retain their meaning if more currencies are added. No valuation, conversion, tax, or accounting features are implied. |
 | Request-time scheduled announcements | Announcement model/schema/service and README | No worker, cron, dismissal tracking or browser polling. Timezone-aware input normalizes to UTC; start inclusive/end exclusive. |

@@ -6,7 +6,9 @@
       "The scheduled release script reports release timing, saved status and local timer health without executing or changing a release.",
       "Ammunition acquisition suggests exact matching owned lots before creating a new lot, while preserving an explicit create-new option.",
       "Ammunition caliber pages group active lots by manufacturer and keep depleted lots accessible in a collapsed section.",
-      "Ammunition lot alerts can be configured for low inventory or depletion and delivered through each user's selected in-app and email channels."
+      "Ammunition lot alerts can be configured for low inventory or depletion and delivered through each user's selected in-app and email channels.",
+      "Administrators can add and remove manufacturer search aliases that resolve to canonical names without renaming records or changing existing inventory references.",
+      "Ammunition entry uses the shared manufacturer search, including aliases, and requires an explicit action to add a new manufacturer."
     ],
     "fixed": [
       "Standard users can no longer see or change administrator-only backup and restore notification preferences."

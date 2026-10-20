@@ -17,10 +17,7 @@ from app.models.ammo_inventory_transaction import (
 from app.models.ammo_lot import AmmoLot
 from app.models.ammo_product import AmmoProduct
 from app.models.caliber import Caliber
-from app.services.manufacturer_service import (
-    create_manufacturer,
-    find_exact_manufacturer,
-)
+from app.models.organization import ManufacturerProfile, Organization
 from app.services.ammo_inventory_service import get_physical_inventory
 
 
@@ -77,7 +74,7 @@ def acquire_ammunition(
     db: Session,
     *,
     owner_id: UUID,
-    brand_name: str,
+    manufacturer_id: UUID,
     caliber_id: UUID,
     grain_weight: Decimal | None,
     projectile_type: str | None,
@@ -88,11 +85,6 @@ def acquire_ammunition(
     lot_number: str | None = None,
     notes: str | None = None,
 ) -> AmmoLot:
-    cleaned_brand_name = normalize_text(brand_name)
-
-    if not cleaned_brand_name:
-        raise ValueError("Brand is required.")
-
     if quantity <= 0:
         raise ValueError("Quantity must be greater than zero.")
 
@@ -108,6 +100,17 @@ def acquire_ammunition(
 
     if caliber is None:
         raise ValueError("Selected caliber is invalid.")
+
+    manufacturer = db.scalar(
+        select(Organization)
+        .join(ManufacturerProfile, ManufacturerProfile.organization_id == Organization.id)
+        .where(
+            Organization.id == manufacturer_id,
+            ManufacturerProfile.is_selectable.is_(True),
+        )
+    )
+    if manufacturer is None:
+        raise ValueError("Selected manufacturer is invalid.")
 
     cleaned_projectile_type = (
         normalize_text(projectile_type)
@@ -136,30 +139,18 @@ def acquire_ammunition(
     cleaned_notes = notes.strip() if notes and notes.strip() else None
 
     try:
-        organization = find_exact_manufacturer(
-            db,
-            cleaned_brand_name,
-        )
-
-        if organization is None:
-            organization = create_manufacturer(
-                db,
-                cleaned_brand_name,
-                commit=False,
-            )
-
         brand = db.scalar(
             select(AmmoBrand).where(
-                AmmoBrand.manufacturer_id == organization.id,
+                AmmoBrand.manufacturer_id == manufacturer.id,
                 func.lower(AmmoBrand.name)
-                == cleaned_brand_name.lower(),
+                == manufacturer.name.lower(),
             )
         )
 
         if brand is None:
             brand = AmmoBrand(
-                manufacturer_id=organization.id,
-                name=cleaned_brand_name,
+                manufacturer_id=manufacturer.id,
+                name=manufacturer.name,
             )
             db.add(brand)
             db.flush()

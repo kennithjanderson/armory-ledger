@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Manufacturer Aliases | {{ app_name }}{% endblock %}
+{% block content %}
+<a href="/admin/manufacturers" class="record-back">← Manufacturers</a>
+<section class="page-heading">
+    <div class="page-marker">SHARED REFERENCE DATA</div>
+    <h1>Manufacturer aliases</h1>
+    <p>Aliases resolve to <strong>{{ manufacturer.name }}</strong>. They help users find the canonical manufacturer; they do not rename it or change existing inventory references.</p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span>
+</div>
+
+{% include "partials/admin_navigation.html" %}
+
+<section class="operations-card" aria-labelledby="add-manufacturer-alias-heading">
+    <h2 id="add-manufacturer-alias-heading">Add an alias</h2>
+    <p>For example, typing “S&amp;W” can select the canonical “Smith &amp; Wesson” record. Aliases are shared by all users.</p>
+    <form id="manufacturer-alias-create" class="operations-form"
+          data-endpoint="/admin/manufacturers/{{ manufacturer.id }}/aliases"
+          data-csrf-token="{{ csrf_token }}">
+        <label for="manufacturer-alias-new">Alias</label>
+        <input id="manufacturer-alias-new" name="alias" type="text" maxlength="255" required>
+        <div class="operations-actions">
+            <button class="button-primary" type="submit">Add alias</button>
+        </div>
+    </form>
+</section>
+
+<div id="manufacturer-alias-message" class="operation-message" role="status" aria-live="polite"></div>
+
+<section class="operations-card" aria-labelledby="manufacturer-alias-list-heading">
+    <h2 id="manufacturer-alias-list-heading">Current aliases</h2>
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead><tr><th>Alias</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for alias in aliases %}
+        <tr>
+            <td>{{ alias.alias }}</td>
+            <td>
+                <button class="button-secondary manufacturer-alias-delete" type="button"
+                        data-endpoint="/admin/manufacturers/{{ manufacturer.id }}/aliases/{{ alias.id }}"
+                        data-csrf-token="{{ csrf_token }}" data-alias="{{ alias.alias }}">Remove</button>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="2">No aliases are configured for this manufacturer.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</section>
+
+<section class="operations-card" aria-labelledby="manufacturer-alias-history-heading">
+    <h2 id="manufacturer-alias-history-heading">Recent alias changes</h2>
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead><tr><th>When</th><th>Administrator</th><th>Action</th><th>Previous</th><th>Current</th></tr></thead>
+        <tbody>
+        {% for event, actor_name, actor_email in changes %}
+        <tr>
+            <td><time datetime="{{ event.created_at.isoformat() }}">{{ event.created_at | utc_display }}</time></td>
+            <td>{{ actor_name }} {{ actor_email }}</td>
+            <td>{{ event.action | title }}</td>
+            <td>{{ event.previous_alias or '—' }}</td>
+            <td>{{ event.new_alias or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">No alias changes recorded.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</section>
+
+<script src="{{ url_for('static', path='/js/admin-manufacturer-aliases.js') }}?v={{ app_version }}" defer></script>
+{% endblock %}

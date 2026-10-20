@@ -178,7 +178,7 @@ class MergeRouteTests(unittest.TestCase):
 
     def test_acquisition_suggestions_are_read_only_owner_scoped_and_explicit(self):
         payload = {
-            "brand_name": "Test Mfr",
+            "manufacturer_id": str(self.fixture.source.ammo_product.brand.manufacturer_id),
             "caliber_id": str(self.fixture.f.nine.id),
             "grain_weight": None,
             "projectile_type": None,
@@ -187,6 +187,7 @@ class MergeRouteTests(unittest.TestCase):
         }
         before_lots = len(self.fixture.db.scalars(select(AmmoLot)).all())
         before_transactions = len(self.fixture.db.scalars(select(AmmoInventoryTransaction)).all())
+        before_organizations = len(self.fixture.db.scalars(select(Organization)).all())
         result = self.request("POST", "/ammunition/", json=payload).json()
         self.assertFalse(result["success"])
         self.assertEqual(
@@ -197,6 +198,14 @@ class MergeRouteTests(unittest.TestCase):
         self.assertNotIn(str(self.fixture.f.foreign_lot.id), str(result))
         self.assertEqual(len(self.fixture.db.scalars(select(AmmoLot)).all()), before_lots)
         self.assertEqual(len(self.fixture.db.scalars(select(AmmoInventoryTransaction)).all()), before_transactions)
+
+        # Acquisition requires an explicitly selected shared manufacturer.
+        missing_selection = self.request("POST", "/ammunition/", json={
+            **payload, "manufacturer_id": str(uuid4()), "create_separate_lot": True,
+        }).json()
+        self.assertFalse(missing_selection["success"])
+        self.assertEqual(missing_selection["error"], "Selected manufacturer is invalid.")
+        self.assertEqual(len(self.fixture.db.scalars(select(Organization)).all()), before_organizations)
 
         # Explicit New Lot and a supplied manufacturer lot number bypass suggestions.
         created = self.request("POST", "/ammunition/", json={

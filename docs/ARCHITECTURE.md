@@ -1,7 +1,8 @@
 # Armory Ledger Architecture
 
-Baseline reviewed: 2026-10-12, commit `1fc2edd` (after release commit `7c260aa`,
-tag `v0.1.2`). This describes source code, not the verified state of any running
+Baseline reviewed: 2026-10-20, committed baseline `625524e` on
+`develop/v0.1.5`, with the manufacturer-alias changes described below in the
+working tree. This describes source code, not the verified state of any running
 database or deployment. See [implementation status](IMPLEMENTATION_STATUS.md),
 [decisions](DECISIONS.md), and [roadmap](ROADMAP.md) for limitations and plans.
 
@@ -65,7 +66,7 @@ paths commit explicitly, with rollback handling in many services.
 | `/accessories/*` | List/create/detail/edit and manufacturer lookup/create |
 | `/range/*` | Session list/create/detail/edit |
 | `/reference/calibers` | Authenticated shared caliber creation |
-| `/admin*` | Admin landing, account identities, read-only references, announcement management |
+| `/admin*` | Admin landing, account identities, references, manufacturer alias management, announcement management |
 | `/about` | Authenticated About / Privacy page |
 
 GET handlers generally render HTML; POST/PUT handlers accept JSON. Business
@@ -112,12 +113,12 @@ operators can have infrastructure access outside these application controls.
 ## Database relationships
 
 Models use UUID primary keys, foreign keys, PostgreSQL enums, timezone-aware
-timestamps, and JSONB for audit changes. There are 18 application tables.
+timestamps, and JSONB for audit changes.
 
 | Domain | Main relationships |
 | --- | --- |
 | Identity | `User` owns private inventory and is referenced as audit actor/announcement author |
-| Shared manufacturers | `Organization` has an optional one-to-one `ManufacturerProfile`; aliases point to organizations; typed organization relationships connect two organizations |
+| Shared manufacturers | `Organization` has an optional one-to-one `ManufacturerProfile`; aliases point to organizations; administrator alias changes have a separate actor-attributed audit trail; typed organization relationships connect two organizations |
 | Shared calibers | `CaliberAlias` points to `Caliber`; firearms and ammunition products reference calibers |
 | Firearms | `Firearm` references owner, optional manufacturer organization, optional caliber |
 | Accessories | `Accessory` references owner, optional organization, optional firearm |
@@ -144,12 +145,27 @@ be at least one; a database check exists in its migration.
 
 Manufacturers and calibers are global. Manufacturer search uses exact canonical
 names/aliases and fuzzy suggestions; fuzzy results do not automatically merge
-records. Authenticated users can create references. Admin reference views are
-read-only. Organization relationships are modeled but have no management UI.
+records. Authenticated users can create references. Administrators can add and
+remove manufacturer search aliases under `/admin`; alias entries are
+read-only after creation and are changed by remove-and-readd. Alias resolution
+returns the existing canonical manufacturer ID and name. Alias changes never
+rename a canonical manufacturer or rewrite inventory references. Canonical names
+and aliases are checked for conflicts. Each change records the admin actor and
+before/after alias values. Caliber aliases remain modeled but do not yet have an
+administration workflow. Organization relationships are modeled but have no
+management UI.
 
 Ammo brands and products are also shared; owned lots reference products. Updating
 a lot's product attributes finds or creates another product and repoints that
 lot rather than mutating a shared product in place.
+
+New ammunition acquisitions select a manufacturer from the same shared catalog
+used by firearm entry. Manufacturer aliases resolve to the canonical record;
+creating another manufacturer requires an explicit action in the lookup. The
+acquisition API accepts a selectable manufacturer UUID and stores its canonical
+name in `AmmoBrand`, so arbitrary typed text cannot silently create a second
+manufacturer spelling. Grain weight, projectile type, product name, and SKU stay
+on the ammunition product.
 
 ### Ammunition inventory
 
@@ -232,7 +248,13 @@ The source revision chain, read from files without executing Alembic, is:
 → 5c0a11b43be4 firearm dates/status
 → ba5b6e5573c8 accessory quantity
 → f57a288ed6ed optional serial/purchase price
-→ 4d9a9a64bd4f announcements (repository head)
+→ 4d9a9a64bd4f announcements
+→ 82c1f947ad30 shooting activity type
+→ c7d2a960e148 ammunition lot merging
+→ d914b7ce203a notifications and email outbox
+→ a47c91e2d563 restore notification preferences
+→ 6ec8a2f145bd ammunition notifications
+→ d2c87ab9415e administrator-managed manufacturer aliases (development head)
 ```
 
 The old [schema plan](v0.1.2-schema-plan.md) predates the last two migration files.

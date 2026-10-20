@@ -13,11 +13,12 @@ const markup = execFileSync(process.env.PYTHON || "python3", [
 const script = readFileSync(path.join(root, "app/static/js/ammunition-form.js"), "utf8");
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
-async function setup(t, fetchResponse) {
+async function setup(t, fetchResponse, submit = true) {
     const dom = new JSDOM(markup, { url: "https://example.test/ammunition/new" });
     t.after(() => dom.window.close());
     const document = dom.window.document;
-    document.getElementById("brand-name").value = "Example Maker";
+    document.getElementById("manufacturer-search").value = "Example Maker";
+    document.getElementById("manufacturer-id").value = "manufacturer-1";
     document.getElementById("caliber").innerHTML = '<option value="caliber-1">9mm</option>';
     document.getElementById("caliber").value = "caliber-1";
     document.getElementById("grain-weight").value = "115";
@@ -32,15 +33,19 @@ async function setup(t, fetchResponse) {
         sessionStorage: dom.window.sessionStorage,
         fetch: async (url, options) => {
             calls.push({ url, options });
-            return fetchResponse(JSON.parse(options.body));
+            return fetchResponse(url, options, options?.body ? JSON.parse(options.body) : null);
         },
+        setTimeout,
+        clearTimeout,
         console,
     });
     document.dispatchEvent(new dom.window.Event("DOMContentLoaded"));
-    document.getElementById("ammunition-form").dispatchEvent(
-        new dom.window.Event("submit", { cancelable: true }),
-    );
-    await flush();
+    if (submit) {
+        document.getElementById("ammunition-form").dispatchEvent(
+            new dom.window.Event("submit", { cancelable: true }),
+        );
+        await flush();
+    }
     return { dom, document, calls, location };
 }
 
@@ -60,14 +65,15 @@ test("cancel closes suggestions and preserves form values without mutation", asy
     assert.match(document.getElementById("duplicate-ammunition-list").textContent, /On hand: 40 rounds.*Requested: 25 rounds/);
     document.getElementById("duplicate-modal-cancel").click();
     assert.equal(document.getElementById("duplicate-ammunition-modal").hidden, true);
-    assert.equal(document.getElementById("brand-name").value, "Example Maker");
+    assert.equal(document.getElementById("manufacturer-search").value, "Example Maker");
     assert.equal(document.getElementById("quantity").value, "25");
     assert.equal(calls.length, 1);
+    assert.equal(JSON.parse(calls[0].options.body).manufacturer_id, "manufacturer-1");
 });
 
 test("create new explicitly resubmits and existing-lot handoff keeps quantity out of URL", async t => {
     let mode = "suggest";
-    const context = await setup(t, async (payload) => {
+    const context = await setup(t, async (url, options, payload) => {
         if (payload.create_separate_lot) {
             mode = "created";
             return { ok: true, json: async () => ({ success: true, lot: { id: "new-lot" } }) };
@@ -97,6 +103,49 @@ test("suggestion labels use text nodes rather than interpreting server text as H
     }) }));
     assert.equal(document.querySelector("#duplicate-ammunition-list img"), null);
     assert.match(document.querySelector("#duplicate-ammunition-list").textContent, /<img src=x>/);
+});
+
+test("manufacturer aliases select the canonical shared manufacturer ID", async t => {
+    const context = await setup(t, async (url) => ({ ok: true, json: async () => ({
+        query: "S&W", match_type: "exact", exact: { id: "smith-id", name: "Smith & Wesson" }, similar: [],
+    }) }), false);
+    const { document, calls } = context;
+    const input = document.getElementById("manufacturer-search");
+    input.value = "S&W";
+    input.dispatchEvent(new context.dom.window.Event("input"));
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await flush();
+    assert.match(calls[0].url, /\/firearms\/manufacturer-search\?q=S%26W$/);
+    document.querySelector("#manufacturer-results button[data-manufacturer-id]").click();
+    assert.equal(document.getElementById("manufacturer-id").value, "smith-id");
+    assert.equal(input.value, "Smith & Wesson");
+});
+
+test("new manufacturer creation remains explicit and submits its returned ID", async t => {
+    const context = await setup(t, async (url, options) => {
+        if (url === "/firearms/manufacturer-search") return { ok: true, json: async () => ({
+            query: "New Maker", match_type: "none", exact: null, similar: [],
+        }) };
+        if (url === "/firearms/manufacturers") return { ok: true, json: async () => ({
+            success: true, manufacturer: { id: "new-maker-id", name: "New Maker" },
+        }) };
+        return { ok: true, json: async () => ({ success: true, lot: { id: "lot-1" } }) };
+    }, false);
+    const input = context.document.getElementById("manufacturer-search");
+    input.value = "New Maker";
+    input.dispatchEvent(new context.dom.window.Event("input"));
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await flush();
+    context.document.querySelector("[data-create-manufacturer]").click();
+    await flush();
+    assert.equal(context.document.getElementById("manufacturer-id").value, "new-maker-id");
+    assert.equal(input.value, "New Maker");
+    context.document.getElementById("ammunition-form").dispatchEvent(
+        new context.dom.window.Event("submit", { cancelable: true }),
+    );
+    await flush();
+    const acquisition = context.calls.find(call => call.url === "/ammunition/");
+    assert.equal(JSON.parse(acquisition.options.body).manufacturer_id, "new-maker-id");
 });
 
 test("activity page consumes only an unexpired matching lot prefill", async t => {

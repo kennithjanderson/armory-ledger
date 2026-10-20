@@ -2317,6 +2317,7 @@ body {
 .operations-inline-check { display: inline-flex !important; align-items: center; gap: .5rem !important; }
 .operations-inline-check input { width: auto; }
 .operation-message { min-height: 1.35rem; margin: .35rem 0; color: var(--navy); font-weight: 650; }
+.operation-message--error { color: #8c2631; }
 .operations-action-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .operations-action-bar > div { min-width: 0; }
 .operations-action-bar h2 { margin: 0 0 .35rem; }

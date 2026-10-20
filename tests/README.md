@@ -32,6 +32,17 @@ replace manual browser verification of layout/native dropdown behavior.
 
 No lint/build configuration or CI test job is introduced by this task.
 
+## Manufacturer alias administration
+
+`test_manufacturer_aliases.py` uses the synthetic SQLite fixture for alias
+resolution, conflict rejection, audited create/remove-and-readd behavior, preserved
+inventory foreign keys, and admin/CSRF route checks. The route harness injects
+identity and database dependencies; it does not exercise OIDC or PostgreSQL's
+transaction advisory lock. The development rebuild applied the migration on the
+development database. Its downgrade behavior has not been exercised; use only an
+explicitly authorized disposable PostgreSQL database for additional migration
+tests, never production data.
+
 ## Shooting Log coverage
 
 The same commands run activity-type and recorded-round tests. Service cases cover

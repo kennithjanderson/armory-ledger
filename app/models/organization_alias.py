@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -15,6 +15,11 @@ class OrganizationAlias(Base):
             "organization_id",
             "alias",
             name="uq_organization_aliases_organization_alias",
+        ),
+        Index(
+            "uq_organization_aliases_normalized_alias",
+            text("lower(trim(alias))"),
+            unique=True,
         ),
     )
 

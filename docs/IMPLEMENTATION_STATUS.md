@@ -1,5 +1,51 @@
 # Armory Ledger Implementation Status
 
+## v0.1.5-dev.6 — administrator-managed manufacturer aliases (2026-10-20)
+
+Implemented in the development working tree. Admins can add and remove search
+aliases for an existing shared manufacturer; each alias is displayed as static
+text and changes use remove-and-readd. Exact searches through the
+firearm, accessory, and ammunition manufacturer lookup return the canonical
+record. Alias collisions with canonical names or other aliases are rejected;
+canonical names and existing inventory manufacturer IDs are not changed. Every
+mutation is server-authorized, CSRF-protected, and recorded with the acting
+administrator and previous/current alias values. The manufacturer page now
+explains that Status is descriptive (`active`, `defunct`, or default `unknown`)
+and does not affect selection; Selectable controls whether the record appears in
+entry forms.
+
+The migration `d2c87ab9415e` adds normalized alias uniqueness and the alias
+administrative audit table after `6ec8a2f145bd`; it is applied in development.
+Before implementation, read-only review found six manufacturer records, no
+aliases, and no
+normalized duplicate canonical names. The development rebuild applied the
+migration successfully. Six focused SQLite/ASGI tests pass, covering canonical
+resolution, duplicate rejection, unchanged inventory references, audited alias
+lifecycle, admin authorization, CSRF, and conflict responses. The normal
+firearm/accessory/ammunition lookup routes use the shared alias resolver. After
+rebuild, PostgreSQL reported healthy and `/health` returned healthy, database
+connected, version `0.1.5`; startup logs showed no errors (one existing non-fatal
+Authlib/httpx deprecation warning). The owner confirmed browser acceptance on
+2026-10-20. The full Python suite ran 154 tests: 116 passed, two PostgreSQL concurrency tests skipped
+as designed, and 36 unrelated release/setup harness tests errored or failed in
+the read-only test container because those harnesses require a writable repo or
+Docker CLI inside the test container. The focused alias and changelog suites
+passed all eight tests. Thirty-six existing JavaScript regression tests passed;
+the seven announcement-form tests in a separate full-suite attempt could not
+run correctly because the host Python used by their renderer lacks Pydantic.
+The alias JavaScript passes `node --check`.
+
+As a related dev.6 refinement, new ammunition acquisitions now select from the
+shared manufacturer catalog used by firearm entry. Alias searches select the
+canonical manufacturer ID/name; creating an unknown manufacturer requires an
+explicit action. The acquisition API requires a selectable manufacturer ID and
+no longer creates manufacturers from arbitrary typed text. New ammunition
+brand rows use the canonical manufacturer name. No migration is needed. Focused
+route and browser-form tests were updated. The route suite passed in an isolated
+container; the jsdom browser-form suite could not run because the test-only jsdom
+package is unavailable. The owner confirmed browser acceptance for the alias
+page and ammunition manufacturer selector on 2026-10-20.
+
 ## v0.1.5-dev.4 — installation experience and documentation (2026-10-20)
 
 The installer and documentation work takes dev.4 because dev.1–dev.3
@@ -10,9 +56,11 @@ and depletion alerts, completing dev.5. Later uncompleted lot merging and alias
 work were initially assigned dev.6–dev.8. On 2026-10-20, the owner reviewed
 the proposed merge enhancement and decided it was unnecessary: zero-round lots
 should retain their existing records and history, and may be merged only after
-the user adds ammunition. No merge code or migration is planned for dev.6.
-Manufacturer alias management is now the next pending feature at dev.6, followed
-by caliber alias management at dev.7. Completed checkpoints remain unchanged.
+the user adds ammunition. The merge-enhancement proposal was removed from the
+pending sequence. Manufacturer alias management is implemented and browser
+acceptance is confirmed for dev.6; caliber alias management remains pending at
+dev.7.
+Completed checkpoints remain unchanged.
 
 This checkpoint adds a first-run `get-started.sh` that prepares either the
 published GHCR configuration or a local source-build override, validates
@@ -169,11 +217,11 @@ has passed automated or runtime testing.
 | Accessories | Quantity, manufacturer, purchase fields, firearm/storage placement, audited edits | Accessory model/service/router |
 | Range sessions | Multiple firearms and ammo rows, inventory or other sources, balance deductions, transactional edits/corrections, history pages | Range service/router/templates/JS |
 | References | Shared manufacturers/calibers, canonical/alias resolution, manufacturer suggestions and authenticated creation | Reference services and routes |
-| Admin pages | Account-only user projection, read-only manufacturer/caliber views, consistent navigation | `app/api/admin.py`, admin templates |
+| Admin pages | Account-only user projection, read-only canonical manufacturer/caliber fields, admin-only manufacturer alias management, consistent navigation | `app/api/admin.py`, admin templates |
 | Announcements | Create/edit/enable/schedule, UTC validation, escaped text, request-time authenticated display, CSRF for writes | Announcement model/schema/service and shared context |
 | About / Privacy | Software/operator separation, optional instance contacts, footer link | About route/template, Settings |
 | Deployment source | Docker image, PostgreSQL Compose, startup migrations, release-triggered GHCR publishing | Dockerfile, entrypoint, Compose example, GitHub workflow |
-| Migrations | Nine revisions, ending at `4d9a9a64bd4f`; firearm and announcement revisions exist | `migrations/versions/` |
+| Migrations | Fifteen source revisions, ending at `d2c87ab9415e`; development database reports this revision as head | `migrations/versions/`, dev rebuild |
 
 ## Partial implementation and known limitations
 
@@ -183,9 +231,10 @@ has passed automated or runtime testing.
   is not a complete child-row snapshot. There is no audit UI or immutable-log
   enforcement. Announcement creator/updater metadata is not full change history.
 - **Caliber aliases and organization relationships are modeled, but lack
-  administration workflows.** Manufacturer alias service code exists without a
-  corresponding management route. Read-only admin reference pages are not a
-  rename/merge/alias-management feature.
+  administration workflows.** Manufacturer alias management is implemented
+  with admin-only routes and actor-attributed history; the caliber workflow
+  remains planned for dev.7. Neither feature grants canonical rename or merge
+  capability.
 - **Inventory concurrency:** balance validation and transaction insertion have no
   explicit locking, so competing requests may overspend a balance. This is a
   source-identified risk; no concurrency reproduction was run.

@@ -1,11 +1,12 @@
 from difflib import SequenceMatcher
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.models.organization import Organization, ManufacturerProfile
 from app.models.organization_alias import OrganizationAlias
+from app.models.manufacturer_alias_audit_event import ManufacturerAliasAuditEvent
 
 
 def normalize_name(value: str) -> str:
@@ -48,7 +49,7 @@ def find_exact_manufacturer(
         return organization
 
     # Organization alias
-    organization = db.scalar(
+    alias_query = (
         select(Organization)
         .join(
             ManufacturerProfile,
@@ -64,7 +65,42 @@ def find_exact_manufacturer(
         )
     )
 
+    organization = db.scalar(alias_query)
+
     return organization
+
+
+def _lock_manufacturer_catalog(db: Session) -> None:
+    """Serialize canonical-name and alias conflict checks on PostgreSQL."""
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(4286797, 5062215)"))
+
+
+def _clean_alias(alias: str) -> str:
+    cleaned = " ".join(alias.strip().split())
+    if not cleaned:
+        raise ValueError("Alias cannot be empty.")
+    return cleaned
+
+
+def _record_alias_change(
+    db: Session,
+    *,
+    organization_id: UUID,
+    alias_id: UUID,
+    actor_user_id: UUID,
+    action: str,
+    previous_alias: str | None,
+    new_alias: str | None,
+) -> None:
+    db.add(ManufacturerAliasAuditEvent(
+        manufacturer_id=organization_id,
+        alias_id=alias_id,
+        actor_user_id=actor_user_id,
+        action=action,
+        previous_alias=previous_alias,
+        new_alias=new_alias,
+    ))
 
 
 def find_similar_manufacturers(
@@ -144,6 +180,7 @@ def create_manufacturer(
     if not cleaned_name:
         raise ValueError("Manufacturer name cannot be empty.")
 
+    _lock_manufacturer_catalog(db)
     existing = find_exact_manufacturer(db, cleaned_name)
 
     if existing is not None:
@@ -178,6 +215,8 @@ def add_manufacturer_alias(
     db: Session,
     organization_id: UUID,
     alias: str,
+    *,
+    actor_user_id: UUID,
 ) -> OrganizationAlias:
     """
     Add an alias to an existing manufacturer.
@@ -185,16 +224,14 @@ def add_manufacturer_alias(
     Refuses aliases that already resolve to another canonical
     manufacturer or alias.
     """
-    cleaned_alias = " ".join(alias.strip().split())
-
-    if not cleaned_alias:
-        raise ValueError("Alias cannot be empty.")
+    cleaned_alias = _clean_alias(alias)
 
     organization = db.get(Organization, organization_id)
 
     if organization is None:
         raise ValueError("Manufacturer does not exist.")
 
+    _lock_manufacturer_catalog(db)
     existing = find_exact_manufacturer(db, cleaned_alias)
 
     if existing is not None:
@@ -214,7 +251,40 @@ def add_manufacturer_alias(
     )
 
     db.add(new_alias)
+    db.flush()
+    _record_alias_change(
+        db, organization_id=organization.id, alias_id=new_alias.id,
+        actor_user_id=actor_user_id, action="created", previous_alias=None,
+        new_alias=new_alias.alias,
+    )
     db.commit()
     db.refresh(new_alias)
 
     return new_alias
+
+
+def delete_manufacturer_alias(
+    db: Session,
+    *,
+    organization_id: UUID,
+    alias_id: UUID,
+    actor_user_id: UUID,
+) -> None:
+    _lock_manufacturer_catalog(db)
+    record = db.scalar(
+        select(OrganizationAlias).where(
+            OrganizationAlias.id == alias_id,
+            OrganizationAlias.organization_id == organization_id,
+        ).with_for_update()
+    )
+    if record is None:
+        raise ValueError("Manufacturer alias not found.")
+
+    previous_alias = record.alias
+    db.delete(record)
+    _record_alias_change(
+        db, organization_id=organization_id, alias_id=alias_id,
+        actor_user_id=actor_user_id, action="deleted",
+        previous_alias=previous_alias, new_alias=None,
+    )
+    db.commit()

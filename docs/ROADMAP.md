@@ -230,9 +230,13 @@ confirmed in-app and email notification browser acceptance on 2026-10-20, so
 dev.5 is verified. The proposed enhanced-merge checkpoint was reviewed on
 2026-10-20 and is unnecessary: zero-round lots retain their existing records and
 history, and can be merged after ammunition is added. Existing merge behavior and
-schema remain unchanged. Manufacturer aliases are the next pending feature at
-dev.6, followed by caliber aliases at dev.7. These assignments do not alter
-completed commits or their numbering.
+schema remain unchanged. Manufacturer alias management is implemented in the
+development working tree as dev.6: admins can add/remove lookup aliases,
+which resolve to the unchanged canonical manufacturer. Its migration and
+focused tests are applied/verified in development.
+The owner confirmed browser acceptance on 2026-10-20. Caliber alias management
+remains the next feature at dev.7 and must also be admin-only.
+These assignments do not alter completed commits or their numbering.
 v0.1.6 transfers and v0.1.7 sharing remain unimplemented. Firearm maintenance
 notifications have no assigned release. Live identity-provider revocation
 integration and multi-host operational coordination are not implemented.

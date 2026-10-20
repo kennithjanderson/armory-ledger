@@ -1,7 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -11,13 +13,23 @@ from app.main_templates import templates
 from app.models.announcement import Announcement
 from app.models.caliber import Caliber
 from app.models.organization import ManufacturerProfile, Organization
+from app.models.organization_alias import OrganizationAlias
+from app.models.manufacturer_alias_audit_event import ManufacturerAliasAuditEvent
 from app.models.user import User
 from app.schemas.announcement import AnnouncementRequest
 from app.schemas.announcement_schedule import SchedulePreview
 from app.services.announcement_service import save_announcement
+from app.services.manufacturer_service import (
+    add_manufacturer_alias,
+    delete_manufacturer_alias,
+)
 
 
 router = APIRouter(prefix="/admin", tags=["administration"], dependencies=[Depends(require_admin)])
+
+
+class ManufacturerAliasRequest(BaseModel):
+    alias: str = Field(min_length=1, max_length=255)
 
 
 def render(request, current_user, template, **context):
@@ -54,6 +66,83 @@ def manufacturers(request: Request, current_user: User = Depends(require_admin),
         Organization.status, ManufacturerProfile.is_selectable,
     ).join(ManufacturerProfile).order_by(Organization.name, Organization.id)).mappings().all()
     return render(request, current_user, "admin/manufacturers.html", records=records)
+
+
+def get_manufacturer(db: Session, manufacturer_id: UUID) -> Organization:
+    manufacturer = db.scalar(
+        select(Organization)
+        .join(ManufacturerProfile, ManufacturerProfile.organization_id == Organization.id)
+        .where(Organization.id == manufacturer_id)
+    )
+    if manufacturer is None:
+        raise HTTPException(status_code=404, detail="Manufacturer not found.")
+    return manufacturer
+
+
+@router.get("/manufacturers/{manufacturer_id}/aliases")
+def manufacturer_aliases(
+    manufacturer_id: UUID, request: Request,
+    current_user: User = Depends(require_admin), db: Session = Depends(get_db),
+):
+    manufacturer = get_manufacturer(db, manufacturer_id)
+    aliases = db.scalars(
+        select(OrganizationAlias).where(
+            OrganizationAlias.organization_id == manufacturer.id,
+        ).order_by(OrganizationAlias.alias, OrganizationAlias.id)
+    ).all()
+    changes = db.execute(
+        select(ManufacturerAliasAuditEvent, User.display_name, User.email)
+        .join(User, User.id == ManufacturerAliasAuditEvent.actor_user_id)
+        .where(ManufacturerAliasAuditEvent.manufacturer_id == manufacturer.id)
+        .order_by(ManufacturerAliasAuditEvent.created_at.desc(), ManufacturerAliasAuditEvent.id)
+        .limit(50)
+    ).all()
+    return render(
+        request, current_user, "admin/manufacturer_aliases.html",
+        manufacturer=manufacturer, aliases=aliases, changes=changes,
+    )
+
+
+@router.post(
+    "/manufacturers/{manufacturer_id}/aliases",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_csrf)],
+)
+def manufacturer_alias_create(
+    manufacturer_id: UUID, payload: ManufacturerAliasRequest,
+    current_user: User = Depends(require_admin), db: Session = Depends(get_db),
+):
+    get_manufacturer(db, manufacturer_id)
+    try:
+        alias = add_manufacturer_alias(
+            db, manufacturer_id, payload.alias, actor_user_id=current_user.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Alias conflicts with an existing manufacturer name or alias.") from exc
+    return {"success": True, "id": str(alias.id), "alias": alias.alias}
+
+
+@router.delete(
+    "/manufacturers/{manufacturer_id}/aliases/{alias_id}",
+    dependencies=[Depends(require_csrf)],
+)
+def manufacturer_alias_delete(
+    manufacturer_id: UUID, alias_id: UUID, current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    get_manufacturer(db, manufacturer_id)
+    try:
+        delete_manufacturer_alias(
+            db, organization_id=manufacturer_id, alias_id=alias_id,
+            actor_user_id=current_user.id,
+        )
+    except ValueError as exc:
+        status_code = 404 if str(exc) == "Manufacturer alias not found." else 409
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+    return {"success": True}
 
 
 @router.get("/calibers")

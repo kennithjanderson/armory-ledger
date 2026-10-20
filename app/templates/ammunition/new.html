@@ -25,18 +25,20 @@
     <form id="ammunition-form" class="record-form">
         <div class="form-grid">
             <div class="form-field form-field-wide">
-                <label for="brand-name">Brand</label>
+                <label for="manufacturer-search">Manufacturer</label>
                 <input
-                    id="brand-name"
-                    name="brand_name"
+                    id="manufacturer-search"
+                    name="manufacturer_search"
                     type="text"
                     maxlength="255"
-                    placeholder="Ammo Inc."
+                    placeholder="Start typing a manufacturer..."
                     autocomplete="off"
                     required
                 >
+                <input id="manufacturer-id" name="manufacturer_id" type="hidden">
+                <div id="manufacturer-results" class="lookup-results" aria-live="polite"></div>
                 <p class="field-help">
-                    Enter the brand shown on the ammunition packaging.
+                    Select a shared manufacturer. Search aliases resolve to the primary manufacturer name.
                 </p>
             </div>
 

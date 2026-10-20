@@ -1,5 +1,33 @@
 # Armory Ledger Implementation Status
 
+## v0.1.5-dev.4 — installation experience and documentation (2026-10-20)
+
+The installer and documentation work takes dev.4 because dev.1–dev.3
+are the completed, committed checkpoints and the existing ammunition-notification
+implementation is still awaiting browser acceptance. That pending work is moved to
+dev.5 without changing its requirements; later uncompleted lot merging and alias
+work move to dev.6–dev.8. No completed checkpoint or commit was renumbered.
+
+This checkpoint adds a first-run `get-started.sh` that prepares either the
+published GHCR configuration or a local source-build override, validates
+Docker/Compose access, and never starts containers. Fresh setup generates
+PostgreSQL, session, backup, and SMTP-password encryption secrets without
+printing them. It preserves existing files and stops when required credentials
+are missing from a potentially existing installation. README and the
+configuration reference document user-supplied OIDC values, optional SMTP and
+operator data, persistent storage, key preservation,
+privacy limits, updates, and both setup modes. Automated tests use temporary
+directories and mocked Docker; no real installation files or application database
+were used for setup-script tests. All 12 installer integration tests passed,
+including config preservation, fresh secret validation, config-failure rerun,
+copied-template handling, secure temporary-file cleanup, existing-volume/backup
+guards, missing-tool diagnostics, and both Compose modes.
+Both Compose files passed the real Docker Compose v2 `config -q` parser in a
+temporary directory; no services were started. Bash syntax and Python AST checks
+passed. ShellCheck is not installed on the development host. No application
+modules, models, migrations, or inventory functionality were changed for this
+checkpoint.
+
 ## v0.1.5-dev.2 — duplicate ammunition lot suggestions (2026-10-19)
 
 Implemented in the development working tree. When an acquisition omits a
@@ -890,3 +918,40 @@ and tests, and keep release candidate refs/tags reachable. Do not automatically
 advance branches as part of publication until separately designed and approved.
 passed; the dev app image was rebuilt, returned healthy on v0.1.4 and generated
 multipart HTML/plain-text output in a local formatting smoke check without delivery.
+
+### v0.1.5-dev.5 — ammunition notifications and system preference authorization
+
+Implemented in the development worktree: per-user ammunition delivery channels
+default off; per-lot low-inventory thresholds and depleted triggers default off;
+informational notices are queued only for downward threshold crossings or
+positive-to-zero transitions. A direct depletion emits only the depleted notice
+when both triggers are enabled. Manual activity and Shooting Log create/edit
+queue notices in the same database transaction as inventory changes; range edits
+evaluate one final balance per lot. Notices use the existing recipient/history
+and email outbox, and carry only the owner's lot link. Standard users can read
+and update only their ammunition channel preferences; backup/restore preference
+fields are now omitted from their Settings response and rejected by the server.
+Administrator preferences and system notice routing remain available to admins.
+
+Revision `6ec8a2f145bd` follows `a47c91e2d563` and adds two false-by-default user
+channel flags, two false-by-default per-lot trigger flags, a nullable positive
+threshold, and database checks. The development rebuild applied the migration;
+the development database now reports `6ec8a2f145bd` as head. The rebuilt app's
+`/health` endpoint reports healthy with the database connected on version 0.1.5;
+the app and tunnel containers are running, and PostgreSQL is healthy. The public
+changelog now presents v0.1.4 with the October 20, 2026 date and no scheduled
+label, and v0.1.5 without an unreleased label or date. Its focused tests pass
+2/2. Focused Python
+regression suites passed 69 tests; three additional targeted migration/model
+constraint tests passed after the final test addition. A broad application Python
+run excluding Git-dependent release tooling passed 98 tests with two opt-in
+PostgreSQL tests skipped. Full Python discovery was attempted but release-tool
+tests could not start because the test image lacks Git; one timezone assertion
+also failed under the container's default UTC setting and passed when rerun with
+the development host timezone. All eight notification JavaScript tests, Python
+AST parsing, JavaScript syntax checks, changelog JSON parsing, template parsing,
+and `git diff --check` passed. The broader JavaScript suite was stopped because
+its announcement tests invoke the host Python, which lacks Pydantic; the focused
+notification suite passed. Manual browser acceptance and the verified
+`v0.1.5-dev.5` checkpoint remain pending. The app version remains 0.1.5. The
+approved v0.1.4 candidate, release timer and saved notes were not changed.

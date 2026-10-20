@@ -1,543 +1,155 @@
-<p align="center">
-  <img src="app/static/img/favicon.png" alt="Armory Ledger" width="180">
-</p>
-
 # Armory Ledger
 
-Armory Ledger is a self-hosted firearm, ammunition, accessory, and range activity
-inventory application designed for private record keeping.
-
-It provides ownership-aware inventory tracking, ammunition transaction history,
-range session logging, and long-term firearm records while keeping application
-data under the control of the person hosting it.
+Armory Ledger is a free, open-source, self-hosted application for tracking
+firearms, ammunition, accessories, and range activity. Each installation is
+operated by its owner, who controls its application data, infrastructure, and
+backups.
 
 ## Features
 
-- Firearm inventory and detailed firearm records
-- Ammunition product and lot tracking
-- Ledger-based ammunition inventory history
-- Accessory inventory management with quantity tracking
-- Range session logging
-- Firearm and ammunition usage tracking for range sessions
-- Multi-user ownership isolation
-- Manufacturer and organization records
-- Shared caliber records and aliases
-- OpenID Connect (OIDC) authentication
-- Group-based user and administrator authorization
-- PostgreSQL database with Alembic migrations
-- Automatic database migrations during application startup
-- Responsive desktop and mobile interface
-- Docker Compose deployment
-- GitHub Container Registry distribution
-- Reverse-proxy and Cloudflare Tunnel compatible
-- Application and database health monitoring
-- Admin-only informational notices when a newer GHCR `latest` image is available
-
-Armory Ledger does not maintain local user passwords. Authentication is handled
-through an external OpenID Connect identity provider.
-
-## Quick Start
-
-Armory Ledger is distributed as a container image through the GitHub Container
-Registry.
-
-### Requirements
-
-- Docker
-- Docker Compose
-- An OpenID Connect (OIDC) identity provider
-
-Download the example Compose and environment files:
-
-```bash
-curl -O https://raw.githubusercontent.com/kennithjanderson/armory-ledger/main/compose.example.yaml
-curl -O https://raw.githubusercontent.com/kennithjanderson/armory-ledger/main/.env.example
-
-cp compose.example.yaml compose.yaml
-cp .env.example .env
-chmod 600 .env
-```
-
-Generate a backup encryption key:
-
-```bash
-python3 -c 'import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())'
-```
-
-Copy the generated value into the blank `ARMORY_BACKUP_ENCRYPTION_KEY` entry in
-`.env`. It is a canonical URL-safe base64 key encoding exactly 32 random bytes.
-Keep a protected copy outside this server. Do not replace an existing key while
-backups encrypted with it may still be needed.
-
-Generate an application session signing secret:
-
-```bash
-python3 -c 'import secrets; print(secrets.token_urlsafe(64))'
-```
-
-Edit `.env` and configure the PostgreSQL credentials, application session
-secret, and OpenID Connect provider.
-
-Start Armory Ledger:
-
-```bash
-docker compose up -d
-```
-
-Docker Compose will pull the Armory Ledger and PostgreSQL container images and
-start the application.
-
-Armory Ledger automatically applies required database migrations before the
-application starts. Manual Alembic commands are not required for normal
-installation.
-
-Check the running services:
-
-```bash
-docker compose ps
-```
-
-Check application health:
-
-```bash
-curl http://127.0.0.1:8000/health
-```
-
-A healthy installation returns information similar to:
-
-```json
-{
-  "status": "healthy",
-  "application": "Armory Ledger",
-  "database": "connected",
-  "version": "0.1.4"
-}
-```
-
-The example Compose configuration makes Armory Ledger available on
-`127.0.0.1:8000`.
-
-A configured OIDC identity provider is required to sign in.
-
-## Updating
-
-Pull the latest container images and recreate the services:
-
-```bash
-docker compose pull
-docker compose up -d
-```
-
-When a new Armory Ledger container starts, required database migrations are
-automatically applied before the application is started.
-
-Application containers can be recreated without removing the PostgreSQL data
-stored in the persistent `postgres_data` Docker volume.
-
-Do not remove the PostgreSQL volume unless you intentionally want to delete the
-database.
-
-Armory Ledger v0.1.4 provides encrypted backup and recovery tools. Before an
-upgrade, create and verify a backup and preserve its encryption key separately.
-See [Backup & Recovery](#v014-backup--recovery-email-and-notifications) for key,
-storage and restore requirements.
-
-## Deployment Architecture
-
-Armory Ledger is designed primarily for private, self-hosted deployment.
-
-The application requires an OIDC identity provider and PostgreSQL database:
-
-```text
-                    OIDC Provider
-                         ^
-                         |
-                         |
-User ---> Reverse Proxy ---> Armory Ledger ---> PostgreSQL
-```
-
-The reverse proxy or ingress method is intentionally left to the operator.
-
-The reference deployment used by the project author uses Cloudflare Tunnel and
-Authentik:
-
-```text
-Internet
-   |
-   v
-Cloudflare
-   |
-   v
-cloudflared
-   |
-   v
-Armory Ledger
-   |
-   +------> Authentik
-   |          (OIDC)
-   |
-   v
-PostgreSQL
-```
-
-Cloudflare Tunnel and Authentik are not required components of Armory Ledger.
-They are the ingress and identity-provider solutions used by the reference
-deployment.
-
-PostgreSQL should not be exposed directly to the Internet.
-
-## Authentication
-
-Armory Ledger does not maintain local passwords.
-
-Authentication is performed through OpenID Connect. The reference deployment
-uses Authentik, but Armory Ledger is designed around standard OIDC rather than a
-specific identity provider.
-
-Armory Ledger maintains an internal user UUID associated with the immutable
-OIDC subject (`sub`) supplied by the identity provider. Email addresses and
-display names can therefore be synchronized during login without changing
-inventory ownership relationships.
-
-The current authorization model expects the following group claims:
-
-- `Armory User` — permits access to Armory Ledger
-- `Armory Admin` — grants application administration privileges
-
-When using Authentik, these can be provided through Authentik groups.
-
-Administrator privileges do not inherently grant access to another user's
-private inventory.
-
-## Configuration
-
-Application configuration is supplied through `.env`.
-
-Start with the included example:
-
-```bash
-cp .env.example .env
-```
-
-Configure the required values for:
-
-- PostgreSQL
-- OIDC client ID
-- OIDC client secret
-- OIDC issuer
-- OIDC callback URL
-- Application session signing secret
-
-A session signing secret can be generated with:
-
-```bash
-python3 -c 'import secrets; print(secrets.token_urlsafe(64))'
-```
-
-Never commit `.env` or deployment credentials to source control.
-
-### OIDC Callback URL
-
-The callback URL must match the URL configured with your identity provider.
-
-For example:
-
-```text
-https://armory.example.com/auth/callback
-```
-
-If the externally accessible application URL changes, update both
-`OIDC_REDIRECT_URI` and the corresponding redirect/callback URI configured with
-the identity provider.
-
-## Reverse Proxy and External Access
-
-Armory Ledger does not require Cloudflare Tunnel.
-
-The example Compose configuration publishes the application only on the Docker
-host loopback interface:
-
-```text
-http://127.0.0.1:8000
-```
-
-This allows a reverse proxy running on the host to forward requests to Armory
-Ledger without exposing port 8000 directly on every network interface.
-
-Armory Ledger can be used behind nginx, Nginx Proxy Manager, Caddy, Traefik,
-Cloudflare Tunnel, or another HTTP reverse proxy or ingress solution.
-
-Operators using another deployment architecture may modify the Compose
-configuration as needed.
-
-Configuration of third-party reverse proxies, TLS certificates, DNS, firewall
-rules, NAT, and port forwarding is outside the scope of the Armory Ledger
-project.
-
-### Cloudflare Tunnel
-
-Cloudflare Tunnel is one supported deployment option, but it is not required.
-
-When `cloudflared` is attached to the same Docker network as Armory Ledger, the
-tunnel can forward traffic to:
-
-```text
-http://armory-ledger:8000
-```
-
-A Cloudflare-specific `cloudflared` service is intentionally not included in
-the public example Compose configuration. This keeps the example deployment
-independent of any particular reverse proxy or ingress provider.
-
-## Database and Migrations
-
-Armory Ledger uses PostgreSQL for application data and Alembic for database
-schema migrations.
-
-The example Compose deployment stores PostgreSQL data in the persistent
-`postgres_data` Docker volume.
-
-Migration files are included in the Armory Ledger container image. During
-container startup, Armory Ledger automatically runs:
-
-```bash
-alembic upgrade head
-```
-
-The application starts only after database migrations complete successfully.
-If a migration fails, the application container exits rather than starting new
-application code against an incompatible database schema.
-
-Manual migration commands are not required during normal installation or
-upgrades.
-
-For development and troubleshooting, the currently applied migration can be
-checked with:
-
-```bash
-docker compose exec armory-ledger alembic current
-```
-
-When developing from source through Docker, a new migration can be generated
-with:
-
-```bash
-docker compose run --rm -T \
-  --user "$(id -u):$(id -g)" \
-  -v "$PWD:/app" \
-  armory-ledger \
-  alembic revision --autogenerate -m "migration description"
-```
-
-Always review autogenerated migrations before applying them.
-
-## Data and Security
-
-Armory Ledger is intended to store information that may be sensitive, including
-firearm ownership and inventory records.
-
-The repository deliberately excludes deployment secrets and private application
-data, including:
-
-- `.env`
-- Authentication credentials
-- OIDC client secrets
-- Session signing secrets
-
-Private inventory records are associated with an internal Armory Ledger user
-identity. Ownership restrictions are enforced server-side by the application
-rather than relying solely on frontend visibility.
-
-Operators are responsible for securing the host, database, identity provider,
-backups, reverse proxy, and any other infrastructure used to deploy their
-instance.
-
-Do not expose PostgreSQL directly to untrusted networks.
-
-## Building from Source
-
-The published container image is the recommended deployment method.
-
-For development or testing, Armory Ledger can also be built directly from the
-repository:
+The v0.1.4 release includes:
+
+- Firearm, ammunition, accessory, and range-session records, with ownership
+  isolation between application users.
+- Optional firearm serial numbers and USD purchase prices.
+- Ammunition activity history, caliber-filtered range entries, and Shooting Log
+  activity types.
+- Ammunition lot merging that preserves transaction and range history.
+- Shared manufacturer and caliber reference data, plus read-only admin views.
+- OpenID Connect authentication, role-protected administration, and scheduled
+  server announcements.
+- Whole-instance encrypted backups, restore safeguards, backup health reporting,
+  scheduling, and automatic-backup retention.
+- An in-app notification center and optional system email notifications.
+- Admin-only notices when the published GHCR `latest` image contains a newer
+  application version.
+
+See the [changelog](app/content/changelog.json) and
+[v0.1.4 operations guide](docs/V0.1.4-OPERATIONS.md) for release details and
+recovery behavior.
+
+## Requirements
+
+- Docker Engine and the Docker Compose v2 plugin.
+- An OpenID Connect (OIDC) identity provider for user sign-in.
+- Host storage for the PostgreSQL volume and encrypted backup files.
+- An SMTP relay only if email notifications are wanted. In-app notifications
+  do not require SMTP.
+
+Authentik and Cloudflare Tunnel are supported examples, not requirements.
+Armory Ledger can sit behind a reverse proxy or another ingress provider. Keep
+PostgreSQL on a private Docker network and expose the application through a
+trusted HTTPS ingress for remote use.
+
+## Quick Start — Published Image
+
+The published GHCR image is the default installation method.
 
 ```bash
 git clone https://github.com/kennithjanderson/armory-ledger.git
 cd armory-ledger
-
-cp .env.example .env
-cp compose.example.yaml compose.yaml
+./get-started.sh
 ```
 
-Because `compose.example.yaml` uses the published container image, change the
-Armory Ledger service in your development `compose.yaml` from:
+The setup script creates `compose.yaml` and a private `.env` when they are
+absent. On a fresh installation it generates the PostgreSQL password, session
+signing secret, backup encryption key, and separate SMTP password-encryption key.
+It preserves existing files and never starts containers.
 
-```yaml
-image: ghcr.io/kennithjanderson/armory-ledger:latest
-```
+Edit `.env` and provide the OIDC client ID, client secret, issuer URL, and the
+externally reachable callback URL ending in `/auth/callback`. Register that
+same callback with your identity provider. The script lists any remaining setup
+items without printing generated secrets.
 
-to:
-
-```yaml
-build: .
-```
-
-Then build and start the development deployment:
+Validate the Compose file and start the published image:
 
 ```bash
-docker compose build --no-cache armory-ledger
+docker compose config -q
+docker compose pull
 docker compose up -d
+docker compose ps
 ```
 
-The locally built container uses the same startup process as the published
-image, including automatic database migrations.
+The application applies its database migrations during startup. Open the URL
+served by your reverse proxy, or use `http://127.0.0.1:8000` for the example
+host-local port. Configure SMTP later under **Admin → Email** if desired.
+Automatic backups remain disabled until enabled under **Admin → Backup &
+Recovery**.
 
-## Project Status
+## Building from Source
 
-Armory Ledger is under active development.
-
-The development source targets version `0.1.3`. Review the current migration and
-testing status in [implementation status](docs/IMPLEMENTATION_STATUS.md) before deployment.
-
-Armory Ledger is distributed as a container image through GitHub Container
-Registry and automatically applies required database migrations during container
-startup.
-
-Armory Ledger is still an early project. Additional functionality and
-improvements will be developed as the application continues to mature.
-
-Bugs and feature requests can be submitted through GitHub Issues.
-
-## Contributing
-
-Suggestions, bug reports, and contributions are welcome.
-
-If you find Armory Ledger useful, you are welcome to self-host it, modify it for
-your own needs, or contribute improvements that may benefit the broader
-project.
-
-Armory Ledger was created by Kennith Anderson.
-
-## License
-
-Armory Ledger is available under the [MIT License](LICENSE).
-
-## v0.1.2 development scope
-
-Firearm serial numbers and purchase prices are optional. Unknown purchase prices
-are stored as NULL, separately from a recorded USD $0.00. Prices use decimal
-storage with a separate recorded currency code. The current forms support USD;
-there is no currency conversion or collection valuation.
-
-Administrative access requires both `Armory User` and `Armory Admin` at login.
-Admin membership is evaluated at login for this release; changing identity-provider
-membership does not immediately revoke an existing signed application session.
-The `/admin*` namespace is protected server-side, with additional authorization
-on the admin router. Announcement mutations also require a session-bound CSRF
-header. No live group lookup or forced OIDC reauthentication is performed.
-
-The Users view shows display name, email, internal UUID, creation time and last
-login time. It has no inventory records, counts, summaries, usage information, or
-links to another user's inventory. Manufacturer and caliber views are read-only
-shared reference data. There are no purge, alias-management, merge, or reference
-rename actions in this release.
-
-Announcements have a title, plain-text message, severity, enabled state and
-required start/end times. In v0.1.3 development, the admin form defaults to your
-browser timezone and accepts IANA zones such as `America/Chicago` or `UTC`, with
-server-validated UTC previews. Repeated fall-back times require an earlier/later
-choice; nonexistent spring-forward times are rejected. The API accepts explicit
-offset timestamps or local schedule objects with an IANA timezone; unqualified
-timezone-free timestamps are rejected. Storage remains UTC. See the
-[release-testing checklist](docs/V0.1.3-RELEASE-TESTING.md). Enabled
-announcements appear on authenticated pages when start <= now < end, evaluated
-when the page is requested. Already-open pages do not poll or update automatically.
-No scheduler or dismissal tracking is used.
-
-### Optional instance/operator information
-
-The public About / Privacy page is linked from both application and login footers.
-Configured operator/support information is visible to signed-out visitors as well.
-Software identity is separate from the identity of whoever operates an instance.
-These environment variables are optional and may be left blank:
-
-| Variable | Purpose |
-| --- | --- |
-| `ARMORY_OPERATOR_NAME` | Name of this installation's operator |
-| `ARMORY_SUPPORT_EMAIL` | Plain support email address for this installation |
-| `ARMORY_SUPPORT_URL` | HTTP or HTTPS contact/support URL |
-
-Only configured fields are displayed. If all are blank, the entire installation
-contact section is omitted. No operator name, email, or domain is supplied by
-default. Malformed configured contact values are rejected by configuration
-validation. Configure these values in your own deployment environment; do not
-commit private deployment configuration.
-
-The page explains user isolation, shared reference data, infrastructure-level
-operator access, and record-keeping limitations. Armory Ledger does not send
-inventory to a centralized service operated by the upstream developer.
-
-### v0.1.2 schema history
-
-The [v0.1.2 schema plan](docs/v0.1.2-schema-plan.md) is retained as historical
-design context. Its firearm and announcement migrations are part of the released
-revision history; use the current migration chain and operations documentation
-when upgrading an installation.
-
-### v0.1.3 date/time and release notes (released October 15, 2026)
-
-Development forms share a calendar with direct month/year selection and explicit
-24-hour time controls. Date-only records retain their calendar dates; announcement
-instants remain UTC with IANA-zone entry and DST validation. System timestamp
-presentation uses 24-hour time.
-
-The public `/changelog` page is linked in the footer. Its repository-managed source
-is `app/content/changelog.json`; release text is escaped, with no database or admin
-editor. Version 0.1.3 was published on October 15, 2026; its release notes remain
-available on the public page.
-
-## Maintainer release workflow
-
-Manual and scheduled release tooling is documented in
-[docs/RELEASE-WORKFLOW.md](docs/RELEASE-WORKFLOW.md). The wrappers share candidate
-validation, Changelog-derived notes and immutable publication/recovery logic.
-Scheduled jobs require explicit approval and separately configured systemd user
-lingering/credentials. No release is automatically scheduled by a Changelog date.
-Use `./release.sh --version 0.1.4 --dry-run` for a read-only notes preview.
-
-## v0.1.4 Backup & Recovery, email and notifications
-
-Admin now includes Backup & Recovery and Email tabs. Automatic backups are disabled
-initially (daily 03:00 UTC, retain 7 automatic archives when enabled); manual,
-pre-restore and imported archives require explicit deletion. Mount `./data/backups`
-at `/var/lib/armory/backups` as shown in the Compose files. Whole-instance downloads
-contain every user's records, so Armory Admin must be restricted to trusted operators.
-
-`ARMORY_BACKUP_ENCRYPTION_KEY` is required before creating, importing or restoring
-backups. It must be canonical URL-safe base64, including padding, encoding exactly
-32 random bytes. The service encrypts each archive with authenticated AES-256-GCM;
-downloads remain encrypted and restores reject a wrong key before changing
-application data. To generate a key for a new installation, run:
+Use the source-build mode for development or testing; it does not change the
+published-image Compose file.
 
 ```bash
-python3 -c 'import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())'
+./get-started.sh --build
+docker compose -f compose.yaml -f compose.build.yaml config -q
+docker compose -f compose.yaml -f compose.build.yaml up --build -d
 ```
 
-Put the result in `.env` and preserve it in a protected off-host secret store.
-Losing the key, or changing it while archives still depend on it, makes those
-archives unrecoverable. The Compose files persist backup archives and their
-catalogue under `./data/backups`, mounted at `/var/lib/armory/backups`; container
-recreation preserves them. Keep this directory protected and copy important
-archives to separate storage. Optional settings: `ARMORY_BACKUP_DIR`,
-`ARMORY_TIMEZONE`, `ARMORY_WORKER_ENABLED`, `ARMORY_BACKUP_MAX_BYTES`, and
-`ARMORY_SECRET_KEY` (a separate Fernet key for SMTP passwords).
-Email starts disabled; configure it under Admin, then explicitly request a test.
-The notification bell updates every 30 seconds. Successful-backup channels are
-personal opt-ins; failures and cleanup warnings target known administrators.
-The in-process worker checks the public Armory Ledger GHCR `latest` image once per
-day and compares its embedded version label with the running application version.
-It creates an informational notification for administrators only when the image
-tag points to a newer version. This check does not update the installation.
+The override builds the checkout's Dockerfile as `armory-ledger:local`. The
+script still only prepares configuration and validates Compose; the final command
+is the explicit service start.
 
-Read [v0.1.4 operations](docs/V0.1.4-OPERATIONS.md) before enabling backups or recovery,
-including migration, re-login, external encryption-key and offline recovery steps.
+## Configuration
+
+Review the generated `.env` before starting the services. The setup script
+generates internal secrets only for a fresh installation. It does not generate
+OIDC credentials or SMTP account credentials, and it stops if an existing
+installation is missing a database, session, or backup key that may be needed to
+access existing data.
+
+See the [configuration reference](docs/CONFIGURATION.md) for every supported
+environment variable, defaults, generated secrets, OIDC setup, SMTP settings,
+backup storage, and key preservation requirements.
+
+Never commit `.env` or place secrets in Compose files. The repository ignores
+local environment files and data, and the Docker build context excludes them.
+
+## Updating
+
+Before upgrading, create and verify an encrypted backup and keep its encryption
+key available. Then pull and recreate the published services:
+
+```bash
+docker compose pull
+docker compose up -d
+docker compose ps
+```
+
+The application automatically applies migrations at startup. Recreating
+containers preserves PostgreSQL data in the `postgres_data` volume and backup
+archives in `./data/backups`. **Do not run `docker compose down -v` or remove
+these volumes/directories** unless you intend to permanently delete their data.
+Backups on the same host do not protect against loss of that host; keep a
+protected off-host copy of important archives and the matching encryption key.
+
+## Security and Privacy
+
+- Inventory queries are scoped to the owning application user. An ordinary user
+  cannot view another user's inventory.
+- Admin pages do not provide inventory-browsing routes or inventory-derived
+  counts. Administrator status alone does not bypass application ownership
+  checks, including between administrators.
+- Administrators can create and download whole-instance backups for recovery.
+  Those archives contain all users' private records, so grant Armory Admin only
+  to trusted installation operators.
+- Cross-user inventory sharing is not implemented. Any future sharing feature
+  must require authorization from the inventory owner and preserve owner-controlled
+  permissions.
+- A person controlling the host, database, Docker daemon, or backups may have
+  infrastructure-level access beyond application permissions.
+- Operators are responsible for protecting secrets and backups and for complying
+  with applicable laws, regulations, and policies. Stored records are not a
+  guarantee of legal sufficiency, accuracy, retention, or suitability.
+
+## Documentation and Support
+
+- [Project repository](https://github.com/kennithjanderson/armory-ledger)
+- [Report a bug or request a feature](https://github.com/kennithjanderson/armory-ledger/issues)
+- [Configuration reference](docs/CONFIGURATION.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Security policy](SECURITY.md)
+- [Backup and recovery operations](docs/V0.1.4-OPERATIONS.md)
+- [Maintainer release workflow](docs/RELEASE-WORKFLOW.md)
+- [MIT License](LICENSE)

@@ -220,11 +220,15 @@ notification deduplication/resolution and admin-only visibility in development.
 ## v0.1.4 implementation — 2026-10-16
 
 v0.1.4 implements Backup & Recovery, health, system email and live notifications.
-v0.1.5 development includes the scheduled-release status command (`dev.1`) and
-duplicate ammunition lot suggestions (`dev.2`, browser accepted). Manufacturer-
-grouped active lots and a collapsed depleted-lot section are implemented and
-browser accepted in dev.3. Enhanced merging,
-ammunition lot notifications and manufacturer/caliber aliases remain planned.
+v0.1.5 development has completed dev.1, the scheduled-release status command;
+dev.2, duplicate ammunition lot suggestions; and dev.3, manufacturer grouping
+and depleted-lot presentation. Dev.4 adds the installation experience and
+`get-started.sh`, plus README/configuration documentation. The pending
+ammunition-notification and admin-preference work is renumbered to dev.5; its
+existing implementation and acceptance criteria are preserved, but browser
+acceptance remains pending. Enhanced ammunition merging moves from dev.5 to dev.6,
+manufacturer aliases from dev.6 to dev.7, and caliber aliases from dev.7 to dev.8.
+These assignments follow completion order; they do not alter completed commits.
 v0.1.6 transfers and v0.1.7 sharing remain unimplemented. Firearm maintenance
 notifications have no assigned release. Live identity-provider revocation
 integration and multi-host operational coordination are not implemented.

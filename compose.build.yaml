@@ -1,0 +1,8 @@
+# Optional local development override. The default Compose file continues to
+# use the published GHCR image; this override selects the checked-out source.
+services:
+  armory-ledger:
+    image: armory-ledger:local
+    build:
+      context: .
+      dockerfile: Dockerfile

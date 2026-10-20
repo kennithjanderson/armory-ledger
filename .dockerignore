@@ -19,3 +19,17 @@ venv/
 node_modules/
 **/node_modules/
 *.log
+.git
+.env
+.env.*
+!.env.example
+compose.yaml
+data/
+*.bak
+**/*.bak
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+node_modules/

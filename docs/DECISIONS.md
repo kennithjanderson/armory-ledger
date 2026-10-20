@@ -164,6 +164,16 @@ These decisions supersede the earlier open merge-design questions above.
   Keep added PostgreSQL enum labels on an otherwise empty downgrade.
 - No version bump, release completion, deployment or live migration is implied.
 
+## No enhanced merge checkpoint — 2026-10-20
+
+The owner reviewed the proposed v0.1.5 depleted-lot merge enhancement and decided
+that no change is needed. A zero-balance lot should remain available with its
+original history; users who later want to merge it can add ammunition first and
+then use the existing explicit merge flow. Keep zero-balance sources ineligible.
+Do not add history-only merges, zero-quantity transfer rows, or a migration for
+this proposal. The checkpoint is removed from the pending sequence; manufacturer
+alias management becomes dev.6 and caliber alias management dev.7.
+
 ## Merge polish decisions — 2026-10-13
 
 Source: [merge polish task](../instructions/ammunition-merge-polish.md).

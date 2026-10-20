@@ -7,7 +7,12 @@ were the completed, committed checkpoints and ammunition notifications were
 still awaiting browser acceptance when the checkpoint was assigned. The owner
 subsequently confirmed in-app and email notification acceptance for low-inventory
 and depletion alerts, completing dev.5. Later uncompleted lot merging and alias
-work remain dev.6–dev.8. No completed checkpoint or commit was renumbered.
+work were initially assigned dev.6–dev.8. On 2026-10-20, the owner reviewed
+the proposed merge enhancement and decided it was unnecessary: zero-round lots
+should retain their existing records and history, and may be merged only after
+the user adds ammunition. No merge code or migration is planned for dev.6.
+Manufacturer alias management is now the next pending feature at dev.6, followed
+by caliber alias management at dev.7. Completed checkpoints remain unchanged.
 
 This checkpoint adds a first-run `get-started.sh` that prepares either the
 published GHCR configuration or a local source-build override, validates

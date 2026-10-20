@@ -227,9 +227,12 @@ and depleted-lot presentation. Dev.4 adds the installation experience and
 ammunition-notification and admin-preference work is renumbered to dev.5; its
 existing implementation and acceptance criteria are preserved. The owner
 confirmed in-app and email notification browser acceptance on 2026-10-20, so
-dev.5 is verified. Enhanced ammunition merging moves from dev.5 to dev.6,
-manufacturer aliases from dev.6 to dev.7, and caliber aliases from dev.7 to dev.8.
-These assignments follow completion order; they do not alter completed commits.
+dev.5 is verified. The proposed enhanced-merge checkpoint was reviewed on
+2026-10-20 and is unnecessary: zero-round lots retain their existing records and
+history, and can be merged after ammunition is added. Existing merge behavior and
+schema remain unchanged. Manufacturer aliases are the next pending feature at
+dev.6, followed by caliber aliases at dev.7. These assignments do not alter
+completed commits or their numbering.
 v0.1.6 transfers and v0.1.7 sharing remain unimplemented. Firearm maintenance
 notifications have no assigned release. Live identity-provider revocation
 integration and multi-host operational coordination are not implemented.

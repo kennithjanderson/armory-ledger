@@ -54,14 +54,42 @@ class OperationsTests(unittest.TestCase):
         Path(args[-1]).write_bytes(b'PGDMPsynthetic')
 
     def test_backup_schema_check_requires_current_migration_head(self):
+        heads=self.backup.schema_heads()
         with self.engine.begin() as connection:
             connection.exec_driver_sql('CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)')
-            connection.exec_driver_sql('INSERT INTO alembic_version VALUES (?)', (self.backup.SCHEMA,))
+            for head in heads:
+                connection.exec_driver_sql('INSERT INTO alembic_version VALUES (?)', (head,))
         self.backup.schema_check()
         with self.engine.begin() as connection:
-            connection.exec_driver_sql('UPDATE alembic_version SET version_num = ?', ('d914b7ce203a',))
+            connection.exec_driver_sql('DELETE FROM alembic_version')
+            connection.exec_driver_sql('INSERT INTO alembic_version VALUES (?)', ('not-a-current-head',))
         with self.assertRaisesRegex(ValueError, 'Database schema does not match'):
             self.backup.schema_check()
+
+    def test_backup_schema_follows_all_current_migration_heads(self):
+        with patch.object(self.backup,'schema_heads',return_value=('head_a','head_b')):
+            with self.engine.begin() as connection:
+                connection.exec_driver_sql('CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)')
+                connection.exec_driver_sql('INSERT INTO alembic_version VALUES (?)', ('head_a',))
+                connection.exec_driver_sql('INSERT INTO alembic_version VALUES (?)', ('head_b',))
+            self.backup.schema_check()
+
+    def test_timezone_selector_contains_valid_iana_zones(self):
+        zones=self.backup.timezone_options()
+        self.assertIn('America/Chicago',zones['north_america'])
+        self.assertIn('UTC',zones['north_america'])
+        self.assertNotIn('America/Sao_Paulo',zones['north_america'])
+        self.assertIn('America/Sao_Paulo',zones['other'])
+        self.assertNotIn('posix/UTC',zones['other'])
+
+    def test_backup_admin_page_supplies_timezone_choices(self):
+        api=load('operations_api_timezone','app/api/operations.py')
+        choices={'north_america':['America/Chicago','UTC'],'other':['Europe/London']}
+        request=SimpleNamespace(session={})
+        with patch.object(api.backup,'timezone_options',return_value=choices),patch.object(api,'render',return_value='rendered') as render:
+            self.assertEqual(api.backup_page(request,self.admin),'rendered')
+        self.assertEqual(render.call_args.kwargs['timezones'],choices)
+        self.assertEqual(render.call_args.args[2],'admin/backups.html')
 
     def test_latest_image_poll_is_daily_admin_only_and_deduplicated(self):
         from datetime import datetime, timedelta, timezone
@@ -239,7 +267,13 @@ class OperationsTests(unittest.TestCase):
     def test_schedule_dst_and_durable_coordination(self):
         schedule={'enabled':True,'hour':2,'minute':30,'timezone':'America/Chicago','retention':7}
         result=self.backup.next_run(schedule,datetime(2026,3,8,6,tzinfo=timezone.utc))
-        self.assertEqual(result.day,9)
+        self.assertEqual(result,datetime(2026,3,8,8,tzinfo=timezone.utc))
+        # On fall-back, the repeated wall time runs at its first occurrence only.
+        fall_schedule={**schedule,'hour':1,'minute':30}
+        first=self.backup.next_run(fall_schedule,datetime(2026,11,1,5,tzinfo=timezone.utc))
+        self.assertEqual(first,datetime(2026,11,1,6,30,tzinfo=timezone.utc))
+        after_first=self.backup.next_run(fall_schedule,datetime(2026,11,1,6,45,tzinfo=timezone.utc))
+        self.assertEqual(after_first,datetime(2026,11,2,7,30,tzinfo=timezone.utc))
         self.storage.put('schedule',schedule)
         self.assertEqual(self.backup.Store(self.temp.name).schedule(),schedule)
         with self.backup.lock('worker',storage=self.storage):

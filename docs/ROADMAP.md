@@ -125,6 +125,19 @@ Move an item to implemented status only with source and verification evidence;
 update IMPLEMENTATION_STATUS and ARCHITECTURE together. A completed source change
 does not by itself mean it is deployed or its database migration is applied.
 
+## Backup schema tracking and timezone selection — v0.1.5-dev.7 verified
+
+The v0.1.5 development source derives backup/restore compatibility from the
+Alembic migration heads shipped with the application. Administrators choose the
+automatic backup timezone from a North America and UTC list, with an all-zones
+option; local daily time remains stable across DST, with a documented gap/fold
+policy. Focused tests cover migration-head matching and both DST transitions; all
+33 focused operations tests passed in an isolated test container. The development
+rebuild is healthy on schema head `d2c87ab9415e`, and browser acceptance including
+a successful backup was confirmed on 2026-10-21. No database migration is
+introduced. Caliber alias management moves from dev.7 to dev.8; completed
+checkpoint numbering is preserved.
+
 ## Shooting Log and recorded firearm rounds — implemented, review pending
 
 The [shooting-log task](../instructions/shooting-log-activity-types.md) is
@@ -235,7 +248,8 @@ development working tree as dev.6: admins can add/remove lookup aliases,
 which resolve to the unchanged canonical manufacturer. Its migration and
 focused tests are applied/verified in development.
 The owner confirmed browser acceptance on 2026-10-20. Caliber alias management
-remains the next feature at dev.7 and must also be admin-only.
+was initially planned as dev.7 and is now dev.8 after backup/timezone work took
+the next completed checkpoint; it must also be admin-only.
 These assignments do not alter completed commits or their numbering.
 v0.1.6 transfers and v0.1.7 sharing remain unimplemented. Firearm maintenance
 notifications have no assigned release. Live identity-provider revocation

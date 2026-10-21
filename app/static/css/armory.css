@@ -2306,6 +2306,8 @@ body {
 /* Operations and severity-coded persistent notifications. */
 .operations-form { display: grid; gap: 1rem; max-width: none; margin: 1rem 0; }
 .operations-form label { display: grid; gap: .4rem; }
+.operations-form select { width: 100%; min-width: 0; box-sizing: border-box; padding: .45rem .55rem; border: 1px solid var(--border); border-radius: 3px; background: rgba(241,237,227,.78); color: var(--text); font: inherit; }
+.operations-form input[name="retention"] { width: 100%; max-width: 12rem; box-sizing: border-box; }
 .operations-preference-group { display: grid; gap: .75rem; border: 1px solid var(--border); padding: .85rem; }
 .operations-preference-group p { margin: 0; color: var(--muted); }
 .operations-card { margin: 1rem 0 1.25rem; padding: 1rem 1.15rem; border: 1px solid var(--border); background: rgba(241,237,227,.72); }

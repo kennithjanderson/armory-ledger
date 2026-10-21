@@ -18,9 +18,13 @@
 <label class="operations-inline-check"><input type="checkbox" name="enabled"> Enable automatic backups</label>
 <label>Daily hour (24-hour)<input type="number" name="hour" min="0" max="23" required></label>
 <label>Minute<input type="number" name="minute" min="0" max="59" required></label>
-<label>IANA timezone<input name="timezone" required></label>
-<label>Automatic backups to retain<input type="number" name="retention" min="0" required></label>
-<p class="operations-notice">0 means unlimited. Retention never removes manual, imported or pre-restore archives.</p>
+<label>Time zone region<select id="backup-timezone-region"><option value="north_america">North America and UTC</option><option value="all">All time zones</option></select></label>
+<label>Schedule timezone<select name="timezone" required>
+{% for zone in timezones.north_america %}<option value="{{ zone }}" data-zone-region="north_america">{{ zone }}</option>{% endfor %}
+{% for zone in timezones.other %}<option value="{{ zone }}" data-zone-region="other">{{ zone }}</option>{% endfor %}
+</select></label>
+<label>Automatic backups to retain<input type="number" name="retention" min="0" max="100000" required></label>
+<p class="operations-notice">The daily hour follows the selected timezone and adjusts for daylight saving time. If that local time does not exist when clocks move forward, the backup runs at the first valid time afterward. When clocks repeat an hour, it runs at the first occurrence. 0 means unlimited; retention never removes manual, imported or pre-restore archives.</p>
 </div>
 <div class="operations-actions"><button class="button-primary">Save schedule</button></div>
 </form>

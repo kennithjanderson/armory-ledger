@@ -1,5 +1,29 @@
 # Armory Ledger Implementation Status
 
+## v0.1.5-dev.7 — backup schema tracking and timezone selection (2026-10-21)
+
+The backup service now reads all Alembic heads from the application migration
+tree for live-schema checks and archive manifests, removing the fixed
+`a47c91e2d563` revision constant. The Backup & Recovery schedule now defaults to
+North American zones plus UTC and has an all-timezones option. The default list
+contains 106 choices and the full list adds 493 other zones. The retention field
+is constrained to a compact width. Local hour/minute remain tied to the selected
+zone, while the next calculated execution remains UTC. A schedule in a spring
+gap advances to the first valid local minute; a repeated fall-back time runs at
+its first occurrence only.
+
+Regression tests cover current and multiple migration heads, selector choices/page
+context, and both DST transitions. All 33 focused operations tests passed in an
+isolated, network-disabled test container with the repository mounted read-only.
+Python AST, changelog JSON, Jinja parsing, direct DST transition checks and
+`git diff --check` also passed. The existing development rebuild completed; the
+app is healthy on v0.1.5, startup migrations completed, the live schema check
+passed against head `d2c87ab9415e`, and PostgreSQL is healthy after the regional
+selector refinement rebuild as well. Only the existing
+non-fatal Authlib/httpx deprecation warning appeared. No schema migration was
+added. The owner confirmed browser acceptance and successful backup operation
+on 2026-10-21. This completes the verified dev.7 checkpoint.
+
 ## v0.1.5-dev.6 — administrator-managed manufacturer aliases (2026-10-20)
 
 Implemented in the development working tree. Admins can add and remove search
@@ -233,7 +257,7 @@ has passed automated or runtime testing.
 - **Caliber aliases and organization relationships are modeled, but lack
   administration workflows.** Manufacturer alias management is implemented
   with admin-only routes and actor-attributed history; the caliber workflow
-  remains planned for dev.7. Neither feature grants canonical rename or merge
+  remains planned for dev.8. Neither feature grants canonical rename or merge
   capability.
 - **Inventory concurrency:** balance validation and transaction insertion have no
   explicit locking, so competing requests may overspend a balance. This is a

@@ -20,7 +20,7 @@ user_routes=APIRouter(dependencies=[Depends(get_current_user)])
 
 @admin.get('/backups')
 def backup_page(request: Request,user=Depends(require_admin)):
-    return render(request,user,'admin/backups.html')
+    return render(request,user,'admin/backups.html',timezones=backup.timezone_options())
 
 
 @admin.get('/backups/status')

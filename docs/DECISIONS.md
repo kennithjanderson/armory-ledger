@@ -231,6 +231,26 @@ migration application, container deployment or release acceptance.
 This decision is implemented in the development working tree; runtime deployment
 and browser acceptance remain separate.
 
+## Backup schema tracking and local schedule timezone — 2026-10-21
+
+- Derive supported Alembic schema identity from every migration head present in
+  the running application's migration tree. Compare the live DB revision set to
+  those heads and record the same sorted set in each archive manifest. Do not
+  keep a manually maintained migration ID in backup/restore code.
+- Keep the application-version match for restore preflight; automatic migration
+  of archives from older application versions is outside this change.
+- Let administrators choose from a North America plus UTC timezone list by
+  default, while retaining an all-IANA-zones option. Persist the zone identifier
+  with local hour/minute, and persist the calculated next occurrence in UTC.
+  This keeps a daily wall-clock schedule aligned to the operator's familiar
+  timezone through daylight-saving changes without excluding other regions.
+- On a spring-forward gap, run at the first valid local minute after the chosen
+  time. On a fall-back fold, run once at the first occurrence to prevent duplicate
+  backups.
+
+Implemented and rebuilt in development on 2026-10-21; browser acceptance and a
+successful backup were confirmed by the owner.
+
 ## Date/time and Changelog decisions — 2026-10-14
 
 - Use a shared vanilla-JavaScript calendar instead of Safari/native date/time UI.

@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 import base64
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 import fcntl
 import hashlib
 import json
@@ -15,14 +16,15 @@ import tarfile
 import tempfile
 import threading
 import uuid
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, TZPATH, available_timezones
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from sqlalchemy import text
 from app.core.config import settings
 
 UTC = timezone.utc
-SCHEMA = 'a47c91e2d563'
 TYPES = {'automatic', 'manual', 'pre-restore', 'imported'}
 ENVELOPE_MAGIC = b'ARMORY-BACKUP-AES256GCM\x01'
 NONCE_SIZE = 12
@@ -32,6 +34,50 @@ ENVELOPE_OVERHEAD = len(ENVELOPE_MAGIC) + NONCE_SIZE + TAG_SIZE
 
 def now():
     return datetime.now(UTC)
+
+
+def schema_heads():
+    """Return the migration heads shipped with this application source tree."""
+    root = Path(__file__).resolve().parents[2]
+    config = Config(str(root/'alembic.ini'))
+    return tuple(sorted(ScriptDirectory.from_config(config).get_heads()))
+
+
+@lru_cache(maxsize=1)
+def timezone_options():
+    """Return North American zones first while keeping every IANA zone available."""
+    zones = {name for name in available_timezones() if not name.startswith(('posix/', 'right/'))}
+    north_american_countries = {
+        'AG', 'AI', 'AW', 'BB', 'BL', 'BM', 'BQ', 'BS', 'BZ', 'CA', 'CR', 'CU',
+        'CW', 'DM', 'DO', 'GD', 'GL', 'GP', 'GT', 'HN', 'HT', 'JM', 'KN', 'KY',
+        'LC', 'MF', 'MQ', 'MS', 'MX', 'NI', 'PA', 'PM', 'PR', 'SV', 'SX', 'TC',
+        'TT', 'US', 'VC', 'VG', 'VI',
+    }
+    zone_tab = next((Path(root)/'zone.tab' for root in TZPATH if (Path(root)/'zone.tab').is_file()), None)
+    if zone_tab is None:
+        try:
+            import tzdata
+            candidate = Path(tzdata.__file__).parent/'zoneinfo'/'zone.tab'
+            zone_tab = candidate if candidate.is_file() else None
+        except ImportError:
+            pass
+    north_american = {'UTC'}
+    if zone_tab is not None:
+        for line in zone_tab.read_text(encoding='utf-8').splitlines():
+            if not line or line.startswith('#'):
+                continue
+            columns = line.split('\t')
+            if len(columns) >= 3 and north_american_countries.intersection(columns[0].split(',')):
+                if columns[2] in zones:
+                    north_american.add(columns[2])
+    else:
+        # Fall back to the IANA Americas namespace on minimal hosts without
+        # zone.tab metadata; other regions remain available in the full list.
+        north_american.update(name for name in zones if name.startswith('America/'))
+    return {
+        'north_america': sorted(north_american),
+        'other': sorted(zones-north_american),
+    }
 
 
 class Busy(RuntimeError):
@@ -287,7 +333,7 @@ def digest(path):
 def schema_check():
     from app.db.session import engine
     with engine.connect() as connection:
-        if set(connection.execute(text('SELECT version_num FROM alembic_version')).scalars()) != {SCHEMA}:
+        if set(connection.execute(text('SELECT version_num FROM alembic_version')).scalars()) != set(schema_heads()):
             raise ValueError('Database schema does not match this application')
         connection.execute(text('SELECT 1 FROM users LIMIT 1'))
 
@@ -319,7 +365,8 @@ def validate_plain_archive(path):
             if archive.getmember('manifest.json').size>65536 or archive.getmember('schedule.json').size>65536:
                 raise ValueError('Oversized archive metadata')
             manifest=json.load(archive.extractfile('manifest.json'))
-            if manifest.get('format')!=1 or manifest.get('app_version')!=settings.app_version or manifest.get('schema')!=[SCHEMA]:
+            if (manifest.get('format')!=1 or manifest.get('app_version')!=settings.app_version
+                    or manifest.get('schema')!=list(schema_heads())):
                 raise ValueError('Unsupported backup version/schema; use the matching application version')
             timestamp=datetime.fromisoformat(manifest['created_at'])
             if timestamp.tzinfo is None: raise ValueError('Archive timestamp must include timezone')
@@ -350,7 +397,7 @@ def create_backup(kind, storage=None):
             root=Path(temp)
             pg_command('pg_dump','--format=custom','--no-owner','--no-acl','--file',root/'database.dump')
             (root/'schedule.json').write_text(json.dumps(storage.schedule()))
-            manifest={'format':1,'app_version':settings.app_version,'schema':[SCHEMA],
+            manifest={'format':1,'app_version':settings.app_version,'schema':list(schema_heads()),
                       'created_at':now().isoformat(),'inventory':{}}
             for name in ('database.dump','schedule.json'):
                 (root/name).chmod(0o600)
@@ -455,10 +502,17 @@ def next_run(schedule, after=None):
     after=after or now(); zone=ZoneInfo(schedule['timezone']); local=after.astimezone(zone)
     for offset in range(3):
         day=local.date()+timedelta(days=offset)
-        wall=datetime(day.year,day.month,day.day,schedule['hour'],schedule['minute'],tzinfo=zone,fold=0)
-        instant=wall.astimezone(UTC)
-        if instant.astimezone(zone).replace(tzinfo=None)!=wall.replace(tzinfo=None): continue
-        if instant>after: return instant
+        wall=datetime(day.year,day.month,day.day,schedule['hour'],schedule['minute'])
+        # A wall time in a spring-forward gap does not exist. Move it forward
+        # minute-by-minute to the first valid local time on that date. During
+        # fall-back, fold=0 chooses the first occurrence and prevents duplicates.
+        for minute in range(24*60):
+            candidate=wall+timedelta(minutes=minute)
+            if candidate.date()!=day: break
+            instant=candidate.replace(tzinfo=zone,fold=0).astimezone(UTC)
+            if instant.astimezone(zone).replace(tzinfo=None)==candidate:
+                if instant>after: return instant
+                break
     raise ValueError('Unable to compute next backup time')
 
 

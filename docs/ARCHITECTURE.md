@@ -524,6 +524,18 @@ Manual and scheduled preparation now reuse reviewed bulk selection. Optional --e
 
 v0.1.4 adds an in-process five-second worker with durable SQLite operational jobs/catalogue outside the restored PostgreSQL database. Shared-volume POSIX worker/maintenance locks coordinate requests and operations. PostgreSQL custom dumps and transactional restore preserve whole-instance records; no persistent user uploads exist. Notification events, recipient state, personal preferences and encrypted SMTP configuration live in PostgreSQL. A 30-second polling bell shows unread notifications only; marking an item read removes it from the bell while leaving it in `/notifications` history. History is retained for 90 days for errors, 30 days for warnings, and 7 days for informational/success notices. Unresolved errors and warnings remain until resolved; a successful backup resolves earlier backup-failure notices. `/settings` manages successful-backup preferences for all users and opt-in restore-initiated in-app/email notices for administrators. Restore notice recipients are queued in the external catalogue before database replacement and the warning is recorded afterward for admins still present. See V0.1.4-OPERATIONS.md for boundaries and recovery.
 
+Backup manifests record every current Alembic migration head discovered from the
+running source tree. Creation and restore preflight compare the database revision
+set with those heads, so adding a migration does not require separately editing a
+backup revision constant. Restore still requires matching application-version
+and migration-head identities; cross-version restore upgrades are not implicit.
+The admin backup schedule defaults to a North America and UTC timezone list, with
+an option to show all valid IANA zones. It stores the selected zone with the local
+daily hour and stores the calculated next run as UTC. The worker recalculates each
+occurrence using the zone database: a nonexistent spring-forward time moves to
+the first valid minute after the gap, and an ambiguous fall-back time runs once
+at its first occurrence.
+
 The worker also polls the public upstream GHCR `latest` manifest once per day,
 reads the OCI version label from its `linux/amd64` image configuration, and
 compares it with `Settings.app_version`. A newer image creates a deduplicated

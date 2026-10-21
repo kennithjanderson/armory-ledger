@@ -15,13 +15,37 @@
     function fill(form, data) { for (const el of form.elements) if (el.name && el.name in data) { if (el.type === 'checkbox') el.checked = data[el.name]; else el.value = data[el.name]; } }
     function action(button, fn) { button?.addEventListener('click', async () => { button.disabled = true; try { await fn(); } catch (e) { show(e.message); } finally { button.disabled = false; } }); }
     const schedule = document.getElementById('backup-schedule');
+    const timezone = schedule?.elements.namedItem('timezone');
+    const timezoneRegion = document.getElementById('backup-timezone-region');
     let initialized = false;
+    function filterTimezones() {
+        if (!timezone || !timezoneRegion) return;
+        const selected = timezone.options[timezone.selectedIndex];
+        for (const option of timezone.options) {
+            const visible = timezoneRegion.value === 'all' || option.dataset.zoneRegion === 'north_america';
+            option.hidden = !visible;
+            option.disabled = !visible;
+        }
+        if (selected && selected.disabled) timezone.value = 'UTC';
+    }
+    function syncTimezoneRegion() {
+        if (!timezone || !timezoneRegion) return;
+        const selected = timezone.options[timezone.selectedIndex];
+        timezoneRegion.value = selected?.dataset.zoneRegion === 'other' ? 'all' : 'north_america';
+        filterTimezones();
+    }
+    timezoneRegion?.addEventListener('change', filterTimezones);
+    timezone?.addEventListener('change', () => {
+        const selected = timezone.options[timezone.selectedIndex];
+        timezoneRegion.value = selected?.dataset.zoneRegion === 'other' ? 'all' : 'north_america';
+        filterTimezones();
+    });
     async function refresh() {
         if (document.hidden) return;
         try {
             if (schedule) {
                 const data = await request('/admin/backups/status');
-                if (!initialized) fill(schedule, data.health.schedule);
+                if (!initialized) { fill(schedule, data.health.schedule); syncTimezoneRegion(); }
                 document.getElementById('backup-jobs').textContent = data.jobs.map(j => `${j.created} ${j.kind}: ${j.phase} ${j.error || ''}`).join('\n');
                 const list = document.getElementById('backup-list'); list.replaceChildren();
                 for (const row of data.backups) {

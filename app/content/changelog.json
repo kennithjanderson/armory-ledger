@@ -8,10 +8,12 @@
       "Ammunition caliber pages group active lots by manufacturer and keep depleted lots accessible in a collapsed section.",
       "Ammunition lot alerts can be configured for low inventory or depletion and delivered through each user's selected in-app and email channels.",
       "Administrators can add and remove manufacturer search aliases that resolve to canonical names without renaming records or changing existing inventory references.",
-      "Ammunition entry uses the shared manufacturer search, including aliases, and requires an explicit action to add a new manufacturer."
+      "Ammunition entry uses the shared manufacturer search, including aliases, and requires an explicit action to add a new manufacturer.",
+      "Automatic backup schedules default to North American timezones plus UTC, with an all-zones option and daylight-saving-aware local scheduling."
     ],
     "fixed": [
-      "Standard users can no longer see or change administrator-only backup and restore notification preferences."
+      "Standard users can no longer see or change administrator-only backup and restore notification preferences.",
+      "Backup creation and restore validation track the migration heads shipped with the application, avoiding failures after schema upgrades."
     ],
     "upgrade_notes": []
   },

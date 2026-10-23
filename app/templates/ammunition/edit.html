@@ -72,6 +72,9 @@
                         >
                             {{ caliber.name }}
                         </option>
+                        {% for alias in caliber.aliases %}
+                        <option value="{{ caliber.id }}">{{ alias.alias }} → {{ caliber.name }}</option>
+                        {% endfor %}
                     {% endfor %}
                 </select>
             </div>

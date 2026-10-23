@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, String, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
@@ -34,4 +34,10 @@ class Caliber(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+    )
+
+    aliases: Mapped[list["CaliberAlias"]] = relationship(
+        back_populates="caliber",
+        order_by="CaliberAlias.alias",
+        cascade="all, delete-orphan",
     )

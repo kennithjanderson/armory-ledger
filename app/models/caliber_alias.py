@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,6 +13,11 @@ class CaliberAlias(Base):
         UniqueConstraint(
             "alias",
             name="uq_caliber_alias",
+        ),
+        Index(
+            "uq_caliber_aliases_normalized_alias",
+            text("lower(trim(alias))"),
+            unique=True,
         ),
     )
 
@@ -34,4 +39,4 @@ class CaliberAlias(Base):
         nullable=False,
     )
 
-    caliber: Mapped["Caliber"] = relationship()
+    caliber: Mapped["Caliber"] = relationship(back_populates="aliases")

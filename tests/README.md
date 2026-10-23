@@ -1,8 +1,10 @@
 # Range ammunition regression tests
 
-Run from the repository root. Tests use synthetic records and never import the
-application Settings/session factory, read `.env`, or connect to an application
-database. No Docker or Alembic is needed.
+Run from the repository root. Tests use synthetic records, do not read `.env`,
+and do not connect to an application database. Some inventory tests exercise
+notification hooks that lazily initialize application Settings; provide
+synthetic environment values for those required fields. No Docker or Alembic is
+needed for these tests.
 
 Python uses the standard-library `unittest` runner and existing SQLAlchemy/Jinja2
 dependencies. Node uses its built-in test runner (Node 18+) and test-only jsdom 24.
@@ -12,9 +14,17 @@ Install test dependencies in temporary locations, for example:
 python3 -m venv /tmp/armory-range-tests
 /tmp/armory-range-tests/bin/pip install sqlalchemy jinja2 alembic pydantic fastapi httpx
 npm install --prefix /tmp/armory-range-js-tests --no-package-lock --no-audit --no-fund jsdom@24
-PYTHONDONTWRITEBYTECODE=1 /tmp/armory-range-tests/bin/python -m unittest discover -s tests -p 'test_*.py' -v
+POSTGRES_DB=synthetic_test POSTGRES_USER=synthetic_test POSTGRES_PASSWORD=synthetic_test_only \
+OIDC_CLIENT_ID=synthetic_test OIDC_CLIENT_SECRET=synthetic_test_only \
+OIDC_ISSUER=https://example.test/ OIDC_REDIRECT_URI=https://example.test/auth/callback \
+SESSION_SECRET=synthetic_test_only PYTHONDONTWRITEBYTECODE=1 \
+  /tmp/armory-range-tests/bin/python -m unittest discover -s tests -p 'test_*.py' -v
 PYTHON=/tmp/armory-range-tests/bin/python NODE_PATH=/tmp/armory-range-js-tests/node_modules node --test tests/range-form.test.cjs tests/ammunition-merge.test.cjs
 ```
+
+Git must be installed for release-workflow tests and the installer test that
+checks `.env` ignore rules. PostgreSQL concurrency tests are opt-in and require
+the separate disposable-database authorization described below.
 
 `test_range_service.py` calls the actual create/update and inventory services
 using SQLite in memory with foreign keys enabled. A copied test schema uses JSON
@@ -42,6 +52,17 @@ transaction advisory lock. The development rebuild applied the migration on the
 development database. Its downgrade behavior has not been exercised; use only an
 explicitly authorized disposable PostgreSQL database for additional migration
 tests, never production data.
+
+## Caliber alias administration
+
+`test_caliber_aliases.py` uses the same synthetic SQLite fixture to verify
+explicit alias resolution, canonical/alias conflict rejection, actor-attributed
+add/remove history, stable firearm/ammunition caliber IDs, selector data and
+server-side admin/CSRF enforcement. It does not execute the PostgreSQL migration
+or test advisory-lock behavior. The migration fails safely if existing aliases
+conflict with canonical names or one another; apply and downgrade checks remain
+separate operations against an explicitly authorized disposable PostgreSQL
+database.
 
 ## Shooting Log coverage
 

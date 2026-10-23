@@ -26,6 +26,7 @@ from app.models.ammo_lot import AmmoLot
 from app.models.ammo_lot_merge import AmmoLotMerge
 from app.models.organization import Organization
 from app.services.ammo_merge_service import merge_candidates, merge_lots
+from app.services.caliber_service import list_selectable_calibers
 from app.core.csrf import csrf_token, require_csrf
 from app.models.user import User
 
@@ -273,11 +274,7 @@ async def ammunition_new(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    calibers = db.scalars(
-        select(Caliber)
-        .where(Caliber.is_selectable.is_(True))
-        .order_by(Caliber.name.asc())
-    ).all()
+    calibers = list_selectable_calibers(db)
 
     return templates.TemplateResponse(
         request=request,
@@ -441,11 +438,7 @@ async def ammunition_edit(
         .limit(1)
     )
 
-    calibers = db.scalars(
-        select(Caliber)
-        .where(Caliber.is_selectable.is_(True))
-        .order_by(Caliber.name)
-    ).all()
+    calibers = list_selectable_calibers(db)
 
     return templates.TemplateResponse(
         request=request,

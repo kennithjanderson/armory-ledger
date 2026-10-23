@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Caliber Aliases | {{ app_name }}{% endblock %}
+{% block content %}
+<a href="/admin/calibers" class="record-back">← Calibers</a>
+<section class="page-heading">
+    <div class="page-marker">SHARED REFERENCE DATA</div>
+    <h1>Caliber aliases</h1>
+    <p>Explicit alternate names resolve to the canonical caliber <strong>{{ caliber.name }}</strong>. They help users find it in firearm and ammunition forms; saved records continue to use the canonical caliber ID. Aliases are shared by all users.</p>
+</section>
+
+<div class="heritage-rule" aria-hidden="true">
+    <span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span>
+</div>
+
+{% include "partials/admin_navigation.html" %}
+
+<p class="operations-notice"><strong>Only add an alias when it is an explicitly approved alternate designation for this caliber.</strong> Similar names, shared bullet diameter, or possible firearm compatibility do not establish equivalence. This does not rename calibers or combine inventory.</p>
+
+<section class="operations-card" aria-labelledby="add-caliber-alias-heading">
+    <h2 id="add-caliber-alias-heading">Add an alias</h2>
+    <form id="caliber-alias-create" class="operations-form"
+          data-endpoint="/admin/calibers/{{ caliber.id }}/aliases"
+          data-csrf-token="{{ csrf_token }}">
+        <label for="caliber-alias-new">Alternate designation</label>
+        <input id="caliber-alias-new" name="alias" type="text" maxlength="100" required>
+        <div class="operations-actions">
+            <button class="button-primary" type="submit">Add alias</button>
+        </div>
+    </form>
+</section>
+
+<div id="caliber-alias-message" class="operation-message" role="status" aria-live="polite"></div>
+
+<section class="operations-card" aria-labelledby="caliber-alias-list-heading">
+    <h2 id="caliber-alias-list-heading">Current aliases</h2>
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead><tr><th>Alias</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for alias in aliases %}
+        <tr>
+            <td>{{ alias.alias }}</td>
+            <td><button class="button-secondary caliber-alias-delete" type="button"
+                        data-endpoint="/admin/calibers/{{ caliber.id }}/aliases/{{ alias.id }}"
+                        data-csrf-token="{{ csrf_token }}" data-alias="{{ alias.alias }}">Remove</button></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="2">No aliases are configured for this caliber.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</section>
+
+<section class="operations-card" aria-labelledby="caliber-alias-history-heading">
+    <h2 id="caliber-alias-history-heading">Recent alias changes</h2>
+    <div class="admin-table-scroll"><table class="admin-table">
+        <thead><tr><th>When</th><th>Administrator</th><th>Action</th><th>Previous</th><th>Current</th></tr></thead>
+        <tbody>
+        {% for event, actor_name, actor_email in changes %}
+        <tr>
+            <td><time datetime="{{ event.created_at.isoformat() }}">{{ event.created_at | utc_display }}</time></td>
+            <td>{{ actor_name }} {{ actor_email }}</td>
+            <td>{{ event.action | title }}</td>
+            <td>{{ event.previous_alias or '—' }}</td>
+            <td>{{ event.new_alias or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">No alias changes recorded.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</section>
+
+<script src="{{ url_for('static', path='/js/admin-caliber-aliases.js') }}?v={{ app_version }}" defer></script>
+{% endblock %}

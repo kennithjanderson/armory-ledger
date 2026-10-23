@@ -1,8 +1,9 @@
 # Armory Ledger Roadmap
 
-Baseline reviewed 2026-10-12 against `1fc2edd`; v0.1.3 was subsequently published
+Originally reviewed 2026-10-12 against `1fc2edd`; v0.1.3 was subsequently published
 from commit `614d469` on **October 15, 2026** (America/Chicago). This roadmap was
-reconciled with that release on 2026-10-17.
+reconciled with that release on 2026-10-17. Development checkpoint ordering was
+reviewed again on 2026-10-23 at `7bef059`.
 Other roadmap items have no assigned release dates or version commitments. Existing behavior is documented in [architecture](ARCHITECTURE.md)
 and [implementation status](IMPLEMENTATION_STATUS.md); open choices are in
 [decisions](DECISIONS.md).
@@ -137,6 +138,38 @@ rebuild is healthy on schema head `d2c87ab9415e`, and browser acceptance includi
 a successful backup was confirmed on 2026-10-21. No database migration is
 introduced. Caliber alias management moves from dev.7 to dev.8; completed
 checkpoint numbering is preserved.
+
+## Caliber alias management — v0.1.5-dev.8 verified
+
+The existing shared `CaliberAlias` model and resolver now have Armory Admin-only
+add/remove management, conflict validation and actor-attributed history. Explicit
+alias options resolve to the existing canonical caliber ID in firearm and
+ammunition forms. Do not infer equivalence between distinct calibers, combine
+records or rewrite inventory references. Revision `e8a1f3c0d64b` follows
+`d2c87ab9415e` and is applied in the development database as its current head.
+The development app is healthy, all 49 focused regression tests pass, and browser
+acceptance was confirmed by the owner on 2026-10-23. This item was initially dev.7;
+backup/timezone work completed as dev.7, so caliber aliases became dev.8 without
+renumbering completed checkpoints.
+
+## Canonical manufacturer and caliber renames — v0.1.5-dev.9 planned
+
+After dev.8, add an Armory Admin-only workflow to correct a
+canonical manufacturer or caliber name without changing its UUID. A successful
+rename should add the previous canonical name as an alias in the same transaction,
+so existing spellings continue to resolve while forms and records show the
+corrected primary name. This supports corrections such as `S&W` → `Smith &
+Wesson`, `223` → `.223`, and `556` → `5.56` when an administrator has confirmed
+the designation is truly equivalent.
+
+Reject a new canonical name that conflicts with another canonical record or an
+alias belonging to another record. If the proposed name is already an alias of
+the same record, promote it by removing that alias while preserving the prior
+canonical name as the new alias. Keep the operation atomic, admin-authorized,
+CSRF-protected and actor-audited. Do not merge records, alter UUIDs, or infer
+caliber equivalence from similar strings, shared dimensions, or firearm
+compatibility. Exact transaction/audit schema design remains for the dev.9
+implementation review.
 
 ## Shooting Log and recorded firearm rounds — implemented, review pending
 

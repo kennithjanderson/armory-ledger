@@ -28,9 +28,10 @@ application session in v0.1.2.
 
 The application administrator role does not bypass inventory ownership checks.
 Administrators may view account identity fields, read shared manufacturer/caliber
-reference data, and manage announcements. There are no administrative routes for
-browsing another user's inventory, inventory-derived counts, or private audit
-events. Inventory purge is not implemented in this release.
+reference data, manage explicit shared manufacturer/caliber aliases, and manage
+announcements. There are no administrative routes for browsing another user's
+inventory, inventory-derived counts, or private audit events. Inventory purge is
+not implemented in this release.
 
 An installation operator may nevertheless have infrastructure-level access to
 the host, database, backups, logs, and identity provider. Application roles do

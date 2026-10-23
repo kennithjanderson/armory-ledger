@@ -31,6 +31,7 @@ from app.services.manufacturer_service import (
 )
 
 from app.services.range_service import get_firearm_recorded_rounds
+from app.services.caliber_service import list_selectable_calibers
 from app.models.range_session import RangeSession
 from app.models.range_session_firearm import RangeSessionFirearm
 from app.models.range_session_ammo_usage import RangeSessionAmmoUsage
@@ -141,11 +142,7 @@ async def firearm_new(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    calibers = db.scalars(
-        select(Caliber)
-        .where(Caliber.is_selectable.is_(True))
-        .order_by(Caliber.name)
-    ).all()
+    calibers = list_selectable_calibers(db)
 
     return templates.TemplateResponse(
         request=request,
@@ -659,11 +656,7 @@ async def firearm_edit(
             detail="Firearm not found.",
         )
 
-    calibers = db.scalars(
-        select(Caliber)
-        .where(Caliber.is_selectable.is_(True))
-        .order_by(Caliber.name)
-    ).all()
+    calibers = list_selectable_calibers(db)
 
     return templates.TemplateResponse(
         request=request,

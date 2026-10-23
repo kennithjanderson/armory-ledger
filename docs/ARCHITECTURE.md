@@ -1,9 +1,10 @@
 # Armory Ledger Architecture
 
-Baseline reviewed: 2026-10-20, committed baseline `625524e` on
-`develop/v0.1.5`, with the manufacturer-alias changes described below in the
-working tree. This describes source code, not the verified state of any running
-database or deployment. See [implementation status](IMPLEMENTATION_STATUS.md),
+Baseline reviewed: 2026-10-23 against committed dev.7 baseline `7bef059` on
+`develop/v0.1.5`; the verified dev.8 source is recorded in implementation
+status. This describes source code, not the verified state of any running
+database or deployment. See
+[implementation status](IMPLEMENTATION_STATUS.md),
 [decisions](DECISIONS.md), and [roadmap](ROADMAP.md) for limitations and plans.
 
 ## System overview
@@ -66,7 +67,7 @@ paths commit explicitly, with rollback handling in many services.
 | `/accessories/*` | List/create/detail/edit and manufacturer lookup/create |
 | `/range/*` | Session list/create/detail/edit |
 | `/reference/calibers` | Authenticated shared caliber creation |
-| `/admin*` | Admin landing, account identities, references, manufacturer alias management, announcement management |
+| `/admin*` | Admin landing, account identities, references, manufacturer/caliber alias management, announcement management |
 | `/about` | Authenticated About / Privacy page |
 
 GET handlers generally render HTML; POST/PUT handlers accept JSON. Business
@@ -146,14 +147,15 @@ be at least one; a database check exists in its migration.
 Manufacturers and calibers are global. Manufacturer search uses exact canonical
 names/aliases and fuzzy suggestions; fuzzy results do not automatically merge
 records. Authenticated users can create references. Administrators can add and
-remove manufacturer search aliases under `/admin`; alias entries are
-read-only after creation and are changed by remove-and-readd. Alias resolution
-returns the existing canonical manufacturer ID and name. Alias changes never
-rename a canonical manufacturer or rewrite inventory references. Canonical names
-and aliases are checked for conflicts. Each change records the admin actor and
-before/after alias values. Caliber aliases remain modeled but do not yet have an
-administration workflow. Organization relationships are modeled but have no
-management UI.
+remove manufacturer and caliber search aliases under `/admin`; alias entries are
+read-only after creation and are changed by remove-and-readd. Alias choices
+submit the canonical reference ID, so saved inventory and product records keep
+their existing canonical identity. Alias changes never rename canonical records
+or rewrite inventory references. Canonical names and aliases are checked for
+conflicts. Each alias change records the admin actor and before/after alias
+values. Caliber aliases are explicit alternate labels only; the application does
+not infer cartridge equivalence from similar names, bullet diameter, or firearm
+compatibility. Organization relationships are modeled but have no management UI.
 
 Ammo brands and products are also shared; owned lots reference products. Updating
 a lot's product attributes finds or creates another product and repoints that

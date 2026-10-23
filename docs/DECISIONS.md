@@ -1,8 +1,8 @@
 # Armory Ledger Decisions
 
-Reviewed 2026-10-20 against `develop/v0.1.5` baseline `625524e` and the
-manufacturer-alias implementation in the working tree. This is a decision register, not a claim
-that every implementation detail was previously approved in a formal ADR.
+Reviewed 2026-10-23 against `develop/v0.1.5` baseline `7bef059` and the
+verified dev.8 caliber-alias implementation. This is a decision register, not a
+claim that every implementation detail was previously approved in a formal ADR.
 Evidence is identified for each entry. See [architecture](ARCHITECTURE.md),
 [status](IMPLEMENTATION_STATUS.md), and [roadmap](ROADMAP.md).
 
@@ -19,7 +19,7 @@ proof of completion.
 | Armory User required; Armory Admin is additional login-time privilege | [SECURITY](../SECURITY.md), auth callback, admin middleware/dependency | Server-side admin enforcement without live group refresh in v0.1.2. Revoking a provider group does not immediately revoke an existing session. |
 | Administrators cannot browse other users' private inventory | Admin router, owner-filtered inventory routers, SECURITY | Admin account identity fields are permitted, but counts, prices, records, usage summaries and private audit data are excluded. Infrastructure operator access is a separate boundary. |
 | Manufacturers and calibers remain shared | Models, reference services, README | Avoids manufacturer ownership migration. Multiple users share identifiers; new reference names are discoverable by other users. Canonical manufacturer/caliber fields remain unchanged by alias administration; the admin-only manufacturer alias workflow manages lookup terms, not primary records. |
-| Manufacturer aliases resolve to canonical shared records; only admins manage them | Owner direction on 2026-10-20; `app/services/manufacturer_service.py`, `/admin/manufacturers/{id}/aliases` | Aliases are lookup shortcuts such as `S&W` for `Smith & Wesson`, not alternate records or a rename tool. Exact alias searches return the canonical ID/name. Reject canonical-name and alias conflicts. Add/remove is server-side admin-only, CSRF-protected, and actor-audited; changing an alias means removing and re-adding it. Existing inventory foreign keys remain unchanged. Caliber alias management remains a separate admin-only dev.7 feature. |
+| Manufacturer aliases resolve to canonical shared records; only admins manage them | Owner direction on 2026-10-20; `app/services/manufacturer_service.py`, `/admin/manufacturers/{id}/aliases` | Aliases are lookup shortcuts such as `S&W` for `Smith & Wesson`, not alternate records or a rename tool. Exact alias searches return the canonical ID/name. Reject canonical-name and alias conflicts. Add/remove is server-side admin-only, CSRF-protected, and actor-audited; changing an alias means removing and re-adding it. Existing inventory foreign keys remain unchanged. Caliber alias management is separately admin-only and is the current dev.8 work. |
 | Ammunition entry selects from the shared manufacturer catalog | Owner direction on 2026-10-20; `app/templates/ammunition/new.html`, `app/services/ammunition_service.py` | Reuse the manufacturer catalog already referenced by `AmmoBrand`; do not create a second ammo-only manufacturer list. Search aliases resolve to the canonical ID/name. Unknown names require an explicit create action. Store the canonical manufacturer name on the new ammo brand record; caliber, grain weight, projectile type and product details remain separate. No schema migration is required. |
 | Optional serial and purchase price | Firearm model/API and migration `f57a288ed6ed` | Unknown is represented by NULL, not fabricated serials or zero prices. Decimal/Numeric avoids binary floating-point storage. |
 | Store currency separately; current UI writes USD | Firearm model/API/templates and schema plan | Existing USD amounts retain their meaning if more currencies are added. No valuation, conversion, tax, or accounting features are implied. |
@@ -175,7 +175,41 @@ original history; users who later want to merge it can add ammunition first and
 then use the existing explicit merge flow. Keep zero-balance sources ineligible.
 Do not add history-only merges, zero-quantity transfer rows, or a migration for
 this proposal. The checkpoint is removed from the pending sequence; manufacturer
-alias management becomes dev.6 and caliber alias management dev.7.
+alias management became dev.6 and caliber alias management was initially set as
+dev.7. The verified backup/timezone work took dev.7, so caliber aliases are now
+dev.8; completed checkpoint numbers remain unchanged.
+
+## Caliber alias scope — approved 2026-10-23
+
+- Keep shared canonical calibers and their identifiers unchanged. Armory Admin
+  may add or remove explicit alternate names; changes are server-side authorized,
+  CSRF-protected and actor-audited. Editing means remove-and-readd.
+- Resolve each alias to its one explicitly selected canonical caliber in entry
+  forms. Store and compare the canonical ID for firearms, ammo products,
+  duplicate-lot detection and merges. Existing inventory references are never
+  rewritten by alias changes.
+- Reject aliases that collide, after conservative case/whitespace normalization,
+  with a canonical caliber name or an alias assigned to another record. Never
+  infer equivalence from similar spelling, shared bullet diameter, or possible
+  firearm compatibility; do not automatically merge calibers.
+
+## Canonical manufacturer and caliber rename scope — approved 2026-10-23
+
+- Plan a separate v0.1.5-dev.9 admin-only workflow to correct canonical
+  manufacturer and caliber display names. Keep each record's UUID stable so
+  firearms, accessories, ammunition products and inventory remain attached.
+- On a successful rename, preserve the former primary name as an alias in the
+  same atomic operation. If the new primary is already an alias of that same
+  record, promote it and remove the duplicate alias. Leave other records and
+  aliases untouched.
+- Reject conflicts with another canonical record or another record's alias;
+  record the acting administrator and prior/new primary names. Caliber names may
+  be corrected only after an administrator confirms they refer to the same
+  designation. Similar spellings, dimensions or possible firearm compatibility
+  are not evidence of equivalence.
+- This is planned for dev.9 and is not part of the in-progress dev.8 alias-only
+  implementation. Transaction, audit-schema and conflict-locking details remain
+  to be reviewed during dev.9 implementation.
 
 ## Merge polish decisions — 2026-10-13
 

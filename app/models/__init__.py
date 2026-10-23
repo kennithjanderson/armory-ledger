@@ -1,6 +1,7 @@
 from app.models.user import User
 from app.models.caliber import Caliber
 from app.models.caliber_alias import CaliberAlias
+from app.models.caliber_alias_audit_event import CaliberAliasAuditEvent
 from app.models.organization import (
     ManufacturerProfile,
     Organization,
@@ -43,6 +44,7 @@ from app.models.range_session_ammo_usage import (
 __all__ = [
     "Caliber",
     "CaliberAlias",
+    "CaliberAliasAuditEvent",
     "ManufacturerProfile",
     "Organization",
     "OrganizationRelationship",

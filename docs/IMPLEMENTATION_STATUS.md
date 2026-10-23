@@ -1,5 +1,29 @@
 # Armory Ledger Implementation Status
 
+## Verified — caliber alias administration (v0.1.5-dev.8, 2026-10-23)
+
+Caliber aliases already existed in the initial schema and exact lookup was used
+when rejecting duplicate caliber creation, but administrators had no management
+workflow and aliases were absent from firearm/ammunition selectors. This work
+adds admin-only add/remove controls with actor-attributed history, normalized
+conflict checks, and alternate selector labels that submit the canonical caliber
+ID. No existing firearm, product or inventory reference is changed. Revision
+`e8a1f3c0d64b` follows `d2c87ab9415e` and is applied in the development database,
+which reports it as the current head. The development app health endpoint reports
+healthy with the database connected on version 0.1.5. The focused caliber/admin,
+manufacturer alias, ammunition suggestion/merge and range suites passed all 49
+tests in an isolated, network-disabled container with source mounted read-only
+and synthetic test-only settings. Python AST, Jinja parsing, JavaScript syntax and
+`git diff --check` pass. The broader application Python run passed 124 tests; its
+remaining installer test could not run because the test image does not include
+Git, which that test invokes to inspect ignore rules. Git-dependent release tests
+and opt-in PostgreSQL concurrency tests were excluded from that run. The owner
+confirmed dev.8 browser acceptance on 2026-10-23.
+
+The owner assigned canonical manufacturer/caliber rename management to the next
+planned checkpoint, v0.1.5-dev.9. It remains a separate scope: dev.8 only adds
+and removes aliases.
+
 ## v0.1.5-dev.7 — backup schema tracking and timezone selection (2026-10-21)
 
 The backup service now reads all Alembic heads from the application migration
@@ -241,7 +265,7 @@ has passed automated or runtime testing.
 | Accessories | Quantity, manufacturer, purchase fields, firearm/storage placement, audited edits | Accessory model/service/router |
 | Range sessions | Multiple firearms and ammo rows, inventory or other sources, balance deductions, transactional edits/corrections, history pages | Range service/router/templates/JS |
 | References | Shared manufacturers/calibers, canonical/alias resolution, manufacturer suggestions and authenticated creation | Reference services and routes |
-| Admin pages | Account-only user projection, read-only canonical manufacturer/caliber fields, admin-only manufacturer alias management, consistent navigation | `app/api/admin.py`, admin templates |
+| Admin pages | Account-only user projection, read-only canonical manufacturer/caliber fields, admin-only manufacturer/caliber alias management, consistent navigation | `app/api/admin.py`, admin templates |
 | Announcements | Create/edit/enable/schedule, UTC validation, escaped text, request-time authenticated display, CSRF for writes | Announcement model/schema/service and shared context |
 | About / Privacy | Software/operator separation, optional instance contacts, footer link | About route/template, Settings |
 | Deployment source | Docker image, PostgreSQL Compose, startup migrations, release-triggered GHCR publishing | Dockerfile, entrypoint, Compose example, GitHub workflow |

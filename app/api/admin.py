@@ -12,6 +12,8 @@ from app.core.dependencies import get_db, require_admin
 from app.main_templates import templates
 from app.models.announcement import Announcement
 from app.models.caliber import Caliber
+from app.models.caliber_alias import CaliberAlias
+from app.models.caliber_alias_audit_event import CaliberAliasAuditEvent
 from app.models.organization import ManufacturerProfile, Organization
 from app.models.organization_alias import OrganizationAlias
 from app.models.manufacturer_alias_audit_event import ManufacturerAliasAuditEvent
@@ -23,6 +25,7 @@ from app.services.manufacturer_service import (
     add_manufacturer_alias,
     delete_manufacturer_alias,
 )
+from app.services.caliber_service import add_caliber_alias, delete_caliber_alias
 
 
 router = APIRouter(prefix="/admin", tags=["administration"], dependencies=[Depends(require_admin)])
@@ -30,6 +33,10 @@ router = APIRouter(prefix="/admin", tags=["administration"], dependencies=[Depen
 
 class ManufacturerAliasRequest(BaseModel):
     alias: str = Field(min_length=1, max_length=255)
+
+
+class CaliberAliasRequest(BaseModel):
+    alias: str = Field(min_length=1, max_length=100)
 
 
 def render(request, current_user, template, **context):
@@ -151,6 +158,82 @@ def calibers(request: Request, current_user: User = Depends(require_admin), db: 
         Caliber.id, Caliber.name, Caliber.is_selectable,
     ).order_by(Caliber.name, Caliber.id)).mappings().all()
     return render(request, current_user, "admin/calibers.html", records=records)
+
+
+def get_caliber(db: Session, caliber_id: UUID) -> Caliber:
+    caliber = db.get(Caliber, caliber_id)
+    if caliber is None:
+        raise HTTPException(status_code=404, detail="Caliber not found.")
+    return caliber
+
+
+@router.get("/calibers/{caliber_id}/aliases")
+def caliber_aliases(
+    caliber_id: UUID, request: Request,
+    current_user: User = Depends(require_admin), db: Session = Depends(get_db),
+):
+    caliber = get_caliber(db, caliber_id)
+    aliases = db.scalars(
+        select(CaliberAlias).where(
+            CaliberAlias.caliber_id == caliber.id,
+        ).order_by(CaliberAlias.alias, CaliberAlias.id)
+    ).all()
+    changes = db.execute(
+        select(CaliberAliasAuditEvent, User.display_name, User.email)
+        .join(User, User.id == CaliberAliasAuditEvent.actor_user_id)
+        .where(CaliberAliasAuditEvent.caliber_id == caliber.id)
+        .order_by(CaliberAliasAuditEvent.created_at.desc(), CaliberAliasAuditEvent.id)
+        .limit(50)
+    ).all()
+    return render(
+        request, current_user, "admin/caliber_aliases.html",
+        caliber=caliber, aliases=aliases, changes=changes,
+    )
+
+
+@router.post(
+    "/calibers/{caliber_id}/aliases",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_csrf)],
+)
+def caliber_alias_create(
+    caliber_id: UUID, payload: CaliberAliasRequest,
+    current_user: User = Depends(require_admin), db: Session = Depends(get_db),
+):
+    get_caliber(db, caliber_id)
+    try:
+        alias = add_caliber_alias(
+            db, caliber_id, payload.alias, actor_user_id=current_user.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Alias conflicts with an existing caliber name or alias.",
+        ) from exc
+    return {"success": True, "id": str(alias.id), "alias": alias.alias}
+
+
+@router.delete(
+    "/calibers/{caliber_id}/aliases/{alias_id}",
+    dependencies=[Depends(require_csrf)],
+)
+def caliber_alias_delete(
+    caliber_id: UUID, alias_id: UUID, current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    get_caliber(db, caliber_id)
+    try:
+        delete_caliber_alias(
+            db, caliber_id=caliber_id, alias_id=alias_id,
+            actor_user_id=current_user.id,
+        )
+    except ValueError as exc:
+        status_code = 404 if str(exc) == "Caliber alias not found." else 409
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+    return {"success": True}
 
 
 @router.get("/announcements")

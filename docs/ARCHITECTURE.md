@@ -1,9 +1,9 @@
 # Armory Ledger Architecture
 
-Baseline reviewed: 2026-10-23 against committed dev.7 baseline `7bef059` on
-`develop/v0.1.5`; the verified dev.8 source is recorded in implementation
-status. This describes source code, not the verified state of any running
-database or deployment. See
+Baseline reviewed: 2026-10-26 against dev.9 source based on committed dev.8
+`6900f35` on `develop/v0.1.5`; schema revision `480378f66895` is applied in the
+development database. This describes source code and the reviewed development
+database, not any production deployment. See
 [implementation status](IMPLEMENTATION_STATUS.md),
 [decisions](DECISIONS.md), and [roadmap](ROADMAP.md) for limitations and plans.
 
@@ -67,7 +67,7 @@ paths commit explicitly, with rollback handling in many services.
 | `/accessories/*` | List/create/detail/edit and manufacturer lookup/create |
 | `/range/*` | Session list/create/detail/edit |
 | `/reference/calibers` | Authenticated shared caliber creation |
-| `/admin*` | Admin landing, account identities, references, manufacturer/caliber alias management, announcement management |
+| `/admin*` | Admin landing, account identities, references, manufacturer/caliber alias and canonical-name management, announcement management |
 | `/about` | Authenticated About / Privacy page |
 
 GET handlers generally render HTML; POST/PUT handlers accept JSON. Business
@@ -119,8 +119,8 @@ timestamps, and JSONB for audit changes.
 | Domain | Main relationships |
 | --- | --- |
 | Identity | `User` owns private inventory and is referenced as audit actor/announcement author |
-| Shared manufacturers | `Organization` has an optional one-to-one `ManufacturerProfile`; aliases point to organizations; administrator alias changes have a separate actor-attributed audit trail; typed organization relationships connect two organizations |
-| Shared calibers | `CaliberAlias` points to `Caliber`; firearms and ammunition products reference calibers |
+| Shared manufacturers | `Organization` has an optional one-to-one `ManufacturerProfile`; aliases point to organizations; administrator alias and canonical-name changes have actor-attributed audit trails; typed organization relationships connect two organizations |
+| Shared calibers | `CaliberAlias` points to `Caliber`; firearms and ammunition products reference calibers; alias changes have an actor-attributed trail, while canonical-name audit records store reference type/UUID, actor and old/new labels |
 | Firearms | `Firearm` references owner, optional manufacturer organization, optional caliber |
 | Accessories | `Accessory` references owner, optional organization, optional firearm |
 | Ammunition | `Organization → AmmoBrand → AmmoProduct → AmmoLot → AmmoInventoryTransaction` |
@@ -150,10 +150,13 @@ records. Authenticated users can create references. Administrators can add and
 remove manufacturer and caliber search aliases under `/admin`; alias entries are
 read-only after creation and are changed by remove-and-readd. Alias choices
 submit the canonical reference ID, so saved inventory and product records keep
-their existing canonical identity. Alias changes never rename canonical records
-or rewrite inventory references. Canonical names and aliases are checked for
-conflicts. Each alias change records the admin actor and before/after alias
-values. Caliber aliases are explicit alternate labels only; the application does
+their existing canonical identity. Admins can also correct a canonical
+manufacturer or caliber name while retaining its UUID; the former name is
+preserved as an alias, and an alias on that same reference can be promoted to
+canonical. Conflicting names are rejected under catalog advisory locks. Rename
+and alias changes are actor-audited. Admin tables and audit history allow
+horizontal scrolling on narrow screens; a broader mobile layout redesign is
+pending. Caliber aliases remain explicit labels only; the application does
 not infer cartridge equivalence from similar names, bullet diameter, or firearm
 compatibility. Organization relationships are modeled but have no management UI.
 

@@ -16,14 +16,18 @@ from sqlalchemy.pool import StaticPool
 import test_range_service as fixtures
 from app.models.audit_event import AuditEvent
 from app.models.manufacturer_alias_audit_event import ManufacturerAliasAuditEvent
+from app.models.reference_name_audit_event import ReferenceNameAuditEvent
 from app.models.organization import ManufacturerProfile, Organization
 from app.models.organization_alias import OrganizationAlias
+from app.models.accessory import Accessory
+from app.models.ammo_brand import AmmoBrand
 from app.services.manufacturer_service import (
     add_manufacturer_alias,
     create_manufacturer,
     delete_manufacturer_alias,
     find_exact_manufacturer,
     find_similar_manufacturers,
+    rename_manufacturer,
 )
 
 
@@ -101,6 +105,76 @@ class ManufacturerAliasServiceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "already resolves to"):
             add_manufacturer_alias(self.db, other.id, " s&w ", actor_user_id=self.f.owner.id)
         self.assertEqual(alias.alias, "S&W")
+
+    def test_rename_preserves_ids_adds_old_name_alias_and_records_actor(self):
+        self.f.firearm.manufacturer_id = self.manufacturer.id
+        brand = self.db.scalar(select(AmmoBrand))
+        brand.manufacturer_id = self.manufacturer.id
+        accessory = Accessory(
+            id=uuid4(), owner_id=self.f.owner.id, manufacturer_id=self.manufacturer.id,
+            name="Light", quantity=1,
+        )
+        self.db.add(accessory)
+        self.db.commit()
+        manufacturer_id = self.manufacturer.id
+        firearm_id = self.f.firearm.manufacturer_id
+        brand_id = brand.manufacturer_id
+        accessory_id = accessory.manufacturer_id
+
+        renamed = rename_manufacturer(
+            self.db, manufacturer_id, "Smith and Wesson", actor_user_id=self.f.owner.id,
+        )
+
+        self.assertEqual(renamed.name, "Smith and Wesson")
+        self.assertEqual(renamed.id, manufacturer_id)
+        self.assertEqual((self.f.firearm.manufacturer_id, brand.manufacturer_id,
+                          accessory.manufacturer_id),
+                         (firearm_id, brand_id, accessory_id))
+        self.assertEqual(find_exact_manufacturer(self.db, "Smith and Wesson").id, manufacturer_id)
+        self.assertEqual(find_exact_manufacturer(self.db, "Smith & Wesson").id, manufacturer_id)
+        event = self.db.scalar(select(ReferenceNameAuditEvent))
+        self.assertEqual((event.reference_type, event.reference_id, event.actor_user_id,
+                          event.previous_name, event.new_name),
+                         ("manufacturer", manufacturer_id, self.f.owner.id,
+                          "Smith & Wesson", "Smith and Wesson"))
+        self.assertEqual(self.db.query(ManufacturerAliasAuditEvent).count(), 1)
+
+    def test_rename_promotes_own_alias_and_rejects_conflicts_atomically(self):
+        alias = add_manufacturer_alias(
+            self.db, self.manufacturer.id, "S&W", actor_user_id=self.f.owner.id,
+        )
+        renamed = rename_manufacturer(
+            self.db, self.manufacturer.id, "S&W", actor_user_id=self.f.owner.id,
+        )
+        self.assertEqual(renamed.name, "S&W")
+        aliases = self.db.scalars(select(OrganizationAlias).where(
+            OrganizationAlias.organization_id == self.manufacturer.id
+        )).all()
+        self.assertEqual([row.alias for row in aliases], ["Smith & Wesson"])
+        alias_events = self.db.scalars(select(ManufacturerAliasAuditEvent).order_by(
+            ManufacturerAliasAuditEvent.created_at, ManufacturerAliasAuditEvent.action
+        )).all()
+        self.assertEqual({(row.action, row.previous_alias, row.new_alias) for row in alias_events}, {
+            ("created", None, "S&W"),
+            ("deleted", "S&W", None),
+            ("created", None, "Smith & Wesson"),
+        })
+        self.assertIsNotNone(alias)
+        self.assertEqual(self.db.query(ReferenceNameAuditEvent).count(), 1)
+
+        other = Organization(id=uuid4(), name="Other Maker")
+        self.db.add(other)
+        self.db.flush()
+        self.db.add(ManufacturerProfile(organization_id=other.id, is_selectable=False))
+        self.db.flush()
+        self.db.add(OrganizationAlias(organization_id=other.id, alias="Taken Name"))
+        self.db.commit()
+        with self.assertRaisesRegex(ValueError, "conflicts with another"):
+            rename_manufacturer(
+                self.db, self.manufacturer.id, "Taken Name", actor_user_id=self.f.owner.id,
+            )
+        self.assertEqual(self.manufacturer.name, "S&W")
+        self.assertEqual(self.db.query(ReferenceNameAuditEvent).count(), 1)
 
 
 class ManufacturerAliasRouteTests(unittest.TestCase):
@@ -202,6 +276,19 @@ class ManufacturerAliasRouteTests(unittest.TestCase):
         self.assertEqual(removed.status_code, 200, removed.text)
         self.assertEqual(self.db.scalar(select(OrganizationAlias.id)), None)
         self.assertEqual(self.db.query(ManufacturerAliasAuditEvent).count(), 2)
+
+    def test_canonical_rename_route_requires_admin_csrf_and_audits_change(self):
+        path = f"/admin/manufacturers/{self.manufacturer.id}/name"
+        self.assertEqual(self.request("PUT", path, {"name": "Smith and Wesson"}, csrf=False).status_code, 403)
+        self.session_user = {"id": str(self.f.other.id), "is_admin": False}
+        self.assertEqual(self.request("PUT", path, {"name": "Smith and Wesson"}).status_code, 403)
+        self.assertEqual(self.manufacturer.name, "Smith & Wesson")
+
+        self.session_user = {"id": str(self.f.owner.id), "is_admin": True}
+        response = self.request("PUT", path, {"name": "Smith and Wesson"})
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["name"], "Smith and Wesson")
+        self.assertEqual(self.db.query(ReferenceNameAuditEvent).count(), 1)
 
     def test_duplicate_conflict_returns_client_error_without_mutation(self):
         path = f"/admin/manufacturers/{self.manufacturer.id}/aliases"

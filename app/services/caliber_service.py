@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.caliber import Caliber
 from app.models.caliber_alias import CaliberAlias
 from app.models.caliber_alias_audit_event import CaliberAliasAuditEvent
+from app.models.reference_name_audit_event import ReferenceNameAuditEvent
 
 
 def normalize_caliber_name(value: str) -> str:
@@ -151,3 +152,88 @@ def delete_caliber_alias(
         action="deleted", previous_alias=previous_alias, new_alias=None,
     ))
     db.commit()
+
+
+def rename_caliber(
+    db: Session,
+    caliber_id: UUID,
+    name: str,
+    *,
+    actor_user_id: UUID,
+) -> Caliber:
+    """Rename one shared caliber, preserving its former name as an alias."""
+    cleaned_name = normalize_caliber_name(name)
+    if not cleaned_name:
+        raise ValueError("Caliber name is required.")
+    if len(cleaned_name) > 100:
+        raise ValueError("Caliber name cannot exceed 100 characters.")
+
+    _lock_caliber_catalog(db)
+    caliber = db.scalar(
+        select(Caliber).where(Caliber.id == caliber_id)
+        .options(selectinload(Caliber.aliases))
+        .with_for_update()
+    )
+    if caliber is None:
+        raise ValueError("Caliber does not exist.")
+
+    previous_name = caliber.name
+    if normalize_caliber_name(previous_name).lower() == cleaned_name.lower():
+        return caliber
+
+    calibers = db.scalars(
+        select(Caliber).options(selectinload(Caliber.aliases))
+    ).unique().all()
+    target = cleaned_name.lower()
+    matches: list[tuple[Caliber, CaliberAlias | None]] = []
+    for candidate in calibers:
+        if normalize_caliber_name(candidate.name).lower() == target:
+            matches.append((candidate, None))
+        matches.extend(
+            (candidate, alias) for alias in candidate.aliases
+            if normalize_caliber_name(alias.alias).lower() == target
+        )
+
+    if any(candidate.id != caliber.id for candidate, _ in matches):
+        raise ValueError("Caliber name conflicts with another canonical name or alias.")
+    promoted_alias = next((alias for candidate, alias in matches if candidate.id == caliber.id), None)
+    if len(matches) > 1:
+        raise ValueError("Caliber name ambiguously matches existing reference data.")
+
+    former_label = normalize_caliber_name(previous_name)
+    old_label_matches = [
+        (candidate, alias)
+        for candidate in calibers
+        for alias in candidate.aliases
+        if normalize_caliber_name(alias.alias).lower() == former_label.lower()
+    ]
+    if any(candidate.id != caliber.id for candidate, _ in old_label_matches):
+        raise ValueError("The current caliber name conflicts with another reference alias.")
+
+    if promoted_alias is not None:
+        db.delete(promoted_alias)
+        db.add(CaliberAliasAuditEvent(
+            caliber_id=caliber.id, alias_id=promoted_alias.id,
+            actor_user_id=actor_user_id, action="deleted",
+            previous_alias=promoted_alias.alias, new_alias=None,
+        ))
+
+    existing_former_alias = next((alias for _, alias in old_label_matches), None)
+    if existing_former_alias is None:
+        former_alias = CaliberAlias(caliber_id=caliber.id, alias=former_label)
+        db.add(former_alias)
+        db.flush()
+        db.add(CaliberAliasAuditEvent(
+            caliber_id=caliber.id, alias_id=former_alias.id,
+            actor_user_id=actor_user_id, action="created",
+            previous_alias=None, new_alias=former_alias.alias,
+        ))
+
+    caliber.name = cleaned_name
+    db.add(ReferenceNameAuditEvent(
+        reference_type="caliber", reference_id=caliber.id,
+        actor_user_id=actor_user_id, previous_name=previous_name, new_name=cleaned_name,
+    ))
+    db.commit()
+    db.refresh(caliber)
+    return caliber

@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
         message.classList.toggle("operation-message--error", isError);
     }
 
-    async function send(method, endpoint, token, alias) {
+    async function send(method, endpoint, token, payload) {
         const response = await fetch(endpoint, {
             method,
             headers: {
@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 "Accept": "application/json",
                 "X-CSRF-Token": token,
             },
-            ...(alias === undefined ? {} : {body: JSON.stringify({alias})}),
+            ...(payload === undefined ? {} : {body: JSON.stringify(payload)}),
         });
         let data = null;
         try { data = await response.json(); } catch { /* use the generic response below */ }
@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
         event.preventDefault();
         const input = createForm.elements.alias;
         try {
-            await send("POST", createForm.dataset.endpoint, createForm.dataset.csrfToken, input.value);
+            await send("POST", createForm.dataset.endpoint, createForm.dataset.csrfToken, {alias: input.value});
             window.location.reload();
         } catch (error) {
             showMessage(error.message || "The alias could not be added.", true);
@@ -46,6 +46,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.location.reload();
             } catch (error) {
                 showMessage(error.message || "The alias could not be removed.", true);
+            }
+        });
+    }
+
+    const nameForm = document.getElementById("manufacturer-name-update");
+    if (nameForm) {
+        nameForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            const input = nameForm.elements.name;
+            const current = nameForm.dataset.currentName;
+            if (!window.confirm(
+                `Rename “${current}” to “${input.value.trim()}”? This shared change affects all users. The old name remains an alias and saved records keep their existing manufacturer ID.`
+            )) return;
+            try {
+                await send("PUT", nameForm.dataset.endpoint, nameForm.dataset.csrfToken, {name: input.value});
+                window.location.reload();
+            } catch (error) {
+                showMessage(error.message || "The canonical name could not be changed.", true);
             }
         });
     }

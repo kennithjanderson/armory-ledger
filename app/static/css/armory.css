@@ -2216,6 +2216,7 @@ body {
     gap: 0.75rem;
 }
 .app-footer-identity a { color: inherit; text-decoration: underline; }
+.announcement-list-create { width: auto; white-space: nowrap; }
 .admin-links {
     display: flex;
     flex-wrap: wrap;
@@ -2247,6 +2248,31 @@ body {
     overflow-wrap: anywhere;
 }
 .admin-table th { color: var(--navy); }
+.admin-table-scroll--wide::before { content: "Swipe horizontally to view all columns."; display: none; }
+@media (max-width: 640px) {
+    .app-footer-inner {
+        min-height: 0;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.75rem 1rem;
+        padding: 1rem 0;
+        line-height: 1.5;
+        text-align: center;
+    }
+    .app-footer-identity { flex: 1 1 100%; justify-content: center; }
+    .admin-table-scroll--wide::before {
+        display: block;
+        margin: 0 0 0.5rem;
+        color: var(--navy-muted);
+        font-size: 0.82rem;
+        letter-spacing: normal;
+    }
+    .admin-table-scroll--wide .admin-table { min-width: 42rem; }
+    .admin-table-scroll--wide .admin-table--announcements { min-width: 50rem; }
+    .admin-table-scroll--wide .admin-table--users { min-width: 52rem; }
+    .admin-table--manufacturers .button-secondary { width: auto; white-space: nowrap; }
+    .announcement-list-create { width: auto; }
+}
 #announcement-form input[type="checkbox"] { width: auto; }
 .server-announcements { display: grid; gap: 0.75rem; margin-bottom: 1.5rem; }
 .server-announcement {

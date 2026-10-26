@@ -2,7 +2,7 @@
 {% block title %}Manufacturers | {{ app_name }}{% endblock %}
 {% block content %}
 <a href="/admin" class="record-back">← Administration</a>
-<section class="page-heading"><h1>Manufacturers</h1><p>Shared reference data. Canonical manufacturer names are not renamed here; admins manage search aliases for each canonical record.</p></section>
+<section class="page-heading"><h1>Manufacturers</h1><p>Shared reference data. Admins manage search aliases and canonical names from each manufacturer record.</p></section>
 
 <div class="heritage-rule" aria-hidden="true">
     <span class="rule-blue"></span>
@@ -14,7 +14,7 @@
 
 <p class="operations-notice">Organization status describes whether the organization is active or defunct; <strong>Unknown</strong> is the default when that information has not been curated. It does not affect search or selection. The separate Selectable field controls whether a manufacturer appears in entry forms.</p>
 
-<div class="admin-table-scroll"><table class="admin-table">
+<div class="admin-table-scroll admin-table-scroll--wide" tabindex="0" role="region" aria-label="Manufacturer list; scroll horizontally on narrow screens"><table class="admin-table admin-table--manufacturers">
     <thead><tr><th>Name</th><th>Legal name</th><th>Status</th><th>Selectable</th><th>Aliases</th></tr></thead>
     <tbody>{% for record in records %}<tr>
         <td>{{ record.name }}</td><td>{{ record.legal_name or 'Not recorded' }}</td>

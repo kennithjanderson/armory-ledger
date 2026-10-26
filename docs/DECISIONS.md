@@ -1,8 +1,9 @@
 # Armory Ledger Decisions
 
-Reviewed 2026-10-23 against `develop/v0.1.5` baseline `7bef059` and the
-verified dev.8 caliber-alias implementation. This is a decision register, not a
-claim that every implementation detail was previously approved in a formal ADR.
+Reviewed 2026-10-26 against the verified v0.1.5-dev.9 implementation on
+`develop/v0.1.5`, based on dev.8 commit `6900f35`. This is a decision register,
+not a claim that every implementation detail was previously approved in a
+formal ADR.
 Evidence is identified for each entry. See [architecture](ARCHITECTURE.md),
 [status](IMPLEMENTATION_STATUS.md), and [roadmap](ROADMAP.md).
 
@@ -193,9 +194,9 @@ dev.8; completed checkpoint numbers remain unchanged.
   infer equivalence from similar spelling, shared bullet diameter, or possible
   firearm compatibility; do not automatically merge calibers.
 
-## Canonical manufacturer and caliber rename scope — approved 2026-10-23
+## Canonical manufacturer and caliber rename — approved 2026-10-23; verified 2026-10-26
 
-- Plan a separate v0.1.5-dev.9 admin-only workflow to correct canonical
+- Use a v0.1.5-dev.9 admin-only workflow to correct canonical
   manufacturer and caliber display names. Keep each record's UUID stable so
   firearms, accessories, ammunition products and inventory remain attached.
 - On a successful rename, preserve the former primary name as an alias in the
@@ -207,9 +208,12 @@ dev.8; completed checkpoint numbers remain unchanged.
   be corrected only after an administrator confirms they refer to the same
   designation. Similar spellings, dimensions or possible firearm compatibility
   are not evidence of equivalence.
-- This is planned for dev.9 and is not part of the in-progress dev.8 alias-only
-  implementation. Transaction, audit-schema and conflict-locking details remain
-  to be reviewed during dev.9 implementation.
+- The dev.9 implementation keeps alias history separate from canonical-name
+  history. A shared reference-name audit table stores reference type/UUID, actor,
+  old name, new name and timestamp. Catalog advisory locks serialize rename,
+  alias creation/removal and canonical creation conflict checks. Revision
+  `480378f66895` is applied in development. The owner confirmed browser
+  acceptance, including portrait layout, on 2026-10-26.
 
 ## Merge polish decisions — 2026-10-13
 

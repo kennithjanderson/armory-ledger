@@ -2,11 +2,12 @@ from difflib import SequenceMatcher
 from uuid import UUID
 
 from sqlalchemy import func, select, text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.organization import Organization, ManufacturerProfile
 from app.models.organization_alias import OrganizationAlias
 from app.models.manufacturer_alias_audit_event import ManufacturerAliasAuditEvent
+from app.models.reference_name_audit_event import ReferenceNameAuditEvent
 
 
 def normalize_name(value: str) -> str:
@@ -288,3 +289,93 @@ def delete_manufacturer_alias(
         previous_alias=previous_alias, new_alias=None,
     )
     db.commit()
+
+
+def rename_manufacturer(
+    db: Session,
+    manufacturer_id: UUID,
+    name: str,
+    *,
+    actor_user_id: UUID,
+) -> Organization:
+    """Rename one shared manufacturer, preserving the former name as an alias."""
+    cleaned_name = " ".join(name.strip().split())
+    if not cleaned_name:
+        raise ValueError("Manufacturer name cannot be empty.")
+    if len(cleaned_name) > 255:
+        raise ValueError("Manufacturer name cannot exceed 255 characters.")
+
+    _lock_manufacturer_catalog(db)
+    organization = db.scalar(
+        select(Organization)
+        .join(ManufacturerProfile, ManufacturerProfile.organization_id == Organization.id)
+        .where(Organization.id == manufacturer_id)
+        .options(selectinload(Organization.aliases))
+        .with_for_update()
+    )
+    if organization is None:
+        raise ValueError("Manufacturer does not exist.")
+
+    previous_name = organization.name
+    if normalize_name(previous_name) == normalize_name(cleaned_name):
+        return organization
+
+    # Check every organization, including non-selectable or non-manufacturer
+    # organizations, because Organization.name is globally unique and aliases
+    # share the same normalized namespace.
+    organizations = db.scalars(
+        select(Organization).options(selectinload(Organization.aliases))
+    ).unique().all()
+    target = normalize_name(cleaned_name)
+    matches: list[tuple[Organization, OrganizationAlias | None]] = []
+    for candidate in organizations:
+        if normalize_name(candidate.name) == target:
+            matches.append((candidate, None))
+        matches.extend(
+            (candidate, alias) for alias in candidate.aliases
+            if normalize_name(alias.alias) == target
+        )
+
+    if any(candidate.id != organization.id for candidate, _ in matches):
+        raise ValueError("Manufacturer name conflicts with another canonical name or alias.")
+    promoted_alias = next((alias for candidate, alias in matches if candidate.id == organization.id), None)
+    if len(matches) > 1:
+        raise ValueError("Manufacturer name ambiguously matches existing reference data.")
+
+    former_label = " ".join(previous_name.strip().split())
+    old_label_matches = [
+        (candidate, alias)
+        for candidate in organizations
+        for alias in candidate.aliases
+        if normalize_name(alias.alias) == normalize_name(former_label)
+    ]
+    if any(candidate.id != organization.id for candidate, _ in old_label_matches):
+        raise ValueError("The current manufacturer name conflicts with another reference alias.")
+
+    if promoted_alias is not None:
+        db.delete(promoted_alias)
+        _record_alias_change(
+            db, organization_id=organization.id, alias_id=promoted_alias.id,
+            actor_user_id=actor_user_id, action="deleted",
+            previous_alias=promoted_alias.alias, new_alias=None,
+        )
+
+    existing_former_alias = next((alias for _, alias in old_label_matches), None)
+    if existing_former_alias is None:
+        former_alias = OrganizationAlias(organization_id=organization.id, alias=former_label)
+        db.add(former_alias)
+        db.flush()
+        _record_alias_change(
+            db, organization_id=organization.id, alias_id=former_alias.id,
+            actor_user_id=actor_user_id, action="created", previous_alias=None,
+            new_alias=former_alias.alias,
+        )
+
+    organization.name = cleaned_name
+    db.add(ReferenceNameAuditEvent(
+        reference_type="manufacturer", reference_id=organization.id,
+        actor_user_id=actor_user_id, previous_name=previous_name, new_name=cleaned_name,
+    ))
+    db.commit()
+    db.refresh(organization)
+    return organization

@@ -5,7 +5,7 @@
 <section class="page-heading">
     <div class="page-marker">SHARED REFERENCE DATA</div>
     <h1>Caliber aliases</h1>
-    <p>Explicit alternate names resolve to the canonical caliber <strong>{{ caliber.name }}</strong>. They help users find it in firearm and ammunition forms; saved records continue to use the canonical caliber ID. Aliases are shared by all users.</p>
+    <p>Explicit alternate names resolve to the canonical caliber <strong>{{ caliber.name }}</strong>. They help users find it in firearm and ammunition forms; saved records continue to use the canonical caliber ID. Names and aliases are shared by all users.</p>
 </section>
 
 <div class="heritage-rule" aria-hidden="true">
@@ -14,7 +14,22 @@
 
 {% include "partials/admin_navigation.html" %}
 
-<p class="operations-notice"><strong>Only add an alias when it is an explicitly approved alternate designation for this caliber.</strong> Similar names, shared bullet diameter, or possible firearm compatibility do not establish equivalence. This does not rename calibers or combine inventory.</p>
+<p class="operations-notice"><strong>Only add an alias when it is an explicitly approved alternate designation for this caliber.</strong> Similar names, shared bullet diameter, or possible firearm compatibility do not establish equivalence. Adding or removing an alias does not rename a caliber or combine inventory.</p>
+
+<section class="operations-card" aria-labelledby="rename-caliber-heading">
+    <h2 id="rename-caliber-heading">Canonical caliber name</h2>
+    <p>Changing this name updates the shared display name for everyone while keeping the caliber ID. The previous name is retained as an alias. If you enter one of this caliber's aliases, it will be promoted to the canonical name. Rename only after confirming the new name is the same caliber designation.</p>
+    <form id="caliber-name-update" class="operations-form reference-name-form"
+          data-endpoint="/admin/calibers/{{ caliber.id }}/name"
+          data-csrf-token="{{ csrf_token }}" data-current-name="{{ caliber.name }}">
+        <label for="caliber-name-new">Primary name</label>
+        <input id="caliber-name-new" name="name" type="text" maxlength="100"
+               value="{{ caliber.name }}" required>
+        <div class="operations-actions">
+            <button class="button-primary" type="submit">Save canonical name</button>
+        </div>
+    </form>
+</section>
 
 <section class="operations-card" aria-labelledby="add-caliber-alias-heading">
     <h2 id="add-caliber-alias-heading">Add an alias</h2>
@@ -52,7 +67,7 @@
 
 <section class="operations-card" aria-labelledby="caliber-alias-history-heading">
     <h2 id="caliber-alias-history-heading">Recent alias changes</h2>
-    <div class="admin-table-scroll"><table class="admin-table">
+    <div class="admin-table-scroll admin-table-scroll--wide" tabindex="0" role="region" aria-label="Caliber alias change history; scroll horizontally on narrow screens"><table class="admin-table">
         <thead><tr><th>When</th><th>Administrator</th><th>Action</th><th>Previous</th><th>Current</th></tr></thead>
         <tbody>
         {% for event, actor_name, actor_email in changes %}
@@ -65,6 +80,24 @@
         </tr>
         {% else %}
         <tr><td colspan="5">No alias changes recorded.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</section>
+
+<section class="operations-card" aria-labelledby="caliber-name-history-heading">
+    <h2 id="caliber-name-history-heading">Recent canonical name changes</h2>
+    <div class="admin-table-scroll admin-table-scroll--wide" tabindex="0" role="region" aria-label="Caliber name change history; scroll horizontally on narrow screens"><table class="admin-table">
+        <thead><tr><th>When</th><th>Administrator</th><th>Previous name</th><th>New name</th></tr></thead>
+        <tbody>
+        {% for event, actor_name, actor_email in name_changes %}
+        <tr>
+            <td><time datetime="{{ event.created_at.isoformat() }}">{{ event.created_at | utc_display }}</time></td>
+            <td>{{ actor_name }} {{ actor_email }}</td>
+            <td>{{ event.previous_name }}</td><td>{{ event.new_name }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">No canonical name changes recorded.</td></tr>
         {% endfor %}
         </tbody>
     </table></div>

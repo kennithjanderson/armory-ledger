@@ -12,8 +12,8 @@
 
 {% include "partials/admin_navigation.html" %}
 
-<div class="admin-table-scroll">
-<table class="admin-table">
+<div class="admin-table-scroll admin-table-scroll--wide" tabindex="0" role="region" aria-label="User accounts; scroll horizontally on narrow screens">
+<table class="admin-table admin-table--users">
     <thead><tr><th>Display name</th><th>Email</th><th>User UUID</th><th>First seen (UTC)</th><th>Last login (UTC)</th></tr></thead>
     <tbody>{% for account in accounts %}<tr>
         <td>{{ account.display_name }}</td><td>{{ account.email }}</td><td>{{ account.id }}</td>

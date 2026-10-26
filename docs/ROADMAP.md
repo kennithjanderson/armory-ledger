@@ -152,15 +152,15 @@ acceptance was confirmed by the owner on 2026-10-23. This item was initially dev
 backup/timezone work completed as dev.7, so caliber aliases became dev.8 without
 renumbering completed checkpoints.
 
-## Canonical manufacturer and caliber renames — v0.1.5-dev.9 planned
+## Canonical manufacturer and caliber renames — v0.1.5-dev.9 verified
 
-After dev.8, add an Armory Admin-only workflow to correct a
-canonical manufacturer or caliber name without changing its UUID. A successful
-rename should add the previous canonical name as an alias in the same transaction,
-so existing spellings continue to resolve while forms and records show the
-corrected primary name. This supports corrections such as `S&W` → `Smith &
-Wesson`, `223` → `.223`, and `556` → `5.56` when an administrator has confirmed
-the designation is truly equivalent.
+Dev.9 adds an Armory Admin-only workflow to correct a canonical manufacturer or
+caliber name without changing its UUID. A successful rename adds the previous
+canonical name as an alias in the same transaction, so existing spellings
+continue to resolve while forms and records show the corrected primary name.
+This supports corrections such as `S&W` → `Smith & Wesson`, `223` → `.223`, and
+`556` → `5.56` when an administrator has confirmed the designation is truly
+equivalent.
 
 Reject a new canonical name that conflicts with another canonical record or an
 alias belonging to another record. If the proposed name is already an alias of
@@ -168,8 +168,25 @@ the same record, promote it by removing that alias while preserving the prior
 canonical name as the new alias. Keep the operation atomic, admin-authorized,
 CSRF-protected and actor-audited. Do not merge records, alter UUIDs, or infer
 caliber equivalence from similar strings, shared dimensions, or firearm
-compatibility. Exact transaction/audit schema design remains for the dev.9
-implementation review.
+compatibility. The implementation uses separate actor-attributed canonical-name
+history and alias history, with catalog advisory locks for conflict checks.
+Migration `480378f66895` follows `e8a1f3c0d64b` and is applied in the
+development database. Service, route, UI, and synthetic migration tests pass;
+the owner confirmed browser acceptance on 2026-10-26. This checkpoint is
+complete.
+
+Implementation status and automated verification are tracked in
+[IMPLEMENTATION_STATUS](IMPLEMENTATION_STATUS.md).
+
+## Admin mobile layout review — future proposal
+
+The current narrow-screen admin tables remain usable through horizontal
+scrolling, but this is an interim layout. Review the admin pages together and
+consider responsive card/list presentations that avoid wide tables on phones.
+The request currently applies to the admin area only. A separate mobile site is
+an option to evaluate, not an approved architectural direction. Keep desktop
+presentation and data access behavior unchanged unless a later task defines a
+broader scope.
 
 ## Shooting Log and recorded firearm rounds — implemented, review pending
 

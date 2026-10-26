@@ -5,7 +5,7 @@
 <section class="page-heading">
     <div class="page-marker">SHARED REFERENCE DATA</div>
     <h1>Manufacturer aliases</h1>
-    <p>Aliases resolve to <strong>{{ manufacturer.name }}</strong>. They help users find the canonical manufacturer; they do not rename it or change existing inventory references.</p>
+    <p>Aliases resolve to <strong>{{ manufacturer.name }}</strong>. Canonical names and aliases are shared across all users.</p>
 </section>
 
 <div class="heritage-rule" aria-hidden="true">
@@ -13,6 +13,21 @@
 </div>
 
 {% include "partials/admin_navigation.html" %}
+
+<section class="operations-card" aria-labelledby="rename-manufacturer-heading">
+    <h2 id="rename-manufacturer-heading">Canonical manufacturer name</h2>
+    <p>Changing this name updates the shared display name for everyone while keeping the manufacturer ID. The previous name is retained as an alias. If you enter one of this manufacturer's aliases, it will be promoted to the canonical name.</p>
+    <form id="manufacturer-name-update" class="operations-form reference-name-form"
+          data-endpoint="/admin/manufacturers/{{ manufacturer.id }}/name"
+          data-csrf-token="{{ csrf_token }}" data-current-name="{{ manufacturer.name }}">
+        <label for="manufacturer-name-new">Primary name</label>
+        <input id="manufacturer-name-new" name="name" type="text" maxlength="255"
+               value="{{ manufacturer.name }}" required>
+        <div class="operations-actions">
+            <button class="button-primary" type="submit">Save canonical name</button>
+        </div>
+    </form>
+</section>
 
 <section class="operations-card" aria-labelledby="add-manufacturer-alias-heading">
     <h2 id="add-manufacturer-alias-heading">Add an alias</h2>
@@ -53,7 +68,7 @@
 
 <section class="operations-card" aria-labelledby="manufacturer-alias-history-heading">
     <h2 id="manufacturer-alias-history-heading">Recent alias changes</h2>
-    <div class="admin-table-scroll"><table class="admin-table">
+    <div class="admin-table-scroll admin-table-scroll--wide" tabindex="0" role="region" aria-label="Manufacturer alias change history; scroll horizontally on narrow screens"><table class="admin-table">
         <thead><tr><th>When</th><th>Administrator</th><th>Action</th><th>Previous</th><th>Current</th></tr></thead>
         <tbody>
         {% for event, actor_name, actor_email in changes %}
@@ -66,6 +81,24 @@
         </tr>
         {% else %}
         <tr><td colspan="5">No alias changes recorded.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+</section>
+
+<section class="operations-card" aria-labelledby="manufacturer-name-history-heading">
+    <h2 id="manufacturer-name-history-heading">Recent canonical name changes</h2>
+    <div class="admin-table-scroll admin-table-scroll--wide" tabindex="0" role="region" aria-label="Manufacturer name change history; scroll horizontally on narrow screens"><table class="admin-table">
+        <thead><tr><th>When</th><th>Administrator</th><th>Previous name</th><th>New name</th></tr></thead>
+        <tbody>
+        {% for event, actor_name, actor_email in name_changes %}
+        <tr>
+            <td><time datetime="{{ event.created_at.isoformat() }}">{{ event.created_at | utc_display }}</time></td>
+            <td>{{ actor_name }} {{ actor_email }}</td>
+            <td>{{ event.previous_name }}</td><td>{{ event.new_name }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">No canonical name changes recorded.</td></tr>
         {% endfor %}
         </tbody>
     </table></div>

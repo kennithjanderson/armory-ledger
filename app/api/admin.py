@@ -17,6 +17,7 @@ from app.models.caliber_alias_audit_event import CaliberAliasAuditEvent
 from app.models.organization import ManufacturerProfile, Organization
 from app.models.organization_alias import OrganizationAlias
 from app.models.manufacturer_alias_audit_event import ManufacturerAliasAuditEvent
+from app.models.reference_name_audit_event import ReferenceNameAuditEvent
 from app.models.user import User
 from app.schemas.announcement import AnnouncementRequest
 from app.schemas.announcement_schedule import SchedulePreview
@@ -24,8 +25,9 @@ from app.services.announcement_service import save_announcement
 from app.services.manufacturer_service import (
     add_manufacturer_alias,
     delete_manufacturer_alias,
+    rename_manufacturer,
 )
-from app.services.caliber_service import add_caliber_alias, delete_caliber_alias
+from app.services.caliber_service import add_caliber_alias, delete_caliber_alias, rename_caliber
 
 
 router = APIRouter(prefix="/admin", tags=["administration"], dependencies=[Depends(require_admin)])
@@ -37,6 +39,14 @@ class ManufacturerAliasRequest(BaseModel):
 
 class CaliberAliasRequest(BaseModel):
     alias: str = Field(min_length=1, max_length=100)
+
+
+class ManufacturerNameRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+
+
+class CaliberNameRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
 
 
 def render(request, current_user, template, **context):
@@ -104,9 +114,20 @@ def manufacturer_aliases(
         .order_by(ManufacturerAliasAuditEvent.created_at.desc(), ManufacturerAliasAuditEvent.id)
         .limit(50)
     ).all()
+    name_changes = db.execute(
+        select(ReferenceNameAuditEvent, User.display_name, User.email)
+        .join(User, User.id == ReferenceNameAuditEvent.actor_user_id)
+        .where(
+            ReferenceNameAuditEvent.reference_type == "manufacturer",
+            ReferenceNameAuditEvent.reference_id == manufacturer.id,
+        )
+        .order_by(ReferenceNameAuditEvent.created_at.desc(), ReferenceNameAuditEvent.id)
+        .limit(50)
+    ).all()
     return render(
         request, current_user, "admin/manufacturer_aliases.html",
         manufacturer=manufacturer, aliases=aliases, changes=changes,
+        name_changes=name_changes,
     )
 
 
@@ -152,6 +173,30 @@ def manufacturer_alias_delete(
     return {"success": True}
 
 
+@router.put(
+    "/manufacturers/{manufacturer_id}/name",
+    dependencies=[Depends(require_csrf)],
+)
+def manufacturer_name_update(
+    manufacturer_id: UUID, payload: ManufacturerNameRequest,
+    current_user: User = Depends(require_admin), db: Session = Depends(get_db),
+):
+    get_manufacturer(db, manufacturer_id)
+    try:
+        manufacturer = rename_manufacturer(
+            db, manufacturer_id, payload.name, actor_user_id=current_user.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Manufacturer name conflicts with an existing canonical name or alias.",
+        ) from exc
+    return {"success": True, "name": manufacturer.name}
+
+
 @router.get("/calibers")
 def calibers(request: Request, current_user: User = Depends(require_admin), db: Session = Depends(get_db)):
     records = db.execute(select(
@@ -185,9 +230,20 @@ def caliber_aliases(
         .order_by(CaliberAliasAuditEvent.created_at.desc(), CaliberAliasAuditEvent.id)
         .limit(50)
     ).all()
+    name_changes = db.execute(
+        select(ReferenceNameAuditEvent, User.display_name, User.email)
+        .join(User, User.id == ReferenceNameAuditEvent.actor_user_id)
+        .where(
+            ReferenceNameAuditEvent.reference_type == "caliber",
+            ReferenceNameAuditEvent.reference_id == caliber.id,
+        )
+        .order_by(ReferenceNameAuditEvent.created_at.desc(), ReferenceNameAuditEvent.id)
+        .limit(50)
+    ).all()
     return render(
         request, current_user, "admin/caliber_aliases.html",
         caliber=caliber, aliases=aliases, changes=changes,
+        name_changes=name_changes,
     )
 
 
@@ -234,6 +290,30 @@ def caliber_alias_delete(
         status_code = 404 if str(exc) == "Caliber alias not found." else 409
         raise HTTPException(status_code=status_code, detail=str(exc)) from exc
     return {"success": True}
+
+
+@router.put(
+    "/calibers/{caliber_id}/name",
+    dependencies=[Depends(require_csrf)],
+)
+def caliber_name_update(
+    caliber_id: UUID, payload: CaliberNameRequest,
+    current_user: User = Depends(require_admin), db: Session = Depends(get_db),
+):
+    get_caliber(db, caliber_id)
+    try:
+        caliber = rename_caliber(
+            db, caliber_id, payload.name, actor_user_id=current_user.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Caliber name conflicts with an existing canonical name or alias.",
+        ) from exc
+    return {"success": True, "name": caliber.name}
 
 
 @router.get("/announcements")

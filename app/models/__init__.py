@@ -12,6 +12,7 @@ from app.models.organization import (
 
 from app.models.organization_alias import OrganizationAlias
 from app.models.manufacturer_alias_audit_event import ManufacturerAliasAuditEvent
+from app.models.reference_name_audit_event import ReferenceNameAuditEvent
 from app.models.audit_event import AuditEvent
 from app.models.announcement import Announcement
 
@@ -52,6 +53,7 @@ __all__ = [
     "OrganizationStatus",
     "OrganizationAlias",
     "ManufacturerAliasAuditEvent",
+    "ReferenceNameAuditEvent",
     "User",
     "AuditEvent",
     "Announcement",

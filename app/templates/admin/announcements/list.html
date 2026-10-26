@@ -12,8 +12,8 @@
 
 {% include "partials/admin_navigation.html" %}
 
-<p><a href="/admin/announcements/new" class="button-primary button-link">Create Announcement</a></p>
-<div class="admin-table-scroll"><table class="admin-table">
+<p><a href="/admin/announcements/new" class="button-primary button-link announcement-list-create">Create Announcement</a></p>
+<div class="admin-table-scroll admin-table-scroll--wide" tabindex="0" role="region" aria-label="Announcements list; scroll horizontally on narrow screens"><table class="admin-table admin-table--announcements">
     <thead><tr><th>Title</th><th>Severity</th><th>Enabled</th><th>Start (UTC)</th><th>End (UTC)</th><th>Action</th></tr></thead>
     <tbody>{% for announcement in announcements %}<tr>
         <td>{{ announcement.title }}</td><td>{{ announcement.severity | title }}</td>

@@ -1,5 +1,24 @@
 # Armory Ledger Implementation Status
 
+## Verified — canonical manufacturer/caliber renames (v0.1.5-dev.9, 2026-10-26)
+
+Armory Admin can rename a canonical manufacturer or caliber without changing its
+UUID. The former primary name is added as an alias atomically; an alias on the
+same record can be promoted to primary. Conflicts against canonical names and
+aliases are rejected under catalog advisory locks. Alias lifecycle events and
+canonical-name changes have separate actor-attributed histories. The pages
+include explicit confirmation and retain audit history. Revision
+`480378f66895` follows `e8a1f3c0d64b` and was applied to the development database
+during the 2026-10-26 rebuild. The app reported healthy with its database
+connected. Focused service, route, audit, migration, and UI tests passed: 70
+Python tests and 4 JavaScript tests. The owner confirmed portrait-mode mobile
+layout and manufacturer/caliber alias and rename browser acceptance on
+2026-10-26. Production was not changed.
+
+The admin reference lists and audit tables use horizontal scrolling on narrow
+screens as an interim readability improvement. A broader admin mobile layout
+redesign remains a future roadmap item.
+
 ## Verified — caliber alias administration (v0.1.5-dev.8, 2026-10-23)
 
 Caliber aliases already existed in the initial schema and exact lookup was used
@@ -9,8 +28,8 @@ adds admin-only add/remove controls with actor-attributed history, normalized
 conflict checks, and alternate selector labels that submit the canonical caliber
 ID. No existing firearm, product or inventory reference is changed. Revision
 `e8a1f3c0d64b` follows `d2c87ab9415e` and is applied in the development database,
-which reports it as the current head. The development app health endpoint reports
-healthy with the database connected on version 0.1.5. The focused caliber/admin,
+which was the current head before dev.9. The development app health endpoint
+reports healthy with the database connected on version 0.1.5. The focused caliber/admin,
 manufacturer alias, ammunition suggestion/merge and range suites passed all 49
 tests in an isolated, network-disabled container with source mounted read-only
 and synthetic test-only settings. Python AST, Jinja parsing, JavaScript syntax and
@@ -20,9 +39,7 @@ Git, which that test invokes to inspect ignore rules. Git-dependent release test
 and opt-in PostgreSQL concurrency tests were excluded from that run. The owner
 confirmed dev.8 browser acceptance on 2026-10-23.
 
-The owner assigned canonical manufacturer/caliber rename management to the next
-planned checkpoint, v0.1.5-dev.9. It remains a separate scope: dev.8 only adds
-and removes aliases.
+Dev.8 was alias-only; canonical renames are complete in dev.9.
 
 ## v0.1.5-dev.7 — backup schema tracking and timezone selection (2026-10-21)
 

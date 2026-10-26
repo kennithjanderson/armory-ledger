@@ -19,12 +19,14 @@ from app.models.audit_event import AuditEvent
 from app.models.caliber import Caliber
 from app.models.caliber_alias import CaliberAlias
 from app.models.caliber_alias_audit_event import CaliberAliasAuditEvent
+from app.models.reference_name_audit_event import ReferenceNameAuditEvent
 from app.services.caliber_service import (
     add_caliber_alias,
     create_caliber,
     delete_caliber_alias,
     get_caliber_by_name_or_alias,
     list_selectable_calibers,
+    rename_caliber,
 )
 
 
@@ -112,6 +114,50 @@ class CaliberAliasServiceTests(unittest.TestCase):
             source = (ROOT / "app/templates" / name).read_text()
             self.assertIn("for alias in caliber.aliases", source)
             self.assertIn('value="{{ caliber.id }}">{{ alias.alias }} → {{ caliber.name }}', source)
+
+    def test_rename_preserves_firearm_and_product_ids_and_old_name_alias(self):
+        firearm_caliber_id = self.f.firearm.caliber_id
+        product_caliber_id = self.f.lot.ammo_product.caliber_id
+        renamed = rename_caliber(
+            self.db, self.f.nine.id, "9 mm", actor_user_id=self.f.owner.id,
+        )
+        self.assertEqual(renamed.id, self.f.nine.id)
+        self.assertEqual(renamed.name, "9 mm")
+        self.assertEqual(self.f.firearm.caliber_id, firearm_caliber_id)
+        self.assertEqual(self.f.lot.ammo_product.caliber_id, product_caliber_id)
+        self.assertEqual(get_caliber_by_name_or_alias(self.db, "9 mm").id, self.f.nine.id)
+        self.assertEqual(get_caliber_by_name_or_alias(self.db, "9mm Luger").id, self.f.nine.id)
+        event = self.db.scalar(select(ReferenceNameAuditEvent))
+        self.assertEqual((event.reference_type, event.reference_id, event.actor_user_id,
+                          event.previous_name, event.new_name),
+                         ("caliber", self.f.nine.id, self.f.owner.id, "9mm Luger", "9 mm"))
+        self.assertEqual(self.db.query(CaliberAliasAuditEvent).count(), 1)
+
+    def test_rename_promotes_own_alias_and_rejects_conflicts_atomically(self):
+        alias = add_caliber_alias(
+            self.db, self.f.nine.id, "9x19", actor_user_id=self.f.owner.id,
+        )
+        renamed = rename_caliber(
+            self.db, self.f.nine.id, "9x19", actor_user_id=self.f.owner.id,
+        )
+        self.assertEqual(renamed.name, "9x19")
+        aliases = self.db.scalars(select(CaliberAlias).where(
+            CaliberAlias.caliber_id == self.f.nine.id
+        )).all()
+        self.assertEqual([row.alias for row in aliases], ["9mm Luger"])
+        events = self.db.scalars(select(CaliberAliasAuditEvent)).all()
+        self.assertEqual({(row.action, row.previous_alias, row.new_alias) for row in events}, {
+            ("created", None, "9x19"),
+            ("deleted", "9x19", None),
+            ("created", None, "9mm Luger"),
+        })
+        self.assertIsNotNone(alias)
+        with self.assertRaisesRegex(ValueError, "conflicts with another"):
+            rename_caliber(
+                self.db, self.f.nine.id, "5.56 NATO", actor_user_id=self.f.owner.id,
+            )
+        self.assertEqual(self.f.nine.name, "9x19")
+        self.assertEqual(self.db.query(ReferenceNameAuditEvent).count(), 1)
 
 
 class CaliberAliasRouteTests(unittest.TestCase):
@@ -227,6 +273,19 @@ class CaliberAliasRouteTests(unittest.TestCase):
         self.assertEqual(duplicate.status_code, 409)
         self.assertEqual(self.db.query(CaliberAlias).count(), 1)
         self.assertEqual(self.db.query(CaliberAliasAuditEvent).count(), 1)
+
+    def test_canonical_rename_route_requires_admin_csrf_and_audits_change(self):
+        path = f"/admin/calibers/{self.f.nine.id}/name"
+        self.assertEqual(self.request("PUT", path, {"name": "9 mm"}, csrf=False).status_code, 403)
+        self.session_user = {"id": str(self.f.other.id), "is_admin": False}
+        self.assertEqual(self.request("PUT", path, {"name": "9 mm"}).status_code, 403)
+        self.assertEqual(self.f.nine.name, "9mm Luger")
+
+        self.session_user = {"id": str(self.f.owner.id), "is_admin": True}
+        response = self.request("PUT", path, {"name": "9 mm"})
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["name"], "9 mm")
+        self.assertEqual(self.db.query(ReferenceNameAuditEvent).count(), 1)
 
 
 if __name__ == "__main__":

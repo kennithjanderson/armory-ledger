@@ -45,24 +45,29 @@ No lint/build configuration or CI test job is introduced by this task.
 ## Manufacturer alias administration
 
 `test_manufacturer_aliases.py` uses the synthetic SQLite fixture for alias
-resolution, conflict rejection, audited create/remove-and-readd behavior, preserved
-inventory foreign keys, and admin/CSRF route checks. The route harness injects
-identity and database dependencies; it does not exercise OIDC or PostgreSQL's
-transaction advisory lock. The development rebuild applied the migration on the
-development database. Its downgrade behavior has not been exercised; use only an
-explicitly authorized disposable PostgreSQL database for additional migration
-tests, never production data.
+resolution, conflict rejection, audited create/remove-and-readd behavior,
+canonical rename and alias promotion, preserved inventory foreign keys, and
+admin/CSRF route checks. The route harness injects identity and database
+dependencies; it does not exercise OIDC or PostgreSQL's transaction advisory
+lock. PostgreSQL migration application and concurrency verification remain
+separate operations against an explicitly authorized disposable database.
 
 ## Caliber alias administration
 
 `test_caliber_aliases.py` uses the same synthetic SQLite fixture to verify
 explicit alias resolution, canonical/alias conflict rejection, actor-attributed
-add/remove history, stable firearm/ammunition caliber IDs, selector data and
-server-side admin/CSRF enforcement. It does not execute the PostgreSQL migration
-or test advisory-lock behavior. The migration fails safely if existing aliases
-conflict with canonical names or one another; apply and downgrade checks remain
-separate operations against an explicitly authorized disposable PostgreSQL
-database.
+add/remove history, canonical rename and alias promotion, stable firearm and
+ammunition caliber IDs, selector data, and server-side admin/CSRF enforcement.
+It does not test PostgreSQL advisory-lock behavior. `test_reference_rename_migration.py`
+executes upgrade/downgrade only against synthetic SQLite tables and checks
+PostgreSQL DDL offline; it does not apply the migration to an application
+database. The migration refuses downgrade after rename audit history exists.
+PostgreSQL runtime verification remains separate and requires an explicitly
+authorized disposable database.
+
+`admin-reference-renames.test.cjs` checks both admin rename forms, confirmation,
+CSRF headers, request payloads and cancellation. It does not replace browser
+acceptance of rendered page layout and native controls.
 
 ## Shooting Log coverage
 

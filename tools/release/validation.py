@@ -100,6 +100,22 @@ def validate(root, target, config, *, results=None):
         db_port = run([*docker, 'port', db_name, '5432/tcp']).rsplit(':', 1)[1]
         env['ARMORY_DISPOSABLE_POSTGRES'] = '1'
         env['ARMORY_TEST_POSTGRES_URL'] = f'postgresql+psycopg://release_test:{password}@127.0.0.1:{db_port}/release_test'
+        # Tests may import application services whose Settings object validates
+        # the normal runtime configuration at import time. Supply synthetic
+        # values pointed only at this disposable database; never inherit an
+        # operator's app database or identity-provider credentials.
+        env.update({
+            'POSTGRES_DB': 'release_test',
+            'POSTGRES_USER': 'release_test',
+            'POSTGRES_PASSWORD': password,
+            'POSTGRES_HOST': '127.0.0.1',
+            'POSTGRES_PORT': db_port,
+            'OIDC_CLIENT_ID': 'release-test',
+            'OIDC_CLIENT_SECRET': secrets.token_hex(24),
+            'OIDC_ISSUER': 'https://example.invalid',
+            'OIDC_REDIRECT_URI': 'https://example.invalid/auth/callback',
+            'SESSION_SECRET': secrets.token_hex(32),
+        })
         results['postgresql'] = 'passed'
         stage('python')
         run([python, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py', '-v'], cwd=root, env=env)

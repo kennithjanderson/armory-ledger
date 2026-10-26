@@ -580,6 +580,16 @@ class ValidationIsolationTests(unittest.TestCase):
                 if args[0]=='python-test':
                     self.assertEqual(kwargs['env']['ARMORY_DISPOSABLE_POSTGRES'],'1')
                     self.assertIn('127.0.0.1:54321/release_test',kwargs['env']['ARMORY_TEST_POSTGRES_URL'])
+                    self.assertEqual(kwargs['env']['POSTGRES_HOST'], '127.0.0.1')
+                    self.assertEqual(kwargs['env']['POSTGRES_PORT'], '54321')
+                    self.assertEqual(kwargs['env']['POSTGRES_DB'], 'release_test')
+                    self.assertEqual(kwargs['env']['POSTGRES_USER'], 'release_test')
+                    self.assertTrue(kwargs['env']['POSTGRES_PASSWORD'])
+                    self.assertEqual(kwargs['env']['OIDC_ISSUER'], 'https://example.invalid')
+                    self.assertEqual(kwargs['env']['OIDC_CLIENT_ID'], 'release-test')
+                    self.assertTrue(kwargs['env']['OIDC_CLIENT_SECRET'])
+                    self.assertTrue(kwargs['env']['OIDC_REDIRECT_URI'])
+                    self.assertTrue(kwargs['env']['SESSION_SECRET'])
                 if args[1]=='port':return '127.0.0.1:54321'
                 return ''
             with patch.object(validation,'static_validate'),patch.object(validation,'run',side_effect=command),patch.object(validation,'check_http'):

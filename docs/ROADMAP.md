@@ -322,14 +322,25 @@ whether section grants automatically cover future records; the precise meaning o
 RW (including deletion, ammunition consumption/corrections, and lot merging);
 whether serial numbers, purchase prices, notes, balances and linked history are
 visible; how cross-section references behave when one section is not shared; how
-owners inspect and revoke grants; and audit/notification behavior. In particular,
-define mixed-owner range sessions: the current service requires a session, every
-firearm and every ammunition lot to have the same owner. A shared-use design must
-decide who owns the full session, how each affected inventory owner's ledger and
-firearm history are updated, and what each owner can see when sharing is
-asymmetric. Preserve the established boundary that administrators do not gain
-private-inventory access. Grants must be owner-controlled and revocable. These
-remaining details and any schema are not yet approved.
+owners inspect and revoke grants; and audit/notification behavior. The owner
+described this mixed-owner case on 2026-10-27: B has RW access to A's inventory,
+logs a session against A's firearm using B's ammo, and A sees a borrowed-ammo
+entry attributed to B without access to B's lot or inventory. That borrowed
+presentation stays redacted even if A independently has access to B's inventory;
+sharing is not implicitly reciprocal. B's own ammo balance should still be
+accounted for and audited. Define the corresponding case where A's ammo is used
+with B's firearm, including how A sees the ammo expenditure without gaining
+access to B's firearm or private Shooting Log.
+
+Today the service requires a session, every firearm and every ammunition lot to
+have the same owner. Its existing Other / Borrowed ammunition path has no linked
+inventory transaction, so it cannot represent borrowed display plus actual
+owner-side balance deduction as-is. The new design must separate the full
+Shooting Log entry from each inventory owner's accounting event and enforce
+owner-scoped queries on both. Preserve the established boundary that
+administrators do not gain private-inventory access. Grants must be
+owner-controlled and revocable. Remaining visibility, session attribution and
+schema details are not yet approved.
 
 ### v0.1.7 inventory transfers — design pending
 

@@ -309,20 +309,27 @@ date yet.
 ### v0.1.6 per-section sharing — design pending
 
 The owner clarified on 2026-10-27 that sharing must be granular by application
-section, with read-only (RO) or read-write (RW) access selected per section. This
-supersedes the earlier whole-inventory wording. At minimum, design the permissions
-for Firearms, Ammunition and Accessories separately; decide whether Shooting Log
-is its own shareable section and how it interacts with those inventory sections.
+section, with **no access, read-only (RO), or read-write (RW)** selected per
+section. RO permits viewing but not recording activity against that owner's
+records. RW is required to log against a shared firearm or consume shared
+ammunition. This supersedes the earlier whole-inventory wording. At minimum,
+design the permissions for Firearms, Ammunition and Accessories separately;
+decide whether Shooting Log is its own shareable section and how it interacts
+with those inventory sections.
 
 Before implementation, define the recipient/invitation and acceptance flow;
 whether section grants automatically cover future records; the precise meaning of
 RW (including deletion, ammunition consumption/corrections, and lot merging);
 whether serial numbers, purchase prices, notes, balances and linked history are
 visible; how cross-section references behave when one section is not shared; how
-owners inspect and revoke grants; and audit/notification behavior. Preserve the
-established boundary that administrators do not gain private-inventory access.
-Grants must be owner-controlled and revocable. These remaining details and any
-schema are not yet approved.
+owners inspect and revoke grants; and audit/notification behavior. In particular,
+define mixed-owner range sessions: the current service requires a session, every
+firearm and every ammunition lot to have the same owner. A shared-use design must
+decide who owns the full session, how each affected inventory owner's ledger and
+firearm history are updated, and what each owner can see when sharing is
+asymmetric. Preserve the established boundary that administrators do not gain
+private-inventory access. Grants must be owner-controlled and revocable. These
+remaining details and any schema are not yet approved.
 
 ### v0.1.7 inventory transfers — design pending
 

@@ -330,9 +330,9 @@ firearm, activity, date, rounds, and “borrowed from B”; do not show location
 session notes, or B's ammo details. That borrowed presentation stays redacted even
 if A independently has access to B's inventory; sharing is not implicitly
 reciprocal. B's own ammo balance should still be accounted for and audited. Define
-the corresponding case where A's ammo is used with B's firearm, including how A
-sees the ammo expenditure without gaining access to B's firearm or private
-Shooting Log.
+the corresponding case where A's ammo is used with B's firearm. The owner
+confirmed that A sees only activity, date, rounds, and “used by B” in A's ammo
+history; do not show B's firearm, location, notes, or private Shooting Log.
 
 Today the service requires a session, every firearm and every ammunition lot to
 have the same owner. Its existing Other / Borrowed ammunition path has no linked

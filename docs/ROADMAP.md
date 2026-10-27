@@ -306,16 +306,18 @@ sharing**, and **v0.1.7 is user-to-user inventory transfers and transfer-request
 notifications**. Neither item has an implementation specification or release
 date yet.
 
-### v0.1.6 inventory sharing — design pending
+### v0.1.6 whole-inventory sharing — design pending
 
-Before implementation, define how an owner grants access and how the recipient
-accepts it; whether grants apply to selected records or a whole collection; which
-record fields and related history are visible; how recipients are identified
-without exposing a user directory; whether access is read-only; how owners review
-and revoke grants; and what the audit and notification behavior is. Preserve the
-established boundary that administrators do not gain private-inventory access.
-Favor a narrow, owner-controlled, revocable read-only grant for the initial design;
-this is a recommendation, not an approved behavior or schema decision.
+The owner confirmed on 2026-10-27 that a share should cover the owner's entire
+inventory, not a hand-picked set of records. Before implementation, define
+whether this includes future inventory additions; how the owner identifies and
+invites a recipient and how the recipient accepts; which fields and related
+history (especially Shooting Log records) are visible; whether serial numbers,
+purchase prices, notes and lot balances are included; whether access is
+read-only; how the owner reviews and revokes a share; and the audit/notification
+behavior. Preserve the established boundary that administrators do not gain
+private-inventory access. A grant should be owner-controlled and revocable; these
+remaining details and any schema are not yet approved.
 
 ### v0.1.7 inventory transfers — design pending
 

@@ -301,6 +301,27 @@ The owner confirmed browser acceptance on 2026-10-20. Caliber alias management
 was initially planned as dev.7 and is now dev.8 after backup/timezone work took
 the next completed checkpoint; it must also be admin-only.
 These assignments do not alter completed commits or their numbering.
-v0.1.6 transfers and v0.1.7 sharing remain unimplemented. Firearm maintenance
-notifications have no assigned release. Live identity-provider revocation
-integration and multi-host operational coordination are not implemented.
+On 2026-10-27, the owner changed the planned order: **v0.1.6 is inventory
+sharing**, and **v0.1.7 is user-to-user inventory transfers and transfer-request
+notifications**. Neither item has an implementation specification or release
+date yet.
+
+### v0.1.6 inventory sharing — design pending
+
+Before implementation, define how an owner grants access and how the recipient
+accepts it; whether grants apply to selected records or a whole collection; which
+record fields and related history are visible; how recipients are identified
+without exposing a user directory; whether access is read-only; how owners review
+and revoke grants; and what the audit and notification behavior is. Preserve the
+established boundary that administrators do not gain private-inventory access.
+Favor a narrow, owner-controlled, revocable read-only grant for the initial design;
+this is a recommendation, not an approved behavior or schema decision.
+
+### v0.1.7 inventory transfers — design pending
+
+User-to-user transfers and transfer-request notifications remain unimplemented.
+Define their relationship to sharing, transfer acceptance, ownership changes,
+history/provenance retention, and cancellation before specifying the release.
+
+Firearm maintenance notifications have no assigned release. Live identity-provider
+revocation integration and multi-host operational coordination are not implemented.

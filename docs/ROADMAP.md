@@ -306,18 +306,23 @@ sharing**, and **v0.1.7 is user-to-user inventory transfers and transfer-request
 notifications**. Neither item has an implementation specification or release
 date yet.
 
-### v0.1.6 whole-inventory sharing — design pending
+### v0.1.6 per-section sharing — design pending
 
-The owner confirmed on 2026-10-27 that a share should cover the owner's entire
-inventory, not a hand-picked set of records. Before implementation, define
-whether this includes future inventory additions; how the owner identifies and
-invites a recipient and how the recipient accepts; which fields and related
-history (especially Shooting Log records) are visible; whether serial numbers,
-purchase prices, notes and lot balances are included; whether access is
-read-only; how the owner reviews and revokes a share; and the audit/notification
-behavior. Preserve the established boundary that administrators do not gain
-private-inventory access. A grant should be owner-controlled and revocable; these
-remaining details and any schema are not yet approved.
+The owner clarified on 2026-10-27 that sharing must be granular by application
+section, with read-only (RO) or read-write (RW) access selected per section. This
+supersedes the earlier whole-inventory wording. At minimum, design the permissions
+for Firearms, Ammunition and Accessories separately; decide whether Shooting Log
+is its own shareable section and how it interacts with those inventory sections.
+
+Before implementation, define the recipient/invitation and acceptance flow;
+whether section grants automatically cover future records; the precise meaning of
+RW (including deletion, ammunition consumption/corrections, and lot merging);
+whether serial numbers, purchase prices, notes, balances and linked history are
+visible; how cross-section references behave when one section is not shared; how
+owners inspect and revoke grants; and audit/notification behavior. Preserve the
+established boundary that administrators do not gain private-inventory access.
+Grants must be owner-controlled and revocable. These remaining details and any
+schema are not yet approved.
 
 ### v0.1.7 inventory transfers — design pending
 

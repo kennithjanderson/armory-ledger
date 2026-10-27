@@ -2339,6 +2339,23 @@ body {
 .operations-card { margin: 1rem 0 1.25rem; padding: 1rem 1.15rem; border: 1px solid var(--border); background: rgba(241,237,227,.72); }
 .operations-card h2 { margin: 0 0 .5rem; }
 .operations-card > :last-child { margin-bottom: 0; }
+.sharing-intro { max-width: 70ch; }
+.sharing-permissions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; margin: .5rem 0 1rem; padding: .75rem; border: 1px solid var(--border); }
+.sharing-permissions legend { padding: 0 .35rem; font-weight: 700; }
+.sharing-permissions label, .sharing-permission-form > label { display: grid; gap: .3rem; min-width: 0; font-weight: 600; }
+.sharing-permissions select, .sharing-permission-form select { width: 100%; min-width: 0; }
+.sharing-list { display: grid; gap: .85rem; }
+.sharing-entry { min-width: 0; padding: .9rem; border: 1px solid var(--border); background: rgba(255,255,255,.25); }
+.sharing-entry-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+.sharing-entry-heading h3 { min-width: 0; overflow-wrap: anywhere; margin: 0; }
+.sharing-status { flex: none; font-size: .82rem; font-weight: 700; text-transform: uppercase; }
+.sharing-email, .sharing-permission-summary { overflow-wrap: anywhere; }
+.sharing-permission-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem 1rem; margin-top: .8rem; }
+.sharing-permission-form .operations-actions { grid-column: 1 / -1; }
+@media (max-width: 640px) {
+    .sharing-permissions, .sharing-permission-form { grid-template-columns: 1fr; }
+    .sharing-entry-heading { align-items: flex-start; flex-direction: column; gap: .2rem; }
+}
 .operations-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem 1rem; }
 .operations-grid label { min-width: 0; }
 .operations-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; }

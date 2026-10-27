@@ -13,6 +13,7 @@ from sqlalchemy import delete, func, select
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.notification import NotificationEvent, NotificationRecipient, SystemSetting
+from app.models.inventory_share import InventoryShare
 from app.models.user import User
 
 EVENTS={
@@ -344,7 +345,12 @@ def test_email(db,user,recipient):
 
 
 def message_for(event,delivery,user,config):
-    address=delivery.test_recipient if event.kind=='test_email' else user.email
+    if event.kind == 'share_invitation':
+        address = delivery.email_override
+        if not address:
+            raise ValueError('Sharing invitation has no destination address')
+    else:
+        address=delivery.test_recipient if event.kind=='test_email' else user.email
     mailbox(address); mailbox(config['from_address'])
     link=config['base_url'].rstrip('/')+event.action
     updated=event.updated_at
@@ -394,6 +400,23 @@ def message_for(event,delivery,user,config):
     return message
 
 
+def share_invitation_delivery_valid(db, event, delivery, user):
+    """Validate the only notification kind permitted to use an email override."""
+    if event is None or event.kind != 'share_invitation' or not delivery.email_override:
+        return False
+    try:
+        identifier = event.event_key.removeprefix('share-invite:')
+        share = db.get(InventoryShare, uuid.UUID(identifier))
+    except (AttributeError, TypeError, ValueError):
+        return False
+    return bool(
+        share is not None
+        and share.status == 'pending'
+        and delivery.email_override.strip().lower() == share.invite_email.strip().lower()
+        and (share.recipient_id == user.id or (share.recipient_id is None and share.owner_id == user.id))
+    )
+
+
 def deliver_pending():
     # Worker POSIX lock serializes this claim/send/commit path across processes.
     with SessionLocal() as db:
@@ -402,8 +425,11 @@ def deliver_pending():
             NotificationRecipient.next_attempt<=utcnow()).order_by(NotificationRecipient.next_attempt).limit(10)).all()
         for delivery in pending:
             user=db.get(User,delivery.user_id); event=db.get(NotificationEvent,delivery.event_id)
-            if not user or (event.scope=='admin' and not user.is_admin):
+            if not user or not event or (event.scope=='admin' and not user.is_admin):
                 delivery.email_state='cancelled'; delivery.diagnostic='Recipient no longer authorized'; db.commit(); continue
+            if delivery.email_override is not None:
+                if not share_invitation_delivery_valid(db, event, delivery, user):
+                    delivery.email_state='cancelled'; delivery.diagnostic='Invitation is no longer pending'; db.commit(); continue
             if event.scope == 'user':
                 recipients = db.scalars(select(NotificationRecipient).where(
                     NotificationRecipient.event_id == event.id)).all()

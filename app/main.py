@@ -18,6 +18,7 @@ from app.api.reference import router as reference_router
 from app.api.admin import router as admin_router
 from app.api.about import router as about_router
 from app.api.changelog import router as changelog_router
+from app.api.sharing import router as sharing_router
 
 from app.core.admin_access import AdminAccessMiddleware
 from app.core.maintenance import MaintenanceMiddleware
@@ -100,6 +101,7 @@ app.include_router(reference_router)
 app.include_router(admin_router)
 app.include_router(about_router)
 app.include_router(changelog_router)
+app.include_router(sharing_router)
 app.include_router(operations_router)
 app.include_router(notifications_router)
 

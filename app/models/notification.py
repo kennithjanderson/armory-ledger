@@ -40,5 +40,7 @@ class NotificationRecipient(Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     next_attempt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     test_recipient: Mapped[str | None] = mapped_column(String(320))
+    # Used only by queued share invitations sent before the recipient has an account.
+    email_override: Mapped[str | None] = mapped_column(String(320))
     diagnostic: Mapped[str | None] = mapped_column(String(200))
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

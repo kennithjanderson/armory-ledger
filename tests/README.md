@@ -69,6 +69,19 @@ authorized disposable database.
 CSRF headers, request payloads and cancellation. It does not replace browser
 acceptance of rendered page layout and native controls.
 
+## Inventory-sharing invitation foundation
+
+`test_inventory_sharing.py` uses the synthetic SQLite fixture to check pending
+email invitations, exact-email account binding, explicit acceptance, independent
+directional section grants, RO/RW enforcement helpers, owner permission changes,
+revocation/reinvitation, actor audit events, notification outbox addressing, and
+the unapplied migration's revision/downgrade safeguards. It statically checks
+that the router declares authenticated-user and CSRF dependencies. It does not
+apply the migration to PostgreSQL or expose shared inventory routes; all current
+inventory endpoints remain owner-only. `sharing.test.cjs` checks the invitation,
+permission-edit and accept request payloads and CSRF headers. Manual browser
+acceptance remains separate.
+
 ## Shooting Log coverage
 
 The same commands run activity-type and recorded-round tests. Service cases cover

@@ -1,7 +1,7 @@
 # Armory Ledger Decisions
 
-Reviewed 2026-10-26 against the verified v0.1.5-dev.9 implementation on
-`develop/v0.1.5`, based on dev.8 commit `6900f35`. This is a decision register,
+Reviewed 2026-10-27 against the v0.1.6-dev.1 source on `develop/v0.1.6`,
+initialized from `acb8b3a`. This is a decision register,
 not a claim that every implementation detail was previously approved in a
 formal ADR.
 Evidence is identified for each entry. See [architecture](ARCHITECTURE.md),
@@ -27,6 +27,7 @@ proof of completion.
 | Request-time scheduled announcements | Announcement model/schema/service and README | No worker, cron, dismissal tracking or browser polling. Timezone-aware input normalizes to UTC; start inclusive/end exclusive. |
 | Configurable operator identity on About / Privacy | Config, About router/template, README | Publicly distributed software must not assume the upstream developer operates every instance. Missing optional contact fields render no placeholders. |
 | Purge deferred | [schema plan](v0.1.2-schema-plan.md), absence of purge routes/services | No self-purge or admin purge currently. Any future inventory purge must also remove private inventory audit JSON while retaining account, shared references and a privacy-limited administrative event. |
+| Inventory sharing is directional, section-based, and recipient-accepted | Owner direction on 2026-10-27; `app/models/inventory_share.py`, `app/services/sharing_service.py` | Each owner independently sets None/RO/RW for Firearms, Ammunition, Accessories, and Shooting Log. An owner sends an email invitation; the recipient must authenticate with the invited email and accept. There is no reciprocal access or administrator bypass. The current v0.1.6-dev.1 slice stores and manages grants but leaves inventory routes owner-only until shared views/actions are implemented. |
 
 ## Observed implementation: ammunition lots
 

@@ -1,9 +1,10 @@
 # Armory Ledger Architecture
 
-Baseline reviewed: 2026-10-26 against dev.9 source based on committed dev.8
-`6900f35` on `develop/v0.1.5`; schema revision `480378f66895` is applied in the
-development database. This describes source code and the reviewed development
-database, not any production deployment. See
+Baseline reviewed: 2026-10-27 against v0.1.6-dev.1 source on
+`develop/v0.1.6`, initialized from `acb8b3a`. The last verified development
+database head is `480378f66895`; the v0.1.6-dev.1 migration is available in
+source and has not been applied. This describes source code and last verified
+development database state, not any production deployment. See
 [implementation status](IMPLEMENTATION_STATUS.md),
 [decisions](DECISIONS.md), and [roadmap](ROADMAP.md) for limitations and plans.
 
@@ -66,6 +67,7 @@ paths commit explicitly, with rollback handling in many services.
 | `/ammunition/*` | Caliber-grouped inventory, lot detail/edit, acquisitions and activity |
 | `/accessories/*` | List/create/detail/edit and manufacturer lookup/create |
 | `/range/*` | Session list/create/detail/edit |
+| `/sharing`, `/api/shares/*`, `/api/sharing-invitations/*` | Authenticated share invitation and section-grant management; invitation acceptance does not itself expose inventory records |
 | `/reference/calibers` | Authenticated shared caliber creation |
 | `/admin*` | Admin landing, account identities, references, manufacturer/caliber alias and canonical-name management, announcement management |
 | `/about` | Authenticated About / Privacy page |
@@ -111,6 +113,19 @@ Isolation is enforced by application code; the migrations do not establish
 PostgreSQL row-level security or composite same-owner foreign keys. Host/database
 operators can have infrastructure access outside these application controls.
 
+`/sharing` requires the normal authenticated Armory User dependency. Its mutation
+routes require CSRF tokens and scope edits/revocation to `owner_id`; accept and
+decline are scoped to the authenticated `recipient_id`. A share is pending until
+the recipient accepts. Invitations may be queued before an account exists; an
+unbound email is associated with exactly one local user only after that user
+authenticates with a matching email. Email delivery uses the existing
+notification outbox, with a narrowly validated destination override for this
+invitation kind. Invitation text contains no inventory content. Accepted section
+grants are resolved by `sharing_service.section_access`; the existing inventory
+routes do not call it yet and remain owner-only. Administrators receive no
+implicit access. See [roadmap](ROADMAP.md) for the remaining shared-view and
+mixed-owner Shooting Log work.
+
 ## Database relationships
 
 Models use UUID primary keys, foreign keys, PostgreSQL enums, timezone-aware
@@ -126,6 +141,7 @@ timestamps, and JSONB for audit changes.
 | Ammunition | `Organization → AmmoBrand → AmmoProduct → AmmoLot → AmmoInventoryTransaction` |
 | Range | `RangeSession → RangeSessionFirearm → RangeSessionAmmoUsage`; associations reference firearms; usage may reference a lot and inventory transaction |
 | Auditing | `AuditEvent` references owner and actor; entity UUID/type are generic, without an entity-table FK |
+| Sharing foundation | `InventoryShare` links an owner to an optional recipient UUID and email snapshot; `InventoryShareAuditEvent` records invitation/grant changes. Each record carries separate Firearms, Ammunition, Accessories and Shooting Log access levels. |
 | Announcements | `Announcement` references creator/updater users and a scheduled time window |
 
 ### Firearms and accessories

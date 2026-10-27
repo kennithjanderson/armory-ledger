@@ -303,36 +303,39 @@ the next completed checkpoint; it must also be admin-only.
 These assignments do not alter completed commits or their numbering.
 On 2026-10-27, the owner changed the planned order: **v0.1.6 is inventory
 sharing**, and **v0.1.7 is user-to-user inventory transfers and transfer-request
-notifications**. Neither item has an implementation specification or release
-date yet.
+notifications**. The owner then approved email invitations with recipient
+acceptance and began v0.1.6 development.
 
-### v0.1.6 per-section sharing — design pending
+### v0.1.6 per-section sharing — dev.1 foundation in progress
 
 The owner clarified on 2026-10-27 that sharing must be granular by application
 section, with **no access, read-only (RO), or read-write (RW)** selected per
 section. RO permits viewing but not recording activity against that owner's
 records. RW is required to log against a shared firearm or consume shared
-ammunition. This supersedes the earlier whole-inventory wording. At minimum,
-design the permissions for Firearms, Ammunition and Accessories separately;
-decide whether Shooting Log is its own shareable section and how it interacts
-with those inventory sections.
+ammunition. These are independent directional grants. Firearms, Ammunition,
+Accessories, and Shooting Log are separate sections; the owner explicitly chose
+Shooting Log as its own access section. Invitations are sent by email and the
+recipient must sign in with the invited email and accept before a grant is active.
 
-Before implementation, define the recipient/invitation and acceptance flow;
-whether section grants automatically cover future records; the precise meaning of
-RW (including deletion, ammunition consumption/corrections, and lot merging);
-whether serial numbers, purchase prices, notes, balances and linked history are
-visible; how cross-section references behave when one section is not shared; how
-owners inspect and revoke grants; and audit/notification behavior. The owner
-described this mixed-owner case on 2026-10-27: B has RW access to A's inventory,
-logs a session against A's firearm using B's ammo, and A sees a borrowed-ammo
-entry attributed to B without access to B's lot or inventory. A sees only the
-firearm, activity, date, rounds, and “borrowed from B”; do not show location,
-session notes, or B's ammo details. That borrowed presentation stays redacted even
-if A independently has access to B's inventory; sharing is not implicitly
-reciprocal. B's own ammo balance should still be accounted for and audited. Define
-the corresponding case where A's ammo is used with B's firearm. The owner
-confirmed that A sees only activity, date, rounds, and “used by B” in A's ammo
-history; do not show B's firearm, location, notes, or private Shooting Log.
+The dev.1 implementation adds pending invitations, per-section grants, recipient
+accept/decline, owner permission edits and revocation, audit events, and
+email/in-app invitation notices. Invitations can be addressed to a person who
+has not logged into this installation yet; the UUID is bound only when exactly
+one authenticated Armory User has the matching email. Email must be configured
+to send invitations. This foundation does not yet add shared inventory browsing
+or shared writes; current inventory routes remain owner-only. Future work must
+connect shared views and writes to the accepted section grants.
+
+The owner described this mixed-owner case on 2026-10-27: B has RW access to A's
+inventory, logs a session against A's firearm using B's ammo, and A sees a
+borrowed-ammo entry attributed to B without access to B's lot or inventory. A
+sees only the firearm, activity, date, rounds, and “borrowed from B”; do not
+show location, session notes, or B's ammo details. That borrowed presentation
+stays redacted even if A independently has access to B's inventory; sharing is
+not implicitly reciprocal. B's own ammo balance should still be accounted for
+and audited. The corresponding case is also defined: if A's ammo is used with
+B's firearm, A sees only activity, date, rounds, and “used by B” in A's ammo
+history, without B's firearm, location, notes, or private Shooting Log.
 
 Today the service requires a session, every firearm and every ammunition lot to
 have the same owner. Its existing Other / Borrowed ammunition path has no linked
@@ -341,8 +344,10 @@ owner-side balance deduction as-is. The new design must separate the full
 Shooting Log entry from each inventory owner's accounting event and enforce
 owner-scoped queries on both. Preserve the established boundary that
 administrators do not gain private-inventory access. Grants must be
-owner-controlled and revocable. Remaining visibility, session attribution and
-schema details are not yet approved.
+owner-controlled and revocable. Still to define before shared inventory actions:
+whether grants cover future records; exact RW boundaries for deletion, corrections
+and lot merging; visibility of serials, purchase prices, notes, balances and
+linked history; and mixed-owner session attribution and schema/accounting details.
 
 ### v0.1.7 inventory transfers — design pending
 

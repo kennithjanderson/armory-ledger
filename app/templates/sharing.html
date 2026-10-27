@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Inventory sharing · {{ app_name }}{% endblock %}
+{% block head %}<script src="{{ url_for('static', path='/js/sharing.js') }}?v={{ app_version }}" defer></script>{% endblock %}
+{% block content %}
+<h1>Inventory sharing</h1>
+<div class="heritage-rule" aria-hidden="true"><span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span></div>
+<p class="sharing-intro">You control access to your inventory. Each invitation is one-way, and access begins only after the recipient accepts.</p>
+
+<section class="operations-card" aria-labelledby="invite-heading">
+    <h2 id="invite-heading">Invite by email</h2>
+    <p>Armory Ledger sends the invitation through this installation’s configured email. If the recipient has not used this installation yet, the invitation waits until they sign in with this email address. The email contains no inventory records.</p>
+    <form id="share-invite-form" class="operations-form" data-endpoint="/api/shares" data-csrf-token="{{ csrf_token }}">
+        <label>Email address<input type="email" name="email" required maxlength="320" autocomplete="email"></label>
+        <fieldset class="sharing-permissions">
+            <legend>Requested access</legend>
+            {% for section, label in [('firearms', 'Firearms'), ('ammunition', 'Ammunition'), ('accessories', 'Accessories'), ('shooting_log', 'Shooting Log')] %}
+            <label>{{ label }}
+                <select name="{{ section }}" required>
+                    <option value="none" selected>No access</option>
+                    <option value="ro">Read-only</option>
+                    <option value="rw">Read and write</option>
+                </select>
+            </label>
+            {% endfor %}
+        </fieldset>
+        <div class="operations-actions"><button class="button-primary">Send invitation</button><span id="share-invite-result" role="status" aria-live="polite"></span></div>
+    </form>
+</section>
+
+<section class="operations-card" aria-labelledby="outgoing-heading">
+    <h2 id="outgoing-heading">People you invited</h2>
+    {% if outgoing_shares %}
+    <div class="sharing-list">
+        {% for share in outgoing_shares %}
+        <article class="sharing-entry">
+            <div class="sharing-entry-heading">
+                <h3>{{ share.recipient.display_name if share.recipient else share.invite_email }}</h3>
+                <span class="sharing-status">{{ share.status|replace('_', ' ')|title }}</span>
+            </div>
+            {% if share.recipient %}<p class="sharing-email">{{ share.recipient.email }}</p>{% endif %}
+            {% if share.status in ('pending', 'accepted') %}
+            <form class="sharing-permission-form" data-share-id="{{ share.id }}" data-csrf-token="{{ csrf_token }}">
+                {% for section, label in [('firearms', 'Firearms'), ('ammunition', 'Ammunition'), ('accessories', 'Accessories'), ('shooting_log', 'Shooting Log')] %}
+                <label>{{ label }}
+                    <select name="{{ section }}">
+                        <option value="none" {% if share.permission(section) == 'none' %}selected{% endif %}>No access</option>
+                        <option value="ro" {% if share.permission(section) == 'ro' %}selected{% endif %}>Read-only</option>
+                        <option value="rw" {% if share.permission(section) == 'rw' %}selected{% endif %}>Read and write</option>
+                    </select>
+                </label>
+                {% endfor %}
+                <div class="operations-actions">
+                    <button class="button-secondary" type="submit">Save access</button>
+                    <button class="button-secondary sharing-revoke" type="button" data-share-id="{{ share.id }}" data-csrf-token="{{ csrf_token }}">Revoke access</button>
+                    <span role="status" aria-live="polite"></span>
+                </div>
+            </form>
+            {% else %}
+            <p class="sharing-permission-summary">Firearms: {{ share.firearms_access|upper }} · Ammunition: {{ share.ammunition_access|upper }} · Accessories: {{ share.accessories_access|upper }} · Shooting Log: {{ share.shooting_log_access|upper }}</p>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}<p>You have not sent any invitations.</p>{% endif %}
+</section>
+
+<section class="operations-card" aria-labelledby="incoming-heading">
+    <h2 id="incoming-heading">Invitations to you</h2>
+    {% if incoming_shares %}
+    <div class="sharing-list">
+        {% for share in incoming_shares %}
+        <article class="sharing-entry">
+            <div class="sharing-entry-heading"><h3>{{ share.owner.display_name }}</h3><span class="sharing-status">{{ share.status|title }}</span></div>
+            <p>{{ share.owner.display_name }} requested these access levels:</p>
+            <p class="sharing-permission-summary">Firearms: {{ share.firearms_access|upper }} · Ammunition: {{ share.ammunition_access|upper }} · Accessories: {{ share.accessories_access|upper }} · Shooting Log: {{ share.shooting_log_access|upper }}</p>
+            {% if share.status == 'pending' %}
+            <div class="operations-actions">
+                <button class="button-primary sharing-response" type="button" data-action="accept" data-share-id="{{ share.id }}" data-csrf-token="{{ csrf_token }}">Accept invitation</button>
+                <button class="button-secondary sharing-response" type="button" data-action="decline" data-share-id="{{ share.id }}" data-csrf-token="{{ csrf_token }}">Decline</button>
+                <span role="status" aria-live="polite"></span>
+            </div>
+            {% else %}<p>Accepted. Shared inventory pages are not part of this development slice yet.</p>{% endif %}
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}<p>No invitations have been sent to you.</p>{% endif %}
+</section>
+<p><a class="record-back" href="/settings">← Settings</a></p>
+{% endblock %}

@@ -1,5 +1,33 @@
 # Armory Ledger Implementation Status
 
+## In progress — v0.1.6-dev.1 sharing invitation foundation (2026-10-27)
+
+The development branch `develop/v0.1.6` now has owner-managed, directional
+sharing invitations by email and separate None/RO/RW grants for Firearms,
+Ammunition, Accessories, and Shooting Log. Recipients must authenticate using
+the invited email and explicitly accept. A pending invite can wait for a person
+who has not signed into the installation; its local recipient UUID is bound only
+when exactly one Armory User has the matching email. Invitation notices use the
+existing email outbox and include no inventory records. Owners can change or
+revoke pending/accepted grants; recipient responses and grant changes are
+actor-audited. Administrators receive no sharing bypass.
+
+This is the grant-management foundation only. Inventory pages and actions still
+filter to the record owner and do not yet use grants to expose shared data. The
+existing same-owner Shooting Log accounting remains unchanged. Mixed-owner
+borrowed-ammunition history is still future work. Migration
+`12ef7a4b9c31` follows `480378f66895` and has not been applied. Forty-seven
+focused Python service/migration tests pass; the three sharing JavaScript
+interaction tests pass, as do the notification, admin-status and reference-rename
+JavaScript suites. Python AST parsing, all 42 Jinja templates, sharing-router
+import, JavaScript syntax and `git diff --check` pass. The full JavaScript suite
+was also attempted; 7 of 52 tests fail because several pre-existing tests spawn
+`python3` from Node and that child process is blocked (`EPERM`), while the
+announcement renderer invoked system Python without Pydantic. The new sharing
+tests are unaffected. Manual browser acceptance remains pending. No Docker,
+Alembic, development DB, production system, or release candidate was operated
+for this implementation.
+
 ## Verified — canonical manufacturer/caliber renames (v0.1.5-dev.9, 2026-10-26)
 
 Armory Admin can rename a canonical manufacturer or caliber without changing its

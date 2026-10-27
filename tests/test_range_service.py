@@ -48,6 +48,7 @@ class RangeServiceTests(unittest.TestCase):
             table.to_metadata(metadata)
         if self.engine.dialect.name == "sqlite":
             metadata.tables["audit_events"].c.changes.type = JSON()
+            metadata.tables["inventory_share_audit_events"].c.changes.type = JSON()
             for constraint in metadata.tables["firearms"].constraints:
                 if constraint.name == "ck_firearms_purchase_price_currency":
                     constraint.sqltext = text(str(constraint.sqltext).replace(" ~ ", " REGEXP "))

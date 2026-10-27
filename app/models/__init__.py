@@ -15,6 +15,7 @@ from app.models.manufacturer_alias_audit_event import ManufacturerAliasAuditEven
 from app.models.reference_name_audit_event import ReferenceNameAuditEvent
 from app.models.audit_event import AuditEvent
 from app.models.announcement import Announcement
+from app.models.inventory_share import InventoryShare, InventoryShareAuditEvent
 
 from app.models.firearm import (
     Firearm,
@@ -57,6 +58,8 @@ __all__ = [
     "User",
     "AuditEvent",
     "Announcement",
+    "InventoryShare",
+    "InventoryShareAuditEvent",
     "Firearm",
     "FirearmStatus",
     "ManufactureDateConfidence",

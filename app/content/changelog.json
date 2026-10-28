@@ -3,7 +3,9 @@
     "version": "0.1.6",
     "added": [],
     "improved": [],
-    "fixed": [],
+    "fixed": [
+      "Version-update notification emails link directly to the release notes instead of combining the GitHub URL with the installation URL."
+    ],
     "upgrade_notes": []
   },
   {

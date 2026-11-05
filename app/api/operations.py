@@ -105,8 +105,9 @@ async def import_backup(request: Request):
                     if count>settings.armory_backup_max_bytes+backup.ENVELOPE_OVERHEAD: raise HTTPException(413,'Archive too large')
                     output.write(chunk)
             manifest=backup.validate_archive(temporary,storage)
-            os.replace(temporary,storage.path(identifier)); storage.register(identifier,'imported',manifest)
-        return {'id':identifier}
+            target=storage.path_for(identifier,manifest['created_at'],manifest['app_version'])
+            os.replace(temporary,target); storage.register(identifier,'imported',manifest)
+        return {'id':identifier,'filename':target.name}
     except backup.Busy as exc: raise HTTPException(409,str(exc)) from exc
     except (ValueError,OSError) as exc: raise HTTPException(422,'Invalid archive or unavailable backup storage') from exc
     finally: temporary.unlink(missing_ok=True)
@@ -123,7 +124,7 @@ def download(identifier: uuid.UUID):
         def chunks():
             with backup.lock('worker',storage=storage), path.open('rb') as stream:
                 while chunk:=stream.read(1024*1024): yield chunk
-        return StreamingResponse(chunks(),media_type='application/octet-stream',headers={'Content-Disposition':f'attachment; filename="armory-{identifier}.armorybackup"','Cache-Control':'no-store'})
+        return StreamingResponse(chunks(),media_type='application/octet-stream',headers={'Content-Disposition':f'attachment; filename="{record.get("filename") or path.name}"','Cache-Control':'no-store'})
     except ValueError as exc: raise HTTPException(404,str(exc)) from exc
 
 

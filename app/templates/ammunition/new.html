@@ -194,6 +194,37 @@
     </form>
 </section>
 
+<div class="modal-backdrop" id="manufacturer-modal" hidden>
+    <div class="modal-panel" role="dialog" aria-modal="true"
+         aria-labelledby="manufacturer-modal-title">
+        <div class="modal-header">
+            <div>
+                <div class="page-marker">REFERENCE DATA</div>
+                <h2 id="manufacturer-modal-title">Add manufacturer</h2>
+            </div>
+            <button type="button" class="modal-close" id="manufacturer-modal-close"
+                    aria-label="Close">×</button>
+        </div>
+        <p class="modal-description">
+            Check the spelling of the manufacturer's canonical name before adding it.
+            You can manage search aliases separately.
+        </p>
+        <div class="form-field">
+            <label for="new-manufacturer-name">Manufacturer name</label>
+            <input type="text" id="new-manufacturer-name" maxlength="255"
+                   autocomplete="off" required>
+        </div>
+        <div id="manufacturer-modal-error" class="modal-error"
+             role="alert" aria-live="polite"></div>
+        <div class="modal-actions">
+            <button type="button" class="button-secondary"
+                    id="manufacturer-modal-cancel">Cancel</button>
+            <button type="button" class="button-primary"
+                    id="manufacturer-modal-save">Add Manufacturer</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-backdrop" id="duplicate-ammunition-modal" hidden>
     <div class="modal-panel" role="dialog" aria-modal="true"
          aria-labelledby="duplicate-ammunition-title"
@@ -294,7 +325,7 @@
 </div>
 
 <script
-    src="{{ url_for('static', path='/js/ammunition-form.js') }}?v={{ app_version }}-duplicates1"
+    src="{{ url_for('static', path='/js/ammunition-form.js') }}?v={{ app_version }}-manufacturer-confirm1"
     defer
 ></script>
 <script

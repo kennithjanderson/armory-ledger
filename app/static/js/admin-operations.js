@@ -50,7 +50,8 @@
                 const list = document.getElementById('backup-list'); list.replaceChildren();
                 for (const row of data.backups) {
                     const item = document.createElement('article');
-                    const title = document.createElement('p'); title.textContent = `${row.id}.armorybackup · ${row.created} · ${row.kind} · v${row.version} · ${row.size} bytes · ${row.status}`;
+                    const filename = row.filename || `${row.id}.armorybackup`;
+                    const title = document.createElement('p'); title.textContent = `${filename} · ${row.created} · ${row.kind} · v${row.version} · ${row.size} bytes · ${row.status}`;
                     const actions = document.createElement('div'); actions.className = 'backup-record-actions';
                     if (row.status === 'valid') {
                         const link = document.createElement('a'); link.href = `/admin/backups/${row.id}/download`; link.textContent = 'Download'; link.className = 'button-secondary button-link'; actions.append(link);
@@ -58,7 +59,7 @@
                         action(restore, async () => { const confirmation = prompt(`Replace ALL application data with backup from ${row.created}, version ${row.version}? A pre-restore backup is required. You will need to sign in again. Type REPLACE ALL DATA.`); if (confirmation !== 'REPLACE ALL DATA') return; await request(`/admin/backups/${row.id}/restore`, 'POST', {confirmation}); show('Restore queued. Maintenance may temporarily interrupt this page.'); });
                     }
                     const remove = document.createElement('button'); remove.textContent = 'Delete'; remove.className = 'button-secondary'; actions.append(remove);
-                    action(remove, async () => { const confirmation = prompt(`Permanently delete ${row.id}.armorybackup? Type DELETE.`); if (confirmation !== 'DELETE') return; await request(`/admin/backups/${row.id}`, 'DELETE', {confirmation}); await refresh(); });
+                    action(remove, async () => { const confirmation = prompt(`Permanently delete ${filename}? Type DELETE.`); if (confirmation !== 'DELETE') return; await request(`/admin/backups/${row.id}`, 'DELETE', {confirmation}); await refresh(); });
                     item.append(title,actions); list.append(item);
                 }
             } else {

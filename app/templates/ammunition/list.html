@@ -115,4 +115,39 @@
         </div>
     {% endif %}
 </section>
+{% if shared_ammunition_groups %}
+<section class="shared-inventory-section" aria-labelledby="shared-ammunition-heading">
+    <h2 id="shared-ammunition-heading">Shared with you</h2>
+    <p>Shared ammunition is read-only. Current balances are visible; owner notes and transaction history are not.</p>
+    {% for group in shared_ammunition_groups %}
+    <details class="shared-inventory-owner">
+        <summary>{{ group.owner.display_name }}’s Ammunition <span>{{ group.lots|length }} lots</span></summary>
+        <div class="firearm-list shared-inventory-list">
+            {% for lot in group.lots %}
+            {% set product = lot.ammo_product %}
+            <article class="firearm-card shared-inventory-card">
+                <div class="firearm-card-main">
+                    <div class="firearm-card-heading">
+                        <div class="firearm-manufacturer">{{ product.brand.manufacturer.name }}</div>
+                        <h3>{{ product.caliber.name }}</h3>
+                        {% if product.product_name %}<div>{{ product.product_name }}</div>{% endif %}
+                    </div>
+                    <div class="ammo-quantity"><strong>{{ group.inventory_by_lot[lot.id] }}</strong><span>rounds</span></div>
+                </div>
+                <div class="firearm-details">
+                    {% if product.grain_weight %}<div class="firearm-detail"><span class="firearm-detail-label">Grain Weight</span><span class="firearm-detail-value">{{ product.grain_weight|format_number }} gr</span></div>{% endif %}
+                    {% if product.projectile_type %}<div class="firearm-detail"><span class="firearm-detail-label">Projectile</span><span class="firearm-detail-value">{{ product.projectile_type }}</span></div>{% endif %}
+                    <div class="firearm-detail"><span class="firearm-detail-label">Lot Number</span><span class="firearm-detail-value">{{ lot.lot_number or 'Not recorded' }}</span></div>
+                </div>
+                <div class="firearm-card-footer">
+                    <span>Shared by {{ group.owner.display_name }}</span>
+                    <a class="firearm-view-link" href="/ammunition/shared/{{ group.owner.id }}/{{ lot.id }}">View shared lot →</a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </details>
+    {% endfor %}
+</section>
+{% endif %}
 {% endblock %}

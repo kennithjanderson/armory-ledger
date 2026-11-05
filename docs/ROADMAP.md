@@ -306,7 +306,7 @@ sharing**, and **v0.1.7 is user-to-user inventory transfers and transfer-request
 notifications**. The owner then approved email invitations with recipient
 acceptance and began v0.1.6 development.
 
-### v0.1.6 per-section sharing — dev.1 foundation in progress
+### v0.1.6-dev.1 — per-section sharing invitation foundation complete
 
 The owner clarified on 2026-10-27 that sharing must be granular by application
 section, with **no access, read-only (RO), or read-write (RW)** selected per
@@ -314,17 +314,27 @@ section. RO permits viewing but not recording activity against that owner's
 records. RW is required to log against a shared firearm or consume shared
 ammunition. These are independent directional grants. Firearms, Ammunition,
 Accessories, and Shooting Log are separate sections; the owner explicitly chose
-Shooting Log as its own access section. Invitations are sent by email and the
-recipient must sign in with the invited email and accept before a grant is active.
+Shooting Log as its own access section. The recipient must sign in with the
+invited email and accept before a grant is active. Existing users receive an
+in-app invitation if SMTP is unavailable; email is an additional channel when
+configured. SMTP is needed to notify someone who does not yet have an account.
+Firearms and Ammunition are the base grants. Any Accessories access requires at
+least Read-only Firearms access. Any Shooting Log access requires at least
+Read-only access to both Firearms and Ammunition. Read-write Shooting Log access
+additionally requires Read-write access to both. The sharing form disables
+ineligible options, and the server must enforce these dependencies. Supporting
+a session with the owner's firearm and borrowed ammunition can be considered
+later.
 
 The dev.1 implementation adds pending invitations, per-section grants, recipient
 accept/decline, owner permission edits and revocation, audit events, and
 email/in-app invitation notices. Invitations can be addressed to a person who
 has not logged into this installation yet; the UUID is bound only when exactly
-one authenticated Armory User has the matching email. Email must be configured
-to send invitations. This foundation does not yet add shared inventory browsing
-or shared writes; current inventory routes remain owner-only. Future work must
-connect shared views and writes to the accepted section grants.
+one authenticated Armory User has the matching email. Existing users receive
+in-app invitations without SMTP; email is needed to notify addresses without an
+account. The owner confirmed the invitation flow and advanced development to
+dev.2. The foundation itself does not expose inventory; shared views are the
+dev.2 scope.
 
 The owner described this mixed-owner case on 2026-10-27: B has RW access to A's
 inventory, logs a session against A's firearm using B's ammo, and A sees a
@@ -344,10 +354,77 @@ owner-side balance deduction as-is. The new design must separate the full
 Shooting Log entry from each inventory owner's accounting event and enforce
 owner-scoped queries on both. Preserve the established boundary that
 administrators do not gain private-inventory access. Grants must be
-owner-controlled and revocable. Still to define before shared inventory actions:
-whether grants cover future records; exact RW boundaries for deletion, corrections
-and lot merging; visibility of serials, purchase prices, notes, balances and
-linked history; and mixed-owner session attribution and schema/accounting details.
+owner-controlled and revocable. For the RO slice, access applies to current and
+future records, and the allowed/hidden fields are listed under dev.2. Still to
+define before RW or mixed-owner activity: exact RW boundaries for deletion,
+corrections and lot merging, and the cross-owner Shooting Log attribution and
+accounting schema.
+
+### v0.1.6-dev.2 — read-only sharing and related fixes verified (2026-11-04)
+
+Show each sharer's records in a separate, collapsed group below the current
+user's own records on Firearms, Ammunition, Accessories, and Shooting Log pages.
+Accepted section grants are evaluated on each request and every shared detail
+route checks the grant again. A revoked grant blocks later requests. Shared
+records remain read-only in this slice, including grants stored as RW; write
+actions and mixed-owner range activity remain future work. Section access applies
+to the owner's current records and records added while the accepted grant stays
+active.
+
+Use an explicit read projection rather than the owner's full detail templates.
+Firearm views show make, model, type, caliber, and status; hide serial number,
+purchase price, and owner notes. Recorded round totals appear only when Shooting
+Log access is also granted. Ammunition views show product and lot specifications
+and current balance; hide owner notes and transaction history. Accessory views
+show item, model, quantity, and a same-owner linked firearm; hide serial number,
+locations, and owner notes. Shooting Log views show date, activity, firearm,
+ammunition, and rounds, while hiding location, session notes, firearm notes, and
+free-text borrowed-ammunition descriptions. A log entry is excluded from shared
+views if its firearm or inventory-ammunition reference does not belong to the log
+owner. Shooting Log access requires read access to both Firearms and Ammunition;
+Accessories access requires Firearms read access. These dependencies are enforced
+server-side as well as in the grant editor.
+
+Shared page lists do not add those records to the recipient's own inventory,
+search results, totals, or mutation forms. Shared links use separate routes and
+owner-scoped queries; ordinary owner detail/edit routes remain owner-only. Admin
+status grants no access. No schema migration is required because dev.1 already
+stores section grants. The owner confirmed browser acceptance on 2026-11-04. The
+51 operations, sharing-service, and Shooting Log/page tests pass in an isolated
+disposable container. The owner also confirmed the sharing pages in the browser.
+
+This checkpoint includes three accompanying updates: backup filenames now
+include the UUID, UTC creation timestamp, and application version while existing
+UUID-only archives remain accessible; ammunition manufacturer creation includes
+an editable spelling review; and update-available emails preserve an absolute
+release-notes URL. The owner confirmed the spelling review and new backup name.
+The checkpoint is complete.
+
+### v0.1.6-dev.3 — shotgun ammunition support planned; design pending
+
+The owner wants shotgun ammunition support included in v0.1.6 without interrupting
+the current sharing work. Keep the existing rifle/pistol ammunition form as the
+default and offer an explicit ammunition category choice. Choosing Shotgun should
+show shotgun specifications such as shell length, shot size, and shot type;
+choosing Rifle/Pistol should retain the current caliber, grain-weight, and
+projectile-type fields. Manufacturer, product/SKU, lot number, acquisition date,
+quantity, notes, and lot-level notifications remain shared inventory data where
+applicable.
+
+Persist the ammunition category and keep the two specification sets separate.
+Validate the category and applicable fields in request schemas, services, and
+database constraints so shotgun values cannot be stored as rifle/pistol fields
+or vice versa. The migration must classify existing `AmmoProduct` records as
+Rifle/Pistol without changing their IDs, inventory lots, transactions, audit
+history, or notification settings. Duplicate-product suggestions and range
+ammunition selection must include the category and the correct type-specific
+specifications, while preserving existing inventory accounting.
+
+Before implementation, settle whether shotgun gauge reuses the shared caliber
+reference, the allowed shell-length units/values, how shot payload weight is
+represented (if needed), and whether shot type/size are controlled references or
+user-entered values. The database representation and constraints depend on those
+choices.
 
 ### v0.1.7 inventory transfers — design pending
 

@@ -181,6 +181,15 @@ class OperationsTests(unittest.TestCase):
         for value in (-1,'7',True):
             with self.assertRaises(ValueError):self.backup.validate_schedule({**schedule,'retention':value})
 
+    def test_backup_filename_records_uuid_utc_timestamp_and_application_version(self):
+        identifier=self.create('manual')
+        record=self.storage.record(identifier)
+        filename=record['filename']
+        self.assertRegex(filename,
+            rf'^{identifier}_\d{{8}}T\d{{6}}Z_v0\.1\.4\.armorybackup$')
+        self.assertEqual(self.storage.path(identifier).name,filename)
+        self.assertTrue(self.storage.path(identifier).is_file())
+
     def test_concurrent_store_initialization_is_serialized(self):
         with tempfile.TemporaryDirectory() as root:
             with ThreadPoolExecutor(max_workers=16) as pool:
@@ -549,6 +558,22 @@ class OperationsTests(unittest.TestCase):
         self.assertIn('href="https://armory.example.test/admin/email"',rich)
         self.assertIn('&lt;script&gt;alert(1)&lt;/script&gt;',rich)
         self.assertNotIn('<script>',rich)
+
+    def test_notification_email_preserves_absolute_release_notes_link(self):
+        release_url='https://github.com/kennithjanderson/armory-ledger/releases/tag/v0.1.6'
+        event=SimpleNamespace(severity='info',title='Armory Ledger 0.1.6 is available',
+            message='Review the release notes before updating.',
+            updated_at=datetime(2026,11,5,3,36,5,tzinfo=timezone.utc),
+            action=release_url,kind='update_available')
+        delivery=SimpleNamespace(test_recipient=None,id='release-delivery')
+        config={**self.mail.DEFAULT_MAIL,'from_address':'armory@example.test',
+            'base_url':'https://armory-dev.example.test','from_name':'Armory Ledger'}
+        message=self.mail.message_for(event,delivery,self.ordinary,config)
+        plain=message.get_body(preferencelist=('plain',)).get_content()
+        rich=message.get_body(preferencelist=('html',)).get_content()
+        self.assertIn(f'Open Armory Ledger: {release_url}',plain)
+        self.assertIn(f'href="{release_url}"',rich)
+        self.assertNotIn(f'{config["base_url"]}{release_url}',plain)
 
     def test_stale_jobs_orphans_and_missing_files_reconcile_safely(self):
         identifier=self.create('manual')

@@ -1,10 +1,10 @@
 # Armory Ledger Architecture
 
-Baseline reviewed: 2026-10-27 against v0.1.6-dev.1 source on
-`develop/v0.1.6`, initialized from `acb8b3a`. The last verified development
-database head is `480378f66895`; the v0.1.6-dev.1 migration is available in
-source and has not been applied. This describes source code and last verified
-development database state, not any production deployment. See
+Baseline reviewed: 2026-11-04 against v0.1.6-dev.2 source on
+`develop/v0.1.6`, based on parent commit `d3ba8a89d3e1`. The last verified
+development database head is `12ef7a4b9c31`, applied during the 2026-10-27
+development rebuild. This describes the reviewed development source and database
+state, not any production deployment. See
 [implementation status](IMPLEMENTATION_STATUS.md),
 [decisions](DECISIONS.md), and [roadmap](ROADMAP.md) for limitations and plans.
 
@@ -42,7 +42,7 @@ There is no JavaScript package/build toolchain in the repository.
 
 - `app/api/`: domain routers, page queries, JSON request schemas and handlers.
 - `app/services/`: ammunition, inventory, range, accessory, manufacturer, caliber,
-  user synchronization, and announcement logic.
+  shared-inventory projections, user synchronization, and announcement logic.
 - `app/models/`: persistence models, registered through `app/models/__init__.py`.
 - `app/schemas/announcement.py`: separate announcement request validation. Most
   other request models are defined in their router modules.
@@ -63,11 +63,11 @@ paths commit explicitly, with rollback handling in many services.
 | --- | --- |
 | `/`, `/dashboard`, `/health` | Login page, owner's summary, database connectivity health |
 | `/auth/*` | OIDC login/callback, popup completion, session check, local logout |
-| `/firearms/*` | List/create/detail/edit and manufacturer lookup/create |
-| `/ammunition/*` | Caliber-grouped inventory, lot detail/edit, acquisitions and activity |
-| `/accessories/*` | List/create/detail/edit and manufacturer lookup/create |
-| `/range/*` | Session list/create/detail/edit |
-| `/sharing`, `/api/shares/*`, `/api/sharing-invitations/*` | Authenticated share invitation and section-grant management; invitation acceptance does not itself expose inventory records |
+| `/firearms/*` | Owner inventory plus accepted shared read-only records and details; owner create/edit and manufacturer lookup/create |
+| `/ammunition/*` | Owner caliber-grouped inventory, acquisitions/activity and lot detail; separate accepted shared read-only lots/details |
+| `/accessories/*` | Owner list/create/detail/edit and manufacturer lookup/create; separate accepted shared read-only records/details |
+| `/range/*` | Owner session list/create/detail/edit; accepted shared read-only Shooting Log list/details |
+| `/sharing`, `/api/shares/*`, `/api/sharing-invitations/*` | Authenticated share invitation and section-grant management |
 | `/reference/calibers` | Authenticated shared caliber creation |
 | `/admin*` | Admin landing, account identities, references, manufacturer/caliber alias and canonical-name management, announcement management |
 | `/about` | Authenticated About / Privacy page |
@@ -121,10 +121,24 @@ unbound email is associated with exactly one local user only after that user
 authenticates with a matching email. Email delivery uses the existing
 notification outbox, with a narrowly validated destination override for this
 invitation kind. Invitation text contains no inventory content. Accepted section
-grants are resolved by `sharing_service.section_access`; the existing inventory
-routes do not call it yet and remain owner-only. Administrators receive no
-implicit access. See [roadmap](ROADMAP.md) for the remaining shared-view and
-mixed-owner Shooting Log work.
+grants are resolved by `sharing_service.section_access`. Read-only views use
+`shared_inventory_service.accessible_shares` for list projections and
+`require_shared_read` for every separate shared detail route. Each query includes
+the granted owner's UUID and record UUID; owner detail, edit, and mutation routes
+remain owner-scoped. The view models are explicit allowlists: firearm serials,
+purchase prices and notes; accessory serials, locations and notes; lot notes and
+transaction history; and Shooting Log location, notes and free-text descriptions
+are omitted. Firearm recorded-round totals require Shooting Log access. Shooting
+Log projections reject sessions with firearm or inventory-ammunition references
+owned by someone other than the session owner. Accessory access depends on
+Firearms access; Shooting Log access depends on both Firearms and Ammunition.
+All shared pages are currently read-only, including grants stored as RW; no
+shared mutation route exists. Revocation is observed on the next request.
+Administrators receive no implicit access. Existing recipients receive an
+in-app invitation even when system email is disabled; email is an additional
+channel when configured. Email is required to notify a recipient who does not
+yet have a local account. See
+[roadmap](ROADMAP.md) for future shared write and mixed-owner Shooting Log work.
 
 ## Database relationships
 

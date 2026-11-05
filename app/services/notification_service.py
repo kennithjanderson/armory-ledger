@@ -352,7 +352,12 @@ def message_for(event,delivery,user,config):
     else:
         address=delivery.test_recipient if event.kind=='test_email' else user.email
     mailbox(address); mailbox(config['from_address'])
-    link=config['base_url'].rstrip('/')+event.action
+    action = event.action or ''
+    parsed_action = urlparse(action)
+    if parsed_action.scheme in ('http', 'https') and parsed_action.netloc:
+        link = action
+    else:
+        link = config['base_url'].rstrip('/') + '/' + action.lstrip('/')
     updated=event.updated_at
     updated=updated.replace(tzinfo=timezone.utc) if updated.tzinfo is None else updated.astimezone(timezone.utc)
     timestamp=updated.strftime('%Y-%m-%d %H:%M:%S UTC')

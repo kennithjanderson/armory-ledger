@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% set product = lot.ammo_product %}
+{% block title %}{{ product.caliber.name }} · {{ owner.display_name }}’s Ammunition{% endblock %}
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <p class="page-marker">SHARED AMMUNITION · READ ONLY</p>
+    <h1>{{ product.brand.manufacturer.name }} <span>{{ product.caliber.name }}</span></h1>
+    <p>Shared by {{ owner.display_name }}. The current round balance is visible; owner notes and transaction history are hidden.</p>
+</section>
+<div class="heritage-rule" aria-hidden="true"><span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span></div>
+<div class="record-detail-toolbar"><a href="/ammunition/" class="record-back">← Ammunition Inventory</a></div>
+<section class="record-detail-card">
+    <div class="record-detail-header">
+        <div><div class="firearm-manufacturer">{{ product.brand.manufacturer.name }}</div><h2>{{ product.caliber.name }}{% if product.product_name %} · {{ product.product_name }}{% endif %}</h2></div>
+        <div class="ammo-quantity"><strong>{{ physical_on_hand }}</strong><span>rounds</span></div>
+    </div>
+    <div class="record-detail-grid">
+        <div class="record-detail-item"><span class="firearm-detail-label">Caliber</span><span class="record-detail-value">{{ product.caliber.name }}</span></div>
+        <div class="record-detail-item"><span class="firearm-detail-label">Grain Weight</span><span class="record-detail-value">{% if product.grain_weight is not none %}{{ product.grain_weight|format_number }} gr{% else %}Unknown{% endif %}</span></div>
+        <div class="record-detail-item"><span class="firearm-detail-label">Projectile</span><span class="record-detail-value">{{ product.projectile_type or 'Unknown' }}</span></div>
+        <div class="record-detail-item"><span class="firearm-detail-label">Product Name</span><span class="record-detail-value">{{ product.product_name or 'Not recorded' }}</span></div>
+        <div class="record-detail-item"><span class="firearm-detail-label">Manufacturer SKU</span><span class="record-detail-value">{{ product.manufacturer_sku or 'Not recorded' }}</span></div>
+        <div class="record-detail-item"><span class="firearm-detail-label">Lot Number</span><span class="record-detail-value">{{ lot.lot_number or 'Not recorded' }}</span></div>
+    </div>
+    <p class="shared-record-owner">{{ owner.display_name }}’s Ammunition</p>
+</section>
+{% endblock %}

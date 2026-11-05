@@ -30,6 +30,7 @@ async function setup(t, fetchResponse, submit = true) {
     vm.runInNewContext(script, {
         document,
         window: { location },
+        requestAnimationFrame: callback => callback(),
         sessionStorage: dom.window.sessionStorage,
         fetch: async (url, options) => {
             calls.push({ url, options });
@@ -121,13 +122,13 @@ test("manufacturer aliases select the canonical shared manufacturer ID", async t
     assert.equal(input.value, "Smith & Wesson");
 });
 
-test("new manufacturer creation remains explicit and submits its returned ID", async t => {
+test("new manufacturer spelling is reviewed before creation and its returned ID is selected", async t => {
     const context = await setup(t, async (url, options) => {
         if (url === "/firearms/manufacturer-search") return { ok: true, json: async () => ({
             query: "New Maker", match_type: "none", exact: null, similar: [],
         }) };
         if (url === "/firearms/manufacturers") return { ok: true, json: async () => ({
-            success: true, manufacturer: { id: "new-maker-id", name: "New Maker" },
+            success: true, manufacturer: { id: "new-maker-id", name: "New Maker, Inc." },
         }) };
         return { ok: true, json: async () => ({ success: true, lot: { id: "lot-1" } }) };
     }, false);
@@ -138,8 +139,15 @@ test("new manufacturer creation remains explicit and submits its returned ID", a
     await flush();
     context.document.querySelector("[data-create-manufacturer]").click();
     await flush();
+    assert.equal(context.document.getElementById("manufacturer-modal").hidden, false);
+    assert.equal(context.calls.some(call => call.url === "/firearms/manufacturers"), false);
+    context.document.getElementById("new-manufacturer-name").value = "New Maker, Inc.";
+    context.document.getElementById("manufacturer-modal-save").click();
+    await flush();
+    assert.equal(context.document.getElementById("manufacturer-modal").hidden, true);
     assert.equal(context.document.getElementById("manufacturer-id").value, "new-maker-id");
-    assert.equal(input.value, "New Maker");
+    assert.equal(input.value, "New Maker, Inc.");
+    assert.equal(context.calls.filter(call => call.url === "/firearms/manufacturers").length, 1);
     context.document.getElementById("ammunition-form").dispatchEvent(
         new context.dom.window.Event("submit", { cancelable: true }),
     );

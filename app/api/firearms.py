@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from pydantic import BaseModel, Field
 
@@ -32,6 +32,12 @@ from app.services.manufacturer_service import (
 
 from app.services.range_service import get_firearm_recorded_rounds
 from app.services.caliber_service import list_selectable_calibers
+from app.services.shared_inventory_service import (
+    accessible_shares,
+    firearm_read_view,
+    require_shared_read,
+    shared_range_sessions,
+)
 from app.models.range_session import RangeSession
 from app.models.range_session_firearm import RangeSessionFirearm
 from app.models.range_session_ammo_usage import RangeSessionAmmoUsage
@@ -120,9 +126,26 @@ async def firearm_list(
 ):
     firearms = db.scalars(
         select(Firearm)
+        .options(joinedload(Firearm.manufacturer), joinedload(Firearm.caliber))
         .where(Firearm.owner_id == current_user.id)
         .order_by(Firearm.created_at.desc())
     ).all()
+
+    shared_firearm_groups = []
+    for owner, _access in accessible_shares(
+        db, recipient_id=current_user.id, section="firearms"
+    ):
+        records = db.scalars(
+            select(Firearm)
+            .options(joinedload(Firearm.manufacturer), joinedload(Firearm.caliber))
+            .where(Firearm.owner_id == owner.id)
+            .order_by(Firearm.created_at.desc(), Firearm.id)
+        ).all()
+        if records:
+            shared_firearm_groups.append({
+                "owner": owner,
+                "firearms": [firearm_read_view(record) for record in records],
+            })
 
     return templates.TemplateResponse(
         request=request,
@@ -133,6 +156,7 @@ async def firearm_list(
             "current_user": current_user,
             "is_admin": request.session["user"].get("is_admin", False),
             "firearms": firearms,
+            "shared_firearm_groups": shared_firearm_groups,
         },
     )
 
@@ -688,6 +712,7 @@ async def firearm_detail(
         )
     )
 
+
     if firearm is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -743,5 +768,55 @@ async def firearm_detail(
             "recorded_rounds": get_firearm_recorded_rounds(
                 db, owner_id=current_user.id, firearm_id=firearm.id,
             ),
+        },
+    )
+
+
+@router.get("/shared/{owner_id}/{firearm_id}")
+async def shared_firearm_detail(
+    owner_id: UUID,
+    firearm_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        owner = require_shared_read(
+            db, owner_id=owner_id, actor_id=current_user.id, section="firearms"
+        )
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Firearm not found.")
+    firearm = db.scalar(
+        select(Firearm)
+        .options(joinedload(Firearm.manufacturer), joinedload(Firearm.caliber))
+        .where(Firearm.id == firearm_id, Firearm.owner_id == owner.id)
+    )
+    if firearm is None:
+        raise HTTPException(status_code=404, detail="Firearm not found.")
+    can_view_log = any(
+        _share_owner.id == owner.id
+        for _share_owner, _access in accessible_shares(
+            db, recipient_id=current_user.id, section="shooting_log"
+        )
+    )
+    recorded_rounds = None
+    if can_view_log:
+        recorded_rounds = sum(
+            record["rounds"]
+            for view in shared_range_sessions(db, owner_id=owner.id)
+            for record in view["firearm_records"]
+            if record["firearm"].id == firearm.id
+        )
+    return templates.TemplateResponse(
+        request=request,
+        name="shared/firearm_detail.html",
+        context={
+            "app_name": settings.app_name,
+            "app_version": settings.app_version,
+            "current_user": current_user,
+            "is_admin": request.session["user"].get("is_admin", False),
+            "owner": owner,
+            "firearm": firearm_read_view(firearm),
+            "recorded_rounds": recorded_rounds,
         },
     )

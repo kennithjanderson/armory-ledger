@@ -1333,6 +1333,61 @@ body {
     gap: 1rem;
 }
 
+.shared-inventory-section {
+    margin-top: 2rem;
+}
+
+.shared-inventory-section > h2 {
+    margin-bottom: .45rem;
+}
+
+.shared-inventory-section > p {
+    color: var(--text-muted);
+    max-width: 75ch;
+}
+
+.shared-inventory-owner {
+    margin: .8rem 0;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--crimson);
+    background: rgba(241, 237, 227, .45);
+}
+
+.shared-inventory-owner > summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: .9rem 1rem;
+    color: var(--navy);
+    font-weight: 700;
+    cursor: pointer;
+    list-style-position: inside;
+}
+
+.shared-inventory-owner > summary span {
+    color: var(--text-muted);
+    font-size: .86rem;
+    font-weight: 600;
+}
+
+.shared-inventory-list {
+    padding: 0 1rem 1rem;
+}
+
+.shared-inventory-card {
+    background: var(--surface);
+}
+
+.shared-record-owner {
+    margin-top: 1.25rem;
+    padding-top: .75rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: .85rem;
+    font-weight: 700;
+}
+
 
 /* =========================================================
    Firearm card

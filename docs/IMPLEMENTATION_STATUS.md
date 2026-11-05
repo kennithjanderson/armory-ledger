@@ -1,6 +1,35 @@
 # Armory Ledger Implementation Status
 
-## In progress — v0.1.6-dev.1 sharing invitation foundation (2026-10-27)
+## Verified — v0.1.6-dev.2 read-only sharing and related fixes (2026-11-04)
+
+Shared records now appear below the recipient's own records in separately
+collapsed owner groups on Firearms, Ammunition, Accessories, and Shooting Log.
+Each page and detail request checks the accepted section grant; all shared detail
+routes use owner-scoped queries. Read-only projections omit firearm and accessory
+serials, firearm purchase prices, owner notes, locations, and transaction history.
+Recorded firearm rounds require Shooting Log access, accessory reads require
+Firearms access, and Shooting Log reads require both Firearms and Ammunition
+access. Shooting Log data with cross-owner firearm/ammunition references is
+excluded. Shared inventory is read-only even when an existing grant is marked
+RW. No schema change is needed.
+
+The same verified working tree includes three related improvements: encrypted
+backup filenames now include the UUID, UTC creation timestamp and app version;
+ammunition manufacturer creation includes an editable spelling confirmation;
+and update-notification emails preserve their absolute GitHub release-notes URL.
+Existing UUID-only backup archives remain available under their current names.
+The local SQLite backup catalogue adds a nullable filename column compatibly.
+
+All 51 tests across `test_operations.py`, `test_inventory_sharing.py`, and
+`test_shooting_pages.py` pass in a disposable, network-isolated container using
+synthetic fixtures and a read-only source mount. This includes backup filename
+and email-link regression tests. Python AST parsing, changelog JSON parsing,
+JavaScript syntax checks and `git diff --check` pass. The owner confirmed browser
+acceptance of shared views, the ammunition spelling confirmation, and a newly
+named backup after the development rebuild. The v0.1.6-dev.2 checkpoint is
+complete. No PostgreSQL schema migration or production operation was performed.
+
+## Completed by owner acceptance — v0.1.6-dev.1 sharing invitation foundation (2026-10-27)
 
 The development branch `develop/v0.1.6` now has owner-managed, directional
 sharing invitations by email and separate None/RO/RW grants for Firearms,
@@ -12,11 +41,40 @@ existing email outbox and include no inventory records. Owners can change or
 revoke pending/accepted grants; recipient responses and grant changes are
 actor-audited. Administrators receive no sharing bypass.
 
-This is the grant-management foundation only. Inventory pages and actions still
-filter to the record owner and do not yet use grants to expose shared data. The
-existing same-owner Shooting Log accounting remains unchanged. Mixed-owner
-borrowed-ammunition history is still future work. Migration
-`12ef7a4b9c31` follows `480378f66895` and has not been applied. Forty-seven
+Existing recipients receive an in-app invitation when SMTP is disabled; email
+is an additional channel when available. Email remains necessary to notify an
+address without a local account. A regression test covers the fallback.
+
+Permission dependencies are recorded and enforced by the sharing service:
+Accessories requires at least read access to Firearms; Shooting Log requires at
+least read access to both Firearms and Ammunition; read-write Shooting Log
+requires read-write access to both. The sharing form disables options that do
+not meet those dependencies. Automated tests cover invalid requests and
+effective access for legacy inconsistent grants.
+
+An update-available email previously concatenated the installation URL with an
+already absolute GitHub release-notes URL. Email generation now preserves
+validated absolute HTTP(S) actions, with a regression test for release links.
+
+Backup archives use filenames containing the UUID, UTC creation timestamp, and
+application version. The SQLite backup catalogue gains a compatible `filename`
+column at startup; existing rows without it continue resolving to their legacy
+UUID-only filenames. Creation, imports, recovery, downloads, and deletion use
+the catalogue filename. Automated operations tests pass, and the owner confirmed
+a newly created backup downloads with the descriptive name.
+
+Ammunition's “Add as a manufacturer” action now opens an editable spelling
+review before creating the shared manufacturer, matching the firearm flow.
+After confirmation, the new manufacturer is selected on the ammunition form.
+The owner confirmed browser acceptance on 2026-11-04. The JavaScript test runner
+could not start because `jsdom` is unavailable in the host environment; source
+and test syntax checks pass.
+
+The dev.1 grant-management foundation now powers dev.2 read-only views. Owner
+inventory mutations and the existing same-owner Shooting Log accounting remain
+unchanged. Mixed-owner borrowed-ammunition history is still future work. Migration
+`12ef7a4b9c31` follows `480378f66895` and was applied to the development
+database during the authorized 2026-10-27 rebuild. Forty-seven
 focused Python service/migration tests pass; the three sharing JavaScript
 interaction tests pass, as do the notification, admin-status and reference-rename
 JavaScript suites. Python AST parsing, all 42 Jinja templates, sharing-router
@@ -24,9 +82,9 @@ import, JavaScript syntax and `git diff --check` pass. The full JavaScript suite
 was also attempted; 7 of 52 tests fail because several pre-existing tests spawn
 `python3` from Node and that child process is blocked (`EPERM`), while the
 announcement renderer invoked system Python without Pydantic. The new sharing
-tests are unaffected. Manual browser acceptance remains pending. No Docker,
-Alembic, development DB, production system, or release candidate was operated
-for this implementation.
+tests are unaffected. Manual browser acceptance of the email/in-app invitation
+flow succeeded. Current permission-dependency tests pass. No production system
+or release candidate was operated.
 
 ## Verified — canonical manufacturer/caliber renames (v0.1.5-dev.9, 2026-10-26)
 

@@ -8,6 +8,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const manufacturerSearch = document.getElementById("manufacturer-search");
     const manufacturerId = document.getElementById("manufacturer-id");
     const manufacturerResults = document.getElementById("manufacturer-results");
+    const manufacturerModal = document.getElementById("manufacturer-modal");
+    const manufacturerModalName = document.getElementById("new-manufacturer-name");
+    const manufacturerModalError = document.getElementById("manufacturer-modal-error");
+    const manufacturerModalSave = document.getElementById("manufacturer-modal-save");
+    const manufacturerModalCancel = document.getElementById("manufacturer-modal-cancel");
+    const manufacturerModalClose = document.getElementById("manufacturer-modal-close");
     const modal = document.getElementById("duplicate-ammunition-modal");
     const list = document.getElementById("duplicate-ammunition-list");
     let pendingPayload = null;
@@ -94,24 +100,71 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const name = option.dataset.createManufacturer;
         if (!name) return;
-        option.disabled = true;
-        option.textContent = "Adding manufacturer…";
+        manufacturerModalName.value = name;
+        manufacturerModalError.textContent = "";
+        manufacturerModal.hidden = false;
+        requestAnimationFrame(() => {
+            manufacturerModalName.focus();
+            manufacturerModalName.select();
+        });
+    });
+
+    function closeManufacturerModal() {
+        manufacturerModal.hidden = true;
+        manufacturerModalError.textContent = "";
+        manufacturerSearch.focus();
+    }
+
+    async function saveManufacturer() {
+        const name = manufacturerModalName.value.trim();
+        if (!name) {
+            manufacturerModalError.textContent = "Manufacturer name is required.";
+            manufacturerModalName.focus();
+            return;
+        }
+
+        manufacturerModalSave.disabled = true;
+        manufacturerModalSave.textContent = "Adding...";
+        manufacturerModalError.textContent = "";
         try {
             const response = await fetch("/firearms/manufacturers", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
                 body: JSON.stringify({ name }),
             });
             const data = await response.json();
             if (!response.ok || !data?.success || !data?.manufacturer) {
-                throw new Error(data?.error || data?.detail || "Unable to add manufacturer.");
+                manufacturerModalError.textContent =
+                    data?.error || data?.detail || "Unable to add manufacturer.";
+                return;
             }
+
             manufacturerId.value = data.manufacturer.id;
             manufacturerSearch.value = data.manufacturer.name;
             manufacturerResults.replaceChildren();
+            closeManufacturerModal();
         } catch (error) {
-            errorElement.textContent = error.message || "Unable to add manufacturer.";
-            await searchManufacturers(name);
+            console.error(error);
+            manufacturerModalError.textContent = "Unable to add manufacturer.";
+        } finally {
+            manufacturerModalSave.disabled = false;
+            manufacturerModalSave.textContent = "Add Manufacturer";
+        }
+    }
+
+    manufacturerModalSave.addEventListener("click", saveManufacturer);
+    manufacturerModalCancel.addEventListener("click", closeManufacturerModal);
+    manufacturerModalClose.addEventListener("click", closeManufacturerModal);
+    manufacturerModal.addEventListener("click", (event) => {
+        if (event.target === manufacturerModal) closeManufacturerModal();
+    });
+    manufacturerModalName.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            saveManufacturer();
         }
     });
     const closeModal = () => {
@@ -238,7 +291,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (event.target === modal) closeModal();
     });
     document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && !modal.hidden) closeModal();
+        if (event.key !== "Escape") return;
+        if (!manufacturerModal.hidden) closeManufacturerModal();
+        else if (!modal.hidden) closeModal();
     });
     saveButton.disabled = false;
 });

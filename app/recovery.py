@@ -16,7 +16,7 @@ def main():
     with lock('worker',storage=storage), lock('maintenance',storage=storage):
         manifest=validate_archive(args.archive,storage)
         identifier=str(uuid.uuid4())
-        target=storage.path(identifier)
+        target=storage.path_for(identifier,manifest['created_at'],manifest['app_version'])
         shutil.copyfile(args.archive,target); target.chmod(0o600)
         storage.register(identifier,'imported',manifest)
         restore_backup(identifier,storage)

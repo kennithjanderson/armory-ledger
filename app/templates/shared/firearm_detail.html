@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ firearm.model }} · {{ owner.display_name }}’s Firearm{% endblock %}
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <p class="page-marker">SHARED FIREARM · READ ONLY</p>
+    <h1>{{ firearm.manufacturer.name if firearm.manufacturer else 'Unknown Manufacturer' }} <span>{{ firearm.model }}</span></h1>
+    <p>Shared by {{ owner.display_name }}. Serial number, purchase price, and owner notes are hidden.</p>
+</section>
+<div class="heritage-rule" aria-hidden="true"><span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span></div>
+<div class="record-detail-toolbar"><a href="/firearms/" class="record-back">← Firearm Inventory</a></div>
+<section class="record-detail-card">
+    <div class="record-detail-header">
+        <div><div class="firearm-manufacturer">{{ firearm.manufacturer.name if firearm.manufacturer else 'Unknown Manufacturer' }}</div><h2>{{ firearm.model }}</h2></div>
+        <div class="firearm-status">{{ firearm.status.value|replace('_', ' ')|title }}</div>
+    </div>
+    <div class="record-detail-grid">
+        <div class="record-detail-item"><span class="firearm-detail-label">Firearm Type</span><span class="record-detail-value">{{ firearm.firearm_type.value|replace('_', ' ')|title }}</span></div>
+        <div class="record-detail-item"><span class="firearm-detail-label">Caliber</span><span class="record-detail-value">{{ firearm.caliber.name if firearm.caliber else 'Not specified' }}</span></div>
+        {% if recorded_rounds is not none %}<div class="record-detail-item"><span class="firearm-detail-label">Recorded Rounds Fired</span><span class="record-detail-value">{{ recorded_rounds }}</span></div>{% endif %}
+    </div>
+    <p class="shared-record-owner">{{ owner.display_name }}’s Firearm</p>
+</section>
+{% endblock %}

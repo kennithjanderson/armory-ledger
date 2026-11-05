@@ -27,7 +27,7 @@ proof of completion.
 | Request-time scheduled announcements | Announcement model/schema/service and README | No worker, cron, dismissal tracking or browser polling. Timezone-aware input normalizes to UTC; start inclusive/end exclusive. |
 | Configurable operator identity on About / Privacy | Config, About router/template, README | Publicly distributed software must not assume the upstream developer operates every instance. Missing optional contact fields render no placeholders. |
 | Purge deferred | [schema plan](v0.1.2-schema-plan.md), absence of purge routes/services | No self-purge or admin purge currently. Any future inventory purge must also remove private inventory audit JSON while retaining account, shared references and a privacy-limited administrative event. |
-| Inventory sharing is directional, section-based, and recipient-accepted | Owner direction on 2026-10-27; `app/models/inventory_share.py`, `app/services/sharing_service.py` | Each owner independently sets None/RO/RW for Firearms, Ammunition, Accessories, and Shooting Log. An owner sends an email invitation; the recipient must authenticate with the invited email and accept. There is no reciprocal access or administrator bypass. The current v0.1.6-dev.1 slice stores and manages grants but leaves inventory routes owner-only until shared views/actions are implemented. |
+| Inventory sharing is directional, section-based, and recipient-accepted | Owner direction on 2026-10-27; `app/models/inventory_share.py`, `app/services/sharing_service.py` | Each owner independently sets None/RO/RW for Firearms, Ammunition, Accessories, and Shooting Log. The recipient must authenticate with the invited email and accept. Existing local users receive an in-app invitation regardless of SMTP availability; email is an additional channel when configured. Email is required to notify addresses without a local account. There is no reciprocal access or administrator bypass. Firearms and Ammunition are the base grants. Any Accessories access requires at least RO Firearms. Any Shooting Log access requires at least RO Firearms and RO Ammunition; RW Shooting Log additionally requires RW in both base sections. The form disables ineligible options and the server enforces the same dependencies. This initial restriction can be revisited for borrowed-ammunition sessions. Dev.2 adds accepted-grant read-only views; writes remain deferred. |
 
 ## Observed implementation: ammunition lots
 
@@ -394,3 +394,24 @@ preferences remain admin-only in both rendering and server validation. Revision
 the migration is applied in the development database. The owner confirmed
 successful in-app and email browser acceptance for both alert types on
 2026-10-20.
+
+## v0.1.6 shared inventory read-only projection — 2026-11-04
+
+Start shared inventory presentation with read-only access. Keep the recipient's
+own records first and render each sharer's current records below in a collapsed,
+separate owner group. Grants apply to current and future records until revoked.
+Every shared list/detail request checks the accepted section grant and queries
+records by the granted owner UUID; admin status adds no access. Existing RW grant
+values still render read-only until shared writes are implemented.
+
+Use fixed allowlisted fields rather than per-field permission controls. Firearms
+show make/model/type/caliber/status; hide serial, purchase price and notes. A
+firearm's recorded-round total is visible only with Shooting Log access.
+Ammunition shows product/lot specifications and current balance, but not notes or
+transaction history. Accessories show item/model/quantity and a same-owner linked
+firearm, but not serial, locations or notes. Shooting Log shows date/activity,
+firearm, ammunition and rounds, but not location, notes or free-text ammunition
+descriptions. Accessories require Firearms RO; Shooting Log requires Firearms
+and Ammunition RO. Shared log sessions with cross-owner firearm or ammunition
+references are omitted. Mixed-owner range accounting and all shared write actions
+remain deferred.

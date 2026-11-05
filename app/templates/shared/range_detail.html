@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ session.activity_type.label }} · {{ owner.display_name }}’s Shooting Log{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <p class="page-marker">SHARED SHOOTING LOG · READ ONLY</p>
+    <h1>{{ session.occurred_date.strftime('%Y-%m-%d') }}</h1>
+    <p>{{ session.activity_type.label }} · {{ total_rounds }} rounds · Shared by {{ owner.display_name }}</p>
+</section>
+<div class="heritage-rule" aria-hidden="true"><span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span></div>
+<div class="record-detail-toolbar"><a href="/range/" class="record-back">← Shooting Log</a></div>
+<section class="range-detail-section">
+    <h2>Firearms and ammunition</h2>
+    {% for record in firearm_records %}
+    <article class="range-firearm-card range-detail-firearm shared-inventory-card">
+        <div class="range-card-header">
+            <div><div class="range-card-kicker">FIREARM</div><h3>{{ record.firearm.manufacturer.name if record.firearm.manufacturer else '' }} {{ record.firearm.model }}</h3></div>
+            <div class="record-quantity"><strong>{{ record.rounds }}</strong><span>ROUNDS</span></div>
+        </div>
+        <div class="range-detail-actions"><a class="record-back" href="/firearms/shared/{{ owner.id }}/{{ record.firearm.id }}">View shared firearm →</a></div>
+        <div class="range-ammo-section">
+            <div class="range-ammo-heading"><h4>Ammunition used</h4></div>
+            {% for usage in record.ammo_usage %}
+            <div class="range-ammo-row range-detail-ammo">
+                {% if usage.source_type.value == 'inventory' and usage.ammo_lot %}
+                {% set product = usage.ammo_lot.ammo_product %}
+                <div class="range-ammo-row-header"><div><strong class="range-ammo-title">{{ product.brand.manufacturer.name }}</strong><div class="range-detail-ammo-description">{{ product.caliber.name }}{% if product.grain_weight %} · {{ product.grain_weight|format_number }} gr{% endif %}{% if product.projectile_type %} · {{ product.projectile_type }}{% endif %}</div></div><div class="record-quantity"><strong>{{ usage.quantity }}</strong><span>ROUNDS</span></div></div>
+                <div class="range-detail-actions"><a class="record-back" href="/ammunition/shared/{{ owner.id }}/{{ usage.ammo_lot.id }}">View shared ammunition →</a></div>
+                {% else %}
+                <div class="range-ammo-row-header"><div><strong class="range-ammo-title">Other / Borrowed</strong></div><div class="record-quantity"><strong>{{ usage.quantity }}</strong><span>ROUNDS</span></div></div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+    {% endfor %}
+</section>
+<p class="shared-record-owner">{{ owner.display_name }}’s Shooting Log</p>
+{% endblock %}

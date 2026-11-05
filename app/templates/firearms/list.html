@@ -162,4 +162,37 @@
 
 </section>
 
+{% if shared_firearm_groups %}
+<section class="shared-inventory-section" aria-labelledby="shared-firearms-heading">
+    <h2 id="shared-firearms-heading">Shared with you</h2>
+    <p>These firearm records are read-only. Serial numbers, purchase prices, and owner notes are not shown.</p>
+    {% for group in shared_firearm_groups %}
+    <details class="shared-inventory-owner">
+        <summary>{{ group.owner.display_name }}’s Firearms <span>{{ group.firearms|length }}</span></summary>
+        <div class="firearm-list shared-inventory-list">
+            {% for firearm in group.firearms %}
+            <article class="firearm-card shared-inventory-card">
+                <div class="firearm-card-main">
+                    <div class="firearm-card-heading">
+                        <div class="firearm-manufacturer">{{ firearm.manufacturer.name if firearm.manufacturer else 'Unknown Manufacturer' }}</div>
+                        <h3>{{ firearm.model }}</h3>
+                    </div>
+                    <div class="firearm-status">{{ firearm.firearm_type.value|replace('_', ' ')|title }}</div>
+                </div>
+                <div class="firearm-details">
+                    <div class="firearm-detail"><span class="firearm-detail-label">Caliber</span><span class="firearm-detail-value">{{ firearm.caliber.name if firearm.caliber else 'Not specified' }}</span></div>
+                    <div class="firearm-detail"><span class="firearm-detail-label">Status</span><span class="firearm-detail-value">{{ firearm.status.value|replace('_', ' ')|title }}</span></div>
+                </div>
+                <div class="firearm-card-footer">
+                    <span>Shared by {{ group.owner.display_name }}</span>
+                    <a class="firearm-view-link" href="/firearms/shared/{{ group.owner.id }}/{{ firearm.id }}">View shared record →</a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </details>
+    {% endfor %}
+</section>
+{% endif %}
+
 {% endblock %}

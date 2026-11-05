@@ -23,6 +23,11 @@ from app.services.manufacturer_service import (
     find_exact_manufacturer,
     find_similar_manufacturers,
 )
+from app.services.shared_inventory_service import (
+    accessible_shares,
+    accessory_read_view,
+    require_shared_read,
+)
 
 
 router = APIRouter(
@@ -101,6 +106,27 @@ async def accessory_list(
         .where(Accessory.owner_id == current_user.id)
         .order_by(Accessory.created_at.desc())
     ).all()
+    shared_accessory_groups = []
+    for owner, _access in accessible_shares(
+        db, recipient_id=current_user.id, section="accessories"
+    ):
+        records = db.scalars(
+            select(Accessory)
+            .options(
+                joinedload(Accessory.manufacturer),
+                joinedload(Accessory.firearm).joinedload(Firearm.manufacturer),
+            )
+            .where(Accessory.owner_id == owner.id)
+            .order_by(Accessory.created_at.desc(), Accessory.id)
+        ).all()
+        if records:
+            shared_accessory_groups.append({
+                "owner": owner,
+                "accessories": [
+                    accessory_read_view(record, owner_id=owner.id)
+                    for record in records
+                ],
+            })
 
     return templates.TemplateResponse(
         request=request,
@@ -109,6 +135,7 @@ async def accessory_list(
             request,
             current_user,
             accessories=accessories,
+            shared_accessory_groups=shared_accessory_groups,
         ),
     )
 
@@ -379,5 +406,39 @@ async def accessory_detail(
             request,
             current_user,
             accessory=accessory,
+        ),
+    )
+
+
+@router.get("/shared/{owner_id}/{accessory_id}")
+async def shared_accessory_detail(
+    owner_id: UUID,
+    accessory_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        owner = require_shared_read(
+            db, owner_id=owner_id, actor_id=current_user.id, section="accessories"
+        )
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Accessory not found.")
+    accessory = db.scalar(
+        select(Accessory)
+        .options(
+            joinedload(Accessory.manufacturer),
+            joinedload(Accessory.firearm).joinedload(Firearm.manufacturer),
+        )
+        .where(Accessory.id == accessory_id, Accessory.owner_id == owner.id)
+    )
+    if accessory is None:
+        raise HTTPException(status_code=404, detail="Accessory not found.")
+    return templates.TemplateResponse(
+        request=request,
+        name="shared/accessory_detail.html",
+        context=_template_context(
+            request, current_user, owner=owner,
+            accessory=accessory_read_view(accessory, owner_id=owner.id),
         ),
     )

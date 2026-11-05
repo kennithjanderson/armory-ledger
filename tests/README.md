@@ -69,18 +69,20 @@ authorized disposable database.
 CSRF headers, request payloads and cancellation. It does not replace browser
 acceptance of rendered page layout and native controls.
 
-## Inventory-sharing invitation foundation
+## Inventory sharing
 
 `test_inventory_sharing.py` uses the synthetic SQLite fixture to check pending
 email invitations, exact-email account binding, explicit acceptance, independent
 directional section grants, RO/RW enforcement helpers, owner permission changes,
 revocation/reinvitation, actor audit events, notification outbox addressing, and
-the unapplied migration's revision/downgrade safeguards. It statically checks
-that the router declares authenticated-user and CSRF dependencies. It does not
-apply the migration to PostgreSQL or expose shared inventory routes; all current
-inventory endpoints remain owner-only. `sharing.test.cjs` checks the invitation,
-permission-edit and accept request payloads and CSRF headers. Manual browser
-acceptance remains separate.
+the migration's revision/downgrade safeguards. It statically checks
+that the router declares authenticated-user and CSRF dependencies. It also checks
+accepted-grant resolution, field-allowlisted read projections, revocation, and
+rejection of Shooting Log data containing cross-owner references. Static
+template checks guard the omitted field references, and `test_shooting_pages.py`
+renders shared list/detail templates with synthetic private values to ensure
+they are not exposed. Shared routes need manual browser acceptance. The tests do
+not apply the migration to PostgreSQL or verify deployment state.
 
 ## Shooting Log coverage
 
@@ -232,8 +234,9 @@ PostgreSQL query plans or a live browser.
 `ammunition-suggestions.test.cjs` uses jsdom with the actual form and scripts. It
 covers cancel-with-values-retained, explicit separate-lot submission, the
 session-storage handoff to Acquired activity without putting quantity in the
-URL, one-time prefill consumption, and escaped suggestion labels. Manual browser
-acceptance remains necessary for visual and native interaction review.
+URL, one-time prefill consumption, escaped suggestion labels, and the editable
+manufacturer spelling review before creation. Manual browser acceptance remains
+necessary for visual and native interaction review.
 
 Caliber inventory route coverage checks manufacturer ordering, active versus
 zero-round grouping, collapsed depleted-lot markup, preserved detail links and

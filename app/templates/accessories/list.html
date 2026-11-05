@@ -178,4 +178,35 @@
 
 </section>
 
+{% if shared_accessory_groups %}
+<section class="shared-inventory-section" aria-labelledby="shared-accessories-heading">
+    <h2 id="shared-accessories-heading">Shared with you</h2>
+    <p>Shared accessories are read-only. Serial numbers, locations, and owner notes are not shown.</p>
+    {% for group in shared_accessory_groups %}
+    <details class="shared-inventory-owner">
+        <summary>{{ group.owner.display_name }}’s Accessories <span>{{ group.accessories|length }}</span></summary>
+        <div class="firearm-list shared-inventory-list">
+            {% for accessory in group.accessories %}
+            <article class="firearm-card shared-inventory-card">
+                <div class="firearm-card-main">
+                    <div class="firearm-card-heading">
+                        <div class="firearm-manufacturer">{{ accessory.manufacturer.name if accessory.manufacturer else 'Manufacturer Not Recorded' }}</div>
+                        <h3>{{ accessory.name }}</h3>
+                        {% if accessory.model %}<div class="record-empty-value">{{ accessory.model }}</div>{% endif %}
+                    </div>
+                    <div class="firearm-status">Qty {{ accessory.quantity }}</div>
+                </div>
+                {% if accessory.firearm %}<p>Installed on {{ accessory.firearm.manufacturer.name if accessory.firearm.manufacturer else '' }} {{ accessory.firearm.model }}</p>{% endif %}
+                <div class="firearm-card-footer">
+                    <span>Shared by {{ group.owner.display_name }}</span>
+                    <a class="firearm-view-link" href="/accessories/shared/{{ group.owner.id }}/{{ accessory.id }}">View shared record →</a>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </details>
+    {% endfor %}
+</section>
+{% endif %}
+
 {% endblock %}

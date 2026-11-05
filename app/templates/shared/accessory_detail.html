@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ accessory.name }} · {{ owner.display_name }}’s Accessory{% endblock %}
+{% block content %}
+<section class="page-heading page-heading--compact">
+    <p class="page-marker">SHARED ACCESSORY · READ ONLY</p>
+    <h1>{{ accessory.manufacturer.name if accessory.manufacturer else 'Accessory' }} <span>{{ accessory.name }}</span></h1>
+    <p>Shared by {{ owner.display_name }}. Serial number, purchase and storage locations, and owner notes are hidden.</p>
+</section>
+<div class="heritage-rule" aria-hidden="true"><span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span></div>
+<div class="record-detail-toolbar"><a href="/accessories/" class="record-back">← Accessory Inventory</a></div>
+<section class="record-detail-card">
+    <div class="record-detail-header"><div><div class="firearm-manufacturer">{{ accessory.manufacturer.name if accessory.manufacturer else 'Manufacturer Not Recorded' }}</div><h2>{{ accessory.name }}</h2></div><div class="firearm-status">Quantity {{ accessory.quantity }}</div></div>
+    <div class="record-detail-grid">
+        <div class="record-detail-item"><span class="firearm-detail-label">Model</span><span class="record-detail-value">{{ accessory.model or 'Not recorded' }}</span></div>
+        {% if accessory.firearm %}<div class="record-detail-item"><span class="firearm-detail-label">Installed on</span><span class="record-detail-value">{{ accessory.firearm.manufacturer.name if accessory.firearm.manufacturer else '' }} {{ accessory.firearm.model }}</span></div>{% endif %}
+    </div>
+    <p class="shared-record-owner">{{ owner.display_name }}’s Accessory</p>
+</section>
+{% endblock %}

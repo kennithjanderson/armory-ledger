@@ -15,6 +15,12 @@ from app.models.range_session_firearm import RangeSessionFirearm
 from app.models.range_session_ammo_usage import RangeSessionAmmoUsage
 from app.models.user import User
 from app.services.ammo_inventory_service import get_physical_inventory
+from app.services.shared_inventory_service import (
+    accessible_shares,
+    require_shared_read,
+    shared_range_session_view,
+    shared_range_sessions,
+)
 
 from pydantic import BaseModel, Field
 
@@ -71,6 +77,13 @@ async def range_list(
             RangeSession.created_at.desc(),
         )
     ).all()
+    shared_range_groups = []
+    for owner, _access in accessible_shares(
+        db, recipient_id=current_user.id, section="shooting_log"
+    ):
+        shared_sessions = shared_range_sessions(db, owner_id=owner.id)
+        if shared_sessions:
+            shared_range_groups.append({"owner": owner, "sessions": shared_sessions})
 
     return templates.TemplateResponse(
         request=request,
@@ -84,6 +97,7 @@ async def range_list(
                 False,
             ),
             "sessions": sessions,
+            "shared_range_groups": shared_range_groups,
         },
     )
 
@@ -417,6 +431,37 @@ async def range_edit(
             "initial_data": initial_data,
         },
     )
+
+@router.get("/shared/{owner_id}/{session_id}")
+async def shared_range_detail(
+    owner_id: UUID,
+    session_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        owner = require_shared_read(
+            db, owner_id=owner_id, actor_id=current_user.id, section="shooting_log"
+        )
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Shooting activity not found.")
+    view = shared_range_session_view(db, owner_id=owner.id, session_id=session_id)
+    if view is None:
+        raise HTTPException(status_code=404, detail="Shooting activity not found.")
+    return templates.TemplateResponse(
+        request=request,
+        name="shared/range_detail.html",
+        context={
+            "app_name": settings.app_name,
+            "app_version": settings.app_version,
+            "current_user": current_user,
+            "is_admin": request.session["user"].get("is_admin", False),
+            "owner": owner,
+            **view,
+        },
+    )
+
 
 @router.get("/{session_id}")
 async def range_detail(

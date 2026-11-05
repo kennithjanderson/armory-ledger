@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import secrets
 import shutil
 import sqlite3
@@ -116,10 +117,13 @@ def initialize_catalogue(root):
                 db.execute('PRAGMA busy_timeout=30000')
                 db.executescript('''CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS backups (id TEXT PRIMARY KEY, kind TEXT NOT NULL, created TEXT NOT NULL,
-                version TEXT NOT NULL, size INTEGER NOT NULL, status TEXT NOT NULL);
+                version TEXT NOT NULL, size INTEGER NOT NULL, status TEXT NOT NULL, filename TEXT);
                 CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, kind TEXT NOT NULL, backup_id TEXT,
                 state TEXT NOT NULL, phase TEXT NOT NULL, created TEXT NOT NULL, error TEXT);
                 CREATE UNIQUE INDEX IF NOT EXISTS one_active_job ON jobs((1)) WHERE state IN ('queued','running');''')
+                backup_columns = {row[1] for row in db.execute('PRAGMA table_info(backups)')}
+                if 'filename' not in backup_columns:
+                    db.execute('ALTER TABLE backups ADD COLUMN filename TEXT')
             (root/'catalogue.sqlite').chmod(0o600)
             _catalogue_initialized.add(identity)
         finally:
@@ -231,7 +235,23 @@ class Store:
 
     def path(self, identifier):
         identifier = str(uuid.UUID(str(identifier)))
+        with self.db() as db:
+            row = db.execute('SELECT filename FROM backups WHERE id=?', (identifier,)).fetchone()
+        if row and row['filename']:
+            filename = row['filename']
+            if Path(filename).name != filename:
+                raise ValueError('Invalid backup filename in catalogue')
+            return self.root/filename
         return self.root/(identifier+'.armorybackup')
+
+    def path_for(self, identifier, created_at, version):
+        identifier = str(uuid.UUID(str(identifier)))
+        timestamp = datetime.fromisoformat(created_at)
+        if timestamp.tzinfo is None:
+            raise ValueError('Backup timestamp must include a timezone')
+        timestamp = timestamp.astimezone(UTC).strftime('%Y%m%dT%H%M%SZ')
+        safe_version = re.sub(r'[^A-Za-z0-9._-]+', '_', str(version)).strip('._-') or 'unknown'
+        return self.root/f'{identifier}_{timestamp}_v{safe_version}.armorybackup'
 
     def records(self):
         with self.db() as db: return [dict(r) for r in db.execute('SELECT * FROM backups ORDER BY created DESC,id DESC')]
@@ -270,10 +290,25 @@ class Store:
                 if not self.path(row['id']).is_file(): db.execute("UPDATE backups SET status='missing' WHERE id=?",(row['id'],))
         known={r['id'] for r in self.records()}
         for path in self.root.glob('*.armorybackup'):
-            if path.stem not in known:
+            identifier_text = path.stem.split('_', 1)[0]
+            try:
+                identifier = str(uuid.UUID(identifier_text))
+            except ValueError:
+                continue
+            if identifier not in known:
                 try:
                     manifest=validate_archive(path,self)
-                    self.register(path.stem,'imported',manifest)
+                    target=self.path_for(identifier,manifest['created_at'],manifest['app_version'])
+                    filename=None
+                    if target != path:
+                        if target.exists():
+                            if digest(target)==digest(path):
+                                path.unlink()
+                            else:
+                                filename=path.name
+                        else:
+                            os.replace(path,target)
+                    self.register(identifier,'imported',manifest,filename=filename)
                 except BackupKeyError:
                     # Keep encrypted orphan files untouched until an operator supplies
                     # the correct key; a missing key does not make data invalid.
@@ -283,21 +318,26 @@ class Store:
                     # potentially misconfigured key.
                     continue
                 except (ValueError, OSError, tarfile.TarError):
-                    # Invalid UUID-named orphan archives remain explicitly deletable.
-                    try: identifier=str(uuid.UUID(path.stem))
-                    except ValueError: continue
                     with self.db() as db:
-                        db.execute('INSERT OR IGNORE INTO backups VALUES (?,?,?,?,?,?)',(identifier,'imported',now().isoformat(),'unknown',path.stat().st_size,'invalid'))
+                        db.execute('''INSERT OR IGNORE INTO backups
+                            (id,kind,created,version,size,status,filename) VALUES (?,?,?,?,?,?,?)''',
+                            (identifier,'imported',now().isoformat(),'unknown',path.stat().st_size,'invalid',path.name))
         for path in self.root.glob('*.partial'): path.unlink(missing_ok=True)
         for pattern in ('stage-*','restore-*','decrypt-*'):
             for path in self.root.glob(pattern):
                 if path.is_dir() and not path.is_symlink(): shutil.rmtree(path)
 
-    def register(self, identifier, kind, manifest):
+    def register(self, identifier, kind, manifest, filename=None):
         if kind not in TYPES: raise ValueError('Invalid backup type')
+        target=self.path_for(identifier,manifest['created_at'],manifest['app_version'])
+        filename=filename or target.name
+        if Path(filename).name != filename:
+            raise ValueError('Invalid backup filename')
+        archive_path=self.root/filename
         with self.db() as db:
-            db.execute('INSERT OR REPLACE INTO backups VALUES (?,?,?,?,?,?)',
-                (identifier,kind,manifest['created_at'],manifest['app_version'],self.path(identifier).stat().st_size,'valid'))
+            db.execute('''INSERT OR REPLACE INTO backups
+                (id,kind,created,version,size,status,filename) VALUES (?,?,?,?,?,?,?)''',
+                (identifier,kind,manifest['created_at'],manifest['app_version'],archive_path.stat().st_size,'valid',filename))
 
 
 def store():
@@ -392,13 +432,16 @@ def create_backup(kind, storage=None):
     schema_check()
     identifier=str(uuid.uuid4())
     partial=storage.root/(identifier+'.partial')
+    created_at=now().isoformat()
+    version=settings.app_version
+    archive_path=storage.path_for(identifier,created_at,version)
     try:
         with tempfile.TemporaryDirectory(dir=storage.root,prefix='stage-') as temp:
             root=Path(temp)
             pg_command('pg_dump','--format=custom','--no-owner','--no-acl','--file',root/'database.dump')
             (root/'schedule.json').write_text(json.dumps(storage.schedule()))
-            manifest={'format':1,'app_version':settings.app_version,'schema':list(schema_heads()),
-                      'created_at':now().isoformat(),'inventory':{}}
+            manifest={'format':1,'app_version':version,'schema':list(schema_heads()),
+                      'created_at':created_at,'inventory':{}}
             for name in ('database.dump','schedule.json'):
                 (root/name).chmod(0o600)
                 manifest['inventory'][name]={'size':(root/name).stat().st_size,'sha256':digest(root/name)}
@@ -410,7 +453,7 @@ def create_backup(kind, storage=None):
             plaintext.chmod(0o600)
             encrypt_archive(plaintext,partial,key)
             validate_archive(partial,storage)
-            os.replace(partial,storage.path(identifier))
+            os.replace(partial,archive_path)
             storage.register(identifier,kind,manifest)
         return identifier
     finally: partial.unlink(missing_ok=True)

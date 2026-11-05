@@ -5,14 +5,15 @@
 <h1>Inventory sharing</h1>
 <div class="heritage-rule" aria-hidden="true"><span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span></div>
 <p class="sharing-intro">You control access to your inventory. Each invitation is one-way, and access begins only after the recipient accepts.</p>
+<p class="operations-notice">Shared inventory is read-only in this release, including grants marked Read and write. Write access will be enabled in a later development step.</p>
 
 <section class="operations-card" aria-labelledby="invite-heading">
     <h2 id="invite-heading">Invite by email</h2>
     <p>Armory Ledger sends the invitation through this installation’s configured email. If the recipient has not used this installation yet, the invitation waits until they sign in with this email address. The email contains no inventory records.</p>
-    <form id="share-invite-form" class="operations-form" data-endpoint="/api/shares" data-csrf-token="{{ csrf_token }}">
+    <form id="share-invite-form" class="operations-form sharing-permission-controls" data-endpoint="/api/shares" data-csrf-token="{{ csrf_token }}">
         <label>Email address<input type="email" name="email" required maxlength="320" autocomplete="email"></label>
         <fieldset class="sharing-permissions">
-            <legend>Requested access</legend>
+            <legend>Access to offer</legend>
             {% for section, label in [('firearms', 'Firearms'), ('ammunition', 'Ammunition'), ('accessories', 'Accessories'), ('shooting_log', 'Shooting Log')] %}
             <label>{{ label }}
                 <select name="{{ section }}" required>
@@ -23,6 +24,7 @@
             </label>
             {% endfor %}
         </fieldset>
+        <p class="field-help">Accessories require Firearms read access. Shooting Log requires read access to both Firearms and Ammunition; read-write access also requires read-write access to both.</p>
         <div class="operations-actions"><button class="button-primary">Send invitation</button><span id="share-invite-result" role="status" aria-live="polite"></span></div>
     </form>
 </section>
@@ -39,7 +41,7 @@
             </div>
             {% if share.recipient %}<p class="sharing-email">{{ share.recipient.email }}</p>{% endif %}
             {% if share.status in ('pending', 'accepted') %}
-            <form class="sharing-permission-form" data-share-id="{{ share.id }}" data-csrf-token="{{ csrf_token }}">
+            <form class="sharing-permission-form sharing-permission-controls" data-share-id="{{ share.id }}" data-csrf-token="{{ csrf_token }}">
                 {% for section, label in [('firearms', 'Firearms'), ('ammunition', 'Ammunition'), ('accessories', 'Accessories'), ('shooting_log', 'Shooting Log')] %}
                 <label>{{ label }}
                     <select name="{{ section }}">
@@ -49,6 +51,7 @@
                     </select>
                 </label>
                 {% endfor %}
+                <p class="field-help">Accessories require Firearms read access. Shooting Log requires read access to both Firearms and Ammunition; read-write access also requires read-write access to both.</p>
                 <div class="operations-actions">
                     <button class="button-secondary" type="submit">Save access</button>
                     <button class="button-secondary sharing-revoke" type="button" data-share-id="{{ share.id }}" data-csrf-token="{{ csrf_token }}">Revoke access</button>
@@ -71,7 +74,7 @@
         {% for share in incoming_shares %}
         <article class="sharing-entry">
             <div class="sharing-entry-heading"><h3>{{ share.owner.display_name }}</h3><span class="sharing-status">{{ share.status|title }}</span></div>
-            <p>{{ share.owner.display_name }} requested these access levels:</p>
+            <p>{{ share.owner.display_name }} is sharing their inventory with you. The access they are offering:</p>
             <p class="sharing-permission-summary">Firearms: {{ share.firearms_access|upper }} · Ammunition: {{ share.ammunition_access|upper }} · Accessories: {{ share.accessories_access|upper }} · Shooting Log: {{ share.shooting_log_access|upper }}</p>
             {% if share.status == 'pending' %}
             <div class="operations-actions">

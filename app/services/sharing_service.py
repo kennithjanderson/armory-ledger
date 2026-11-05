@@ -48,6 +48,16 @@ def normalize_permissions(values: dict) -> dict[str, str]:
         normalized[field] = value
     if all(value == "none" for value in normalized.values()):
         raise ValueError("Grant access to at least one section")
+    if normalized["accessories_access"] != "none" and normalized["firearms_access"] == "none":
+        raise ValueError("Firearms read access is required to share accessories")
+    if normalized["shooting_log_access"] != "none":
+        if normalized["firearms_access"] == "none" or normalized["ammunition_access"] == "none":
+            raise ValueError("Firearms and ammunition read access are required to share the Shooting Log")
+        if normalized["shooting_log_access"] == "rw" and (
+            normalized["firearms_access"] != "rw"
+            or normalized["ammunition_access"] != "rw"
+        ):
+            raise ValueError("Read-write Shooting Log access requires read-write Firearms and Ammunition access")
     return normalized
 
 
@@ -62,17 +72,15 @@ def _audit(db: Session, share: InventoryShare, actor_id, action: str, changes: d
 
 
 def invite(db: Session, *, owner: User, email: str, permissions: dict) -> InventoryShare | None:
-    """Queue an email invitation; return None for generic, non-actionable cases.
+    """Queue an invitation; existing users can be notified in-app without SMTP.
 
     A pending invitation can target an email before its owner has logged into this
     installation. Its recipient UUID is bound only after an authenticated user
-    with that exact email claims it.
+    with that exact email claims it. Email is required only when there is no local
+    recipient to notify in-app.
     """
     email = normalize_email(email)
     normalized_permissions = normalize_permissions(permissions)
-    if not notices.mail_config(db)["enabled"]:
-        raise InvitationEmailUnavailable("System email must be enabled to send sharing invitations")
-
     matching_users = db.scalars(select(User).where(
         func.lower(func.trim(User.email)) == email.lower()
     ).limit(2)).all()
@@ -81,6 +89,11 @@ def invite(db: Session, *, owner: User, email: str, permissions: dict) -> Invent
     # to be claimed by multiple accounts.
     if len(matching_users) > 1 or (recipient is not None and recipient.id == owner.id):
         return None
+    email_enabled = notices.mail_config(db)["enabled"]
+    if recipient is None and not email_enabled:
+        raise InvitationEmailUnavailable(
+            "System email must be enabled to invite an address without an Armory Ledger account"
+        )
 
     pending_count = db.scalar(select(func.count()).select_from(InventoryShare).where(
         InventoryShare.owner_id == owner.id,
@@ -157,8 +170,9 @@ def invite(db: Session, *, owner: User, email: str, permissions: dict) -> Invent
                 event_id=event.id,
                 user_id=target_id,
                 in_app=recipient is not None,
-                email_state="pending",
+                email_state="pending" if email_enabled else "disabled",
                 email_override=email,
+                diagnostic=None if email_enabled else "Email disabled; in-app invitation delivered",
                 next_attempt=timestamp,
             )
             db.add(delivery)
@@ -166,12 +180,12 @@ def invite(db: Session, *, owner: User, email: str, permissions: dict) -> Invent
             delivery.user_id = target_id
             delivery.in_app = recipient is not None
             delivery.read_at = None
-            delivery.email_state = "pending"
+            delivery.email_state = "pending" if email_enabled else "disabled"
             delivery.email_override = email
             delivery.attempts = 0
             delivery.next_attempt = timestamp
             delivery.sent_at = None
-            delivery.diagnostic = None
+            delivery.diagnostic = None if email_enabled else "Email disabled; in-app invitation delivered"
         db.commit()
         db.refresh(share)
         return share
@@ -348,7 +362,19 @@ def section_access(db: Session, *, owner_id, actor_id, section: str) -> str:
         InventoryShare.recipient_id == actor_id,
         InventoryShare.status == "accepted",
     ))
-    return getattr(share, field) if share is not None else "none"
+    if share is None:
+        return "none"
+    access = getattr(share, field)
+    if section == "accessories" and share.firearms_access == "none":
+        return "none"
+    if section == "shooting_log":
+        if share.firearms_access == "none" or share.ammunition_access == "none":
+            return "none"
+        if access == "rw" and (
+            share.firearms_access != "rw" or share.ammunition_access != "rw"
+        ):
+            return "ro"
+    return access
 
 
 def require_section_access(db: Session, *, owner_id, actor_id, section: str, write: bool = False) -> str:

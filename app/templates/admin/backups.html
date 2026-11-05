@@ -33,5 +33,5 @@
 <section class="operations-card"><h2>Import encrypted archive</h2><p>Only import archives from a trusted operator. Authentication detects modification, and the configured key must match.</p>
 <div class="backup-upload-row"><input id="backup-upload" type="file" accept=".armorybackup"><button id="backup-import" class="button-secondary">Upload and validate</button></div></section>
 <script>window.armoryOperationToken={{ csrf_token|tojson }};</script>
-<script src="/static/js/admin-operations.js?v={{ app_version }}" defer></script>
+<script src="/static/js/admin-operations.js?v={{ app_version }}-backup-filenames1" defer></script>
 {% endblock %}

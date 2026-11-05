@@ -108,4 +108,23 @@
         </div>
     {% endif %}
 </section>
+{% if shared_range_groups %}
+<section class="shared-inventory-section" aria-labelledby="shared-range-heading">
+    <h2 id="shared-range-heading">Shared with you</h2>
+    <p>Shared Shooting Log entries are read-only. Locations, session notes, and private descriptions are hidden.</p>
+    {% for group in shared_range_groups %}
+    <details class="shared-inventory-owner">
+        <summary>{{ group.owner.display_name }}’s Shooting Log <span>{{ group.sessions|length }} activities</span></summary>
+        <div class="firearm-list shared-inventory-list">
+            {% for view in group.sessions %}
+            <article class="firearm-card shared-inventory-card">
+                <div class="firearm-card-main"><div><div class="firearm-manufacturer">{{ view.session.activity_type.label }}</div><h3>{{ view.session.occurred_date.strftime('%Y-%m-%d') }}</h3></div><div class="ammo-quantity"><strong>{{ view.total_rounds }}</strong><span>rounds</span></div></div>
+                <div class="firearm-card-footer"><span>Shared by {{ group.owner.display_name }}</span><a class="firearm-view-link" href="/range/shared/{{ group.owner.id }}/{{ view.session.id }}">View shared activity →</a></div>
+            </article>
+            {% endfor %}
+        </div>
+    </details>
+    {% endfor %}
+</section>
+{% endif %}
 {% endblock %}

@@ -27,6 +27,8 @@ from app.models.ammo_lot_merge import AmmoLotMerge
 from app.models.organization import Organization
 from app.services.ammo_merge_service import merge_candidates, merge_lots
 from app.services.caliber_service import list_selectable_calibers
+from app.services.shared_inventory_service import accessible_shares, require_shared_read
+from app.services.shared_inventory_service import ammunition_read_view
 from app.core.csrf import csrf_token, require_csrf
 from app.models.user import User
 
@@ -189,6 +191,42 @@ async def ammunition_list(
         caliber_summaries_by_id.values()
     )
 
+    shared_ammunition_groups = []
+    for owner, _access in accessible_shares(
+        db, recipient_id=current_user.id, section="ammunition"
+    ):
+        shared_lots = db.scalars(
+            select(AmmoLot)
+            .join(AmmoLot.ammo_product)
+            .options(
+                joinedload(AmmoLot.ammo_product).joinedload(AmmoProduct.brand)
+                .joinedload(AmmoBrand.manufacturer),
+                joinedload(AmmoLot.ammo_product).joinedload(AmmoProduct.caliber),
+            )
+            .where(
+                AmmoLot.owner_id == owner.id,
+                AmmoLot.merged_into_lot_id.is_(None),
+            )
+            .order_by(
+                AmmoProduct.caliber_id,
+                AmmoProduct.brand_id,
+                AmmoProduct.grain_weight.asc().nulls_last(),
+                AmmoProduct.projectile_type.asc().nulls_last(),
+                AmmoLot.created_at,
+                AmmoLot.id,
+            )
+        ).unique().all()
+        if shared_lots:
+            shared_views = [ammunition_read_view(lot) for lot in shared_lots]
+            shared_ammunition_groups.append({
+                "owner": owner,
+                "lots": shared_views,
+                "inventory_by_lot": {
+                    view.id: get_physical_inventory(db, lot_id=view.id)
+                    for view in shared_views
+                },
+            })
+
     return templates.TemplateResponse(
         request=request,
         name="ammunition/list.html",
@@ -201,6 +239,7 @@ async def ammunition_list(
                 False,
             ),
             "caliber_summaries": caliber_summaries,
+            "shared_ammunition_groups": shared_ammunition_groups,
         },
     )
 
@@ -550,6 +589,7 @@ async def ammunition_detail(
         )
     )
 
+
     if lot is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -630,6 +670,50 @@ async def ammunition_detail(
             "range_usage": range_usage,
             "merges": merges, "can_merge": bool(candidates),
             "merge_success": merge_success,
+        },
+    )
+
+
+@router.get("/shared/{owner_id}/{ammo_lot_id}")
+async def shared_ammunition_detail(
+    owner_id: UUID,
+    ammo_lot_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        owner = require_shared_read(
+            db, owner_id=owner_id, actor_id=current_user.id, section="ammunition"
+        )
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Ammunition lot not found.")
+    lot = db.scalar(
+        select(AmmoLot)
+        .options(
+            joinedload(AmmoLot.ammo_product).joinedload(AmmoProduct.brand)
+            .joinedload(AmmoBrand.manufacturer),
+            joinedload(AmmoLot.ammo_product).joinedload(AmmoProduct.caliber),
+        )
+        .where(
+            AmmoLot.id == ammo_lot_id,
+            AmmoLot.owner_id == owner.id,
+            AmmoLot.merged_into_lot_id.is_(None),
+        )
+    )
+    if lot is None:
+        raise HTTPException(status_code=404, detail="Ammunition lot not found.")
+    return templates.TemplateResponse(
+        request=request,
+        name="shared/ammunition_detail.html",
+        context={
+            "app_name": settings.app_name,
+            "app_version": settings.app_version,
+            "current_user": current_user,
+            "is_admin": request.session["user"].get("is_admin", False),
+            "owner": owner,
+            "lot": ammunition_read_view(lot),
+            "physical_on_hand": get_physical_inventory(db, lot_id=lot.id),
         },
     )
 

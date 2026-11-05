@@ -1,8 +1,13 @@
 [
   {
     "version": "0.1.6",
-    "added": [],
-    "improved": [],
+    "added": [
+      "Accepted inventory shares provide separate, read-only views of firearms, ammunition, accessories, and Shooting Log entries, with sensitive fields hidden and section dependencies enforced."
+    ],
+    "improved": [
+      "Ammunition manufacturer creation includes a spelling review before adding a new shared manufacturer.",
+      "Backup archive filenames include their UTC creation time and application version."
+    ],
     "fixed": [
       "Version-update notification emails link directly to the release notes instead of combining the GitHub URL with the installation URL."
     ],

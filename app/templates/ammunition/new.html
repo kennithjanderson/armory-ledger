@@ -31,20 +31,28 @@
                     name="manufacturer_search"
                     type="text"
                     maxlength="255"
-                    placeholder="Start typing a manufacturer..."
+                    placeholder="Search manufacturer names or aliases..."
                     autocomplete="off"
                     required
                 >
                 <input id="manufacturer-id" name="manufacturer_id" type="hidden">
                 <div id="manufacturer-results" class="lookup-results" aria-live="polite"></div>
                 <p class="field-help">
-                    Select a shared manufacturer. Search aliases resolve to the primary manufacturer name.
+                    Type a few starting letters to find matching names or aliases. Selecting an alias chooses its primary manufacturer.
                 </p>
             </div>
 
             <div class="form-field">
+                <label for="ammunition-type">Ammunition Type</label>
+                <select id="ammunition-type" name="ammunition_type" required>
+                    <option value="rifle_pistol" selected>Rifle / Pistol</option>
+                    <option value="shotgun">Shotgun</option>
+                </select>
+            </div>
+
+            <div class="form-field">
                 <div class="field-label-row">
-                    <label for="caliber">Caliber</label>
+                    <label id="caliber-label" for="caliber">Caliber</label>
 
                     <button
                         type="button"
@@ -60,7 +68,7 @@
                     name="caliber_id"
                     required
                 >
-                    <option value="">
+                    <option id="caliber-placeholder" value="">
                         Select caliber
                     </option>
 
@@ -75,7 +83,7 @@
                 </select>
             </div>
 
-            <div class="form-field">
+            <div class="form-field" id="grain-weight-field">
                 <label for="grain-weight">Grain Weight</label>
                 <input
                     id="grain-weight"
@@ -87,7 +95,7 @@
                 >
             </div>
 
-            <div class="form-field">
+            <div class="form-field" id="projectile-type-field">
                 <label for="projectile-type">Projectile Type</label>
                 <input
                     id="projectile-type"
@@ -96,6 +104,24 @@
                     maxlength="100"
                     placeholder="JHP"
                 >
+            </div>
+
+            <div class="form-field" id="shell-length-field" hidden>
+                <label for="shell-length-inches">Shell Length (inches)</label>
+                <input id="shell-length-inches" name="shell_length_inches" type="number"
+                       min="0.01" max="99.99" step="0.01" placeholder="2.75">
+            </div>
+
+            <div class="form-field" id="shot-size-field" hidden>
+                <label for="shot-size">Shot Size</label>
+                <input id="shot-size" name="shot_size" type="text" maxlength="32"
+                       placeholder="#7½ or 00">
+            </div>
+
+            <div class="form-field" id="shot-type-field" hidden>
+                <label for="shot-type">Shot Type</label>
+                <input id="shot-type" name="shot_type" type="text" maxlength="64"
+                       placeholder="Birdshot, buckshot, slug">
             </div>
 
             <div class="form-field">
@@ -325,7 +351,7 @@
 </div>
 
 <script
-    src="{{ url_for('static', path='/js/ammunition-form.js') }}?v={{ app_version }}-manufacturer-confirm1"
+    src="{{ url_for('static', path='/js/ammunition-form.js') }}?v={{ app_version }}-shotgun1"
     defer
 ></script>
 <script

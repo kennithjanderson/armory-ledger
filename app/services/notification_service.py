@@ -154,14 +154,22 @@ def ammunition_inventory_transition(db, *, lot, transaction_id, before, after):
     product = lot.ammo_product
     manufacturer = product.brand.manufacturer.name
     caliber = product.caliber.name
-    grain = ''
-    if product.grain_weight is not None:
-        grain_value = format(product.grain_weight, 'f')
-        if '.' in grain_value:
-            grain_value = grain_value.rstrip('0').rstrip('.')
-        grain = f' — {grain_value} gr'
-    projectile = product.projectile_type or 'Unknown projectile'
-    description = f'{manufacturer} — {caliber}{grain} — {projectile}'
+    if product.ammunition_type == 'shotgun':
+        shell_length = None
+        if product.shell_length_inches is not None:
+            shell_length = format(product.shell_length_inches.normalize(), 'f') + ' in'
+        specs = [shell_length, product.shot_size, product.shot_type]
+        detail = ' · '.join(value for value in specs if value) or 'Specifications not recorded'
+        description = f"{manufacturer} — {caliber} (shotgun) — {detail}"
+    else:
+        grain = ''
+        if product.grain_weight is not None:
+            grain_value = format(product.grain_weight, 'f')
+            if '.' in grain_value:
+                grain_value = grain_value.rstrip('0').rstrip('.')
+            grain = f' — {grain_value} gr'
+        projectile = product.projectile_type or 'Unknown projectile'
+        description = f'{manufacturer} — {caliber}{grain} — {projectile}'
     message = f'{description} {condition}. Current quantity: {after} rounds.'
     event_key = f'{kind}:{transaction_id}'
     if db.scalar(select(NotificationEvent.id).where(NotificationEvent.event_key == event_key)):

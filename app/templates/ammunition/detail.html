@@ -15,11 +15,16 @@
     <p>
         {{ lot.ammo_product.caliber.name }}
 
-        {% if lot.ammo_product.grain_weight %}
+        {% if lot.ammo_product.ammunition_type == 'shotgun' %}
+            · Shotgun
+            {% if lot.ammo_product.shell_length_inches %}· {{ lot.ammo_product.shell_length_inches }} in{% endif %}
+            {% if lot.ammo_product.shot_size %}· {{ lot.ammo_product.shot_size }}{% endif %}
+            {% if lot.ammo_product.shot_type %}· {{ lot.ammo_product.shot_type }}{% endif %}
+        {% elif lot.ammo_product.grain_weight %}
             · {{ lot.ammo_product.grain_weight | format_number }} gr
         {% endif %}
 
-        {% if lot.ammo_product.projectile_type %}
+        {% if lot.ammo_product.ammunition_type != 'shotgun' and lot.ammo_product.projectile_type %}
             · {{ lot.ammo_product.projectile_type }}
         {% endif %}
     </p>
@@ -83,13 +88,31 @@
         <div class="record-detail-grid">
             <div class="record-detail-item">
                 <span class="firearm-detail-label">
-                    Caliber
+                    {% if lot.ammo_product.ammunition_type == 'shotgun' %}Caliber / Gauge{% else %}Caliber{% endif %}
                 </span>
                 <span class="record-detail-value">
                     {{ lot.ammo_product.caliber.name }}
                 </span>
             </div>
 
+            {% if lot.ammo_product.ammunition_type == 'shotgun' %}
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">Ammunition Type</span>
+                <span class="record-detail-value">Shotgun</span>
+            </div>
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">Shell Length</span>
+                <span class="record-detail-value">{{ lot.ammo_product.shell_length_inches ~ ' inches' if lot.ammo_product.shell_length_inches is not none else 'Not recorded' }}</span>
+            </div>
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">Shot Size</span>
+                <span class="record-detail-value">{{ lot.ammo_product.shot_size or 'Not recorded' }}</span>
+            </div>
+            <div class="record-detail-item">
+                <span class="firearm-detail-label">Shot Type</span>
+                <span class="record-detail-value">{{ lot.ammo_product.shot_type or 'Not recorded' }}</span>
+            </div>
+            {% else %}
             <div class="record-detail-item">
                 <span class="firearm-detail-label">
                     Grain Weight
@@ -111,6 +134,7 @@
                     {{ lot.ammo_product.projectile_type or "Unknown" }}
                 </span>
             </div>
+            {% endif %}
 
             <div class="record-detail-item">
                 <span class="firearm-detail-label">

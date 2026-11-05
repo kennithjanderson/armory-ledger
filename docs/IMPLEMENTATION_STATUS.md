@@ -1,5 +1,32 @@
 # Armory Ledger Implementation Status
 
+## In development — v0.1.6-dev.3 shotgun ammunition (2026-11-04)
+
+Shotgun ammunition is implemented in the development working tree. Ammunition
+products now distinguish Rifle/Pistol from Shotgun. Shotgun products use the
+shared Caliber reference selector, labeled “Caliber / Gauge” in shotgun mode,
+and record optional shell length, shot size, and shot type. Rifle/Pistol grain
+weight and projectile fields remain separate and the database constraints
+reject mixed category-specific data. Acquisition, duplicate-lot suggestions,
+merge compatibility, read-only shared views, details, and Shooting Log displays
+include the category-specific specifications without changing inventory
+accounting. Shared manufacturer search prioritizes canonical-name and alias
+prefixes and partial-name matches, so input such as “Wi” can surface Winchester
+without requiring most of the name to be entered.
+
+Revision `b61a4e70c2d9` follows `12ef7a4b9c31` and was applied to the development
+database during the authorized rebuild. The rebuilt app reports healthy with
+PostgreSQL connected on version 0.1.6. Its startup log confirms the migration
+completed. Focused shotgun, migration, ammunition suggestion, and merge tests
+pass (26 tests) in a network-isolated container with source mounted read-only.
+The manufacturer, shotgun, and ammunition regression suites also pass (19
+tests) after the short-prefix search refinement.
+Python AST parsing (9 files), JavaScript syntax checks, Jinja parsing (46
+templates), and `git diff --check` pass. The browser-oriented Node test could not
+start because `jsdom` is not installed in the host environment. Manual browser
+acceptance is pending. The last known-good checkpoint remains v0.1.6-dev.2; no
+development checkpoint commit has been created.
+
 ## Verified — v0.1.6-dev.2 read-only sharing and related fixes (2026-11-04)
 
 Shared records now appear below the recipient's own records in separately

@@ -15,9 +15,16 @@
         <div class="ammo-quantity"><strong>{{ physical_on_hand }}</strong><span>rounds</span></div>
     </div>
     <div class="record-detail-grid">
-        <div class="record-detail-item"><span class="firearm-detail-label">Caliber</span><span class="record-detail-value">{{ product.caliber.name }}</span></div>
+        <div class="record-detail-item"><span class="firearm-detail-label">{% if product.ammunition_type == 'shotgun' %}Caliber / Gauge{% else %}Caliber{% endif %}</span><span class="record-detail-value">{{ product.caliber.name }}</span></div>
+        {% if product.ammunition_type == 'shotgun' %}
+        <div class="record-detail-item"><span class="firearm-detail-label">Ammunition Type</span><span class="record-detail-value">Shotgun</span></div>
+        <div class="record-detail-item"><span class="firearm-detail-label">Shell Length</span><span class="record-detail-value">{{ product.shell_length_inches ~ ' inches' if product.shell_length_inches is not none else 'Not recorded' }}</span></div>
+        <div class="record-detail-item"><span class="firearm-detail-label">Shot Size</span><span class="record-detail-value">{{ product.shot_size or 'Not recorded' }}</span></div>
+        <div class="record-detail-item"><span class="firearm-detail-label">Shot Type</span><span class="record-detail-value">{{ product.shot_type or 'Not recorded' }}</span></div>
+        {% else %}
         <div class="record-detail-item"><span class="firearm-detail-label">Grain Weight</span><span class="record-detail-value">{% if product.grain_weight is not none %}{{ product.grain_weight|format_number }} gr{% else %}Unknown{% endif %}</span></div>
         <div class="record-detail-item"><span class="firearm-detail-label">Projectile</span><span class="record-detail-value">{{ product.projectile_type or 'Unknown' }}</span></div>
+        {% endif %}
         <div class="record-detail-item"><span class="firearm-detail-label">Product Name</span><span class="record-detail-value">{{ product.product_name or 'Not recorded' }}</span></div>
         <div class="record-detail-item"><span class="firearm-detail-label">Manufacturer SKU</span><span class="record-detail-value">{{ product.manufacturer_sku or 'Not recorded' }}</span></div>
         <div class="record-detail-item"><span class="firearm-detail-label">Lot Number</span><span class="record-detail-value">{{ lot.lot_number or 'Not recorded' }}</span></div>

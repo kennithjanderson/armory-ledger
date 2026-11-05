@@ -256,10 +256,15 @@
                         >
                             {{ lot.ammo_product.brand.name }}
                             · {{ lot.ammo_product.caliber.name }}
-                            {% if lot.ammo_product.grain_weight %}
+                            {% if lot.ammo_product.ammunition_type == 'shotgun' %}
+                                · Shotgun
+                                {% if lot.ammo_product.shell_length_inches is not none %}· {{ lot.ammo_product.shell_length_inches }} in{% endif %}
+                                {% if lot.ammo_product.shot_size %}· {{ lot.ammo_product.shot_size }}{% endif %}
+                                {% if lot.ammo_product.shot_type %}· {{ lot.ammo_product.shot_type }}{% endif %}
+                            {% elif lot.ammo_product.grain_weight %}
                                 · {{ lot.ammo_product.grain_weight | format_number }} gr
                             {% endif %}
-                            {% if lot.ammo_product.projectile_type %}
+                            {% if lot.ammo_product.ammunition_type != 'shotgun' and lot.ammo_product.projectile_type %}
                                 · {{ lot.ammo_product.projectile_type }}
                             {% endif %}
                             · {{ inventory_by_lot.get(lot.id, 0) }} rounds

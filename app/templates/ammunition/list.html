@@ -135,8 +135,15 @@
                     <div class="ammo-quantity"><strong>{{ group.inventory_by_lot[lot.id] }}</strong><span>rounds</span></div>
                 </div>
                 <div class="firearm-details">
+                    {% if product.ammunition_type == 'shotgun' %}
+                    <div class="firearm-detail"><span class="firearm-detail-label">Ammunition Type</span><span class="firearm-detail-value">Shotgun</span></div>
+                    {% if product.shell_length_inches is not none %}<div class="firearm-detail"><span class="firearm-detail-label">Shell Length</span><span class="firearm-detail-value">{{ product.shell_length_inches }} in</span></div>{% endif %}
+                    {% if product.shot_size %}<div class="firearm-detail"><span class="firearm-detail-label">Shot Size</span><span class="firearm-detail-value">{{ product.shot_size }}</span></div>{% endif %}
+                    {% if product.shot_type %}<div class="firearm-detail"><span class="firearm-detail-label">Shot Type</span><span class="firearm-detail-value">{{ product.shot_type }}</span></div>{% endif %}
+                    {% else %}
                     {% if product.grain_weight %}<div class="firearm-detail"><span class="firearm-detail-label">Grain Weight</span><span class="firearm-detail-value">{{ product.grain_weight|format_number }} gr</span></div>{% endif %}
                     {% if product.projectile_type %}<div class="firearm-detail"><span class="firearm-detail-label">Projectile</span><span class="firearm-detail-value">{{ product.projectile_type }}</span></div>{% endif %}
+                    {% endif %}
                     <div class="firearm-detail"><span class="firearm-detail-label">Lot Number</span><span class="firearm-detail-value">{{ lot.lot_number or 'Not recorded' }}</span></div>
                 </div>
                 <div class="firearm-card-footer">

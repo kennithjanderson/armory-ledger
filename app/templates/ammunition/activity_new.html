@@ -13,7 +13,8 @@
     <p>
         Record a change to the physical inventory of
         {{ lot.ammo_product.brand.name }}
-        {{ lot.ammo_product.caliber.name }}.
+        {{ lot.ammo_product.caliber.name }}{% if lot.ammo_product.ammunition_type == 'shotgun' %}
+        shotgun ammunition{% if lot.ammo_product.shell_length_inches is not none %}, {{ lot.ammo_product.shell_length_inches }} in{% endif %}{% if lot.ammo_product.shot_size %}, {{ lot.ammo_product.shot_size }}{% endif %}{% if lot.ammo_product.shot_type %}, {{ lot.ammo_product.shot_type }}{% endif %}{% endif %}.
     </p>
 </section>
 

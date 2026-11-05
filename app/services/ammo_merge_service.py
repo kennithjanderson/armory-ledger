@@ -18,14 +18,19 @@ def compatible_lots(source: AmmoLot, destination: AmmoLot) -> bool:
         return False
     left, right = source.ammo_product, destination.ammo_product
     # Brand identity includes manufacturer identity. Do not infer brand aliases.
-    if (left.brand_id, left.caliber_id, left.grain_weight) != (
-        right.brand_id, right.caliber_id, right.grain_weight
+    if (left.brand_id, left.caliber_id, left.ammunition_type, left.grain_weight,
+            left.shell_length_inches) != (
+        right.brand_id, right.caliber_id, right.ammunition_type,
+        right.grain_weight, right.shell_length_inches,
     ):
         return False
     # Existing product matching is whitespace-normalized and case-insensitive.
     def product_text(value):
         return normalize_text(value).lower() if value and value.strip() else None
-    for field in ("projectile_type", "product_name", "manufacturer_sku"):
+    for field in (
+        "projectile_type", "shot_size", "shot_type", "product_name",
+        "manufacturer_sku",
+    ):
         if product_text(getattr(left, field)) != product_text(getattr(right, field)):
             return False
     # Product notes may carry specifications; conservatively require equality.

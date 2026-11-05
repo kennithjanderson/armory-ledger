@@ -5,8 +5,13 @@
     <div class="page-marker">AMMUNITION INVENTORY</div>
     <h1>Merge lot.</h1>
     <p>{{ lot.ammo_product.brand.name }} · {{ lot.ammo_product.caliber.name }}
-        · {{ lot.ammo_product.grain_weight | format_number }} gr
-        · {{ lot.ammo_product.projectile_type or 'Unknown projectile' }}</p>
+        {% if lot.ammo_product.ammunition_type == 'shotgun' %}
+            · Shotgun{% if lot.ammo_product.shell_length_inches is not none %} · {{ lot.ammo_product.shell_length_inches }} in{% endif %}{% if lot.ammo_product.shot_size %} · {{ lot.ammo_product.shot_size }}{% endif %}{% if lot.ammo_product.shot_type %} · {{ lot.ammo_product.shot_type }}{% endif %}
+        {% else %}
+            · {{ lot.ammo_product.grain_weight | format_number }} gr
+            · {{ lot.ammo_product.projectile_type or 'Unknown projectile' }}
+        {% endif %}
+    </p>
 </section>
 <div class="heritage-rule" aria-hidden="true">
     <span class="rule-blue"></span><span class="rule-ivory"></span><span class="rule-red"></span>
@@ -23,8 +28,12 @@
             {% for candidate in candidates %}
             <option value="{{ candidate.id }}" data-quantity="{{ balances[candidate.id] }}" data-record-url="/ammunition/{{ candidate.id }}">
                 {{ candidate.ammo_product.brand.name }} · {{ candidate.ammo_product.caliber.name }}
-                · {{ candidate.ammo_product.grain_weight | format_number }} gr
-                · {{ candidate.ammo_product.projectile_type or 'Unknown projectile' }}
+                {% if candidate.ammo_product.ammunition_type == 'shotgun' %}
+                    · Shotgun{% if candidate.ammo_product.shell_length_inches is not none %} · {{ candidate.ammo_product.shell_length_inches }} in{% endif %}{% if candidate.ammo_product.shot_size %} · {{ candidate.ammo_product.shot_size }}{% endif %}{% if candidate.ammo_product.shot_type %} · {{ candidate.ammo_product.shot_type }}{% endif %}
+                {% else %}
+                    · {{ candidate.ammo_product.grain_weight | format_number }} gr
+                    · {{ candidate.ammo_product.projectile_type or 'Unknown projectile' }}
+                {% endif %}
                 · {{ balances[candidate.id] }} rounds
                 · added {{ candidate.created_at.strftime('%Y-%m-%d') }}
             </option>

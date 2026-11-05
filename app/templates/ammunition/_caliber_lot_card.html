@@ -13,6 +13,15 @@
     </div>
 
     <div class="firearm-details">
+        {% if lot.ammo_product.ammunition_type == 'shotgun' %}
+        <div class="firearm-detail">
+            <span class="firearm-detail-label">Ammunition Type</span>
+            <span class="firearm-detail-value">Shotgun</span>
+        </div>
+        {% if lot.ammo_product.shell_length_inches is not none %}<div class="firearm-detail"><span class="firearm-detail-label">Shell Length</span><span class="firearm-detail-value">{{ lot.ammo_product.shell_length_inches }} in</span></div>{% endif %}
+        {% if lot.ammo_product.shot_size %}<div class="firearm-detail"><span class="firearm-detail-label">Shot Size</span><span class="firearm-detail-value">{{ lot.ammo_product.shot_size }}</span></div>{% endif %}
+        {% if lot.ammo_product.shot_type %}<div class="firearm-detail"><span class="firearm-detail-label">Shot Type</span><span class="firearm-detail-value">{{ lot.ammo_product.shot_type }}</span></div>{% endif %}
+        {% else %}
         <div class="firearm-detail">
             <span class="firearm-detail-label">Grain Weight</span>
             <span class="firearm-detail-value">
@@ -29,6 +38,7 @@
                 {{ lot.ammo_product.projectile_type or "Unknown" }}
             </span>
         </div>
+        {% endif %}
         <div class="firearm-detail">
             <span class="firearm-detail-label">Lot Number</span>
             <span class="firearm-detail-value">

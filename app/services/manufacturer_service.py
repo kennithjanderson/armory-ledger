@@ -148,11 +148,20 @@ def find_similar_manufacturers(
         best_score = 0.0
 
         for candidate in candidate_names:
-            score = SequenceMatcher(
-                None,
-                normalized_search,
-                normalize_name(candidate),
-            ).ratio()
+            normalized_candidate = normalize_name(candidate)
+            if normalized_candidate.startswith(normalized_search):
+                # Prefix matches should surface immediately. Pure string
+                # similarity made users type most of a manufacturer name
+                # before the right record appeared.
+                score = 1.0
+            elif normalized_search in normalized_candidate:
+                score = 0.9
+            else:
+                score = SequenceMatcher(
+                    None,
+                    normalized_search,
+                    normalized_candidate,
+                ).ratio()
 
             best_score = max(best_score, score)
 

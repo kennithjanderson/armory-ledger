@@ -13,7 +13,7 @@
 <div class="firearm-list">
     {% for lot in lots %}
     <article class="firearm-card">
-        <h2>{{ lot.ammo_product.brand.name }} · {{ lot.ammo_product.caliber.name }}</h2>
+        <h2>{{ lot.ammo_product.brand.name }} · {{ lot.ammo_product.caliber.name }}{% if lot.ammo_product.ammunition_type == 'shotgun' %} · Shotgun{% endif %}</h2>
         <p>Merged · Lot {{ lot.id }} · manufacturer lot {{ lot.lot_number or 'Unknown' }}</p>
         <a class="record-back" href="/ammunition/{{ lot.id }}">View historical record →</a>
     </article>

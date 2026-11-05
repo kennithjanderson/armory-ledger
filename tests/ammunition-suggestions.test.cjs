@@ -72,6 +72,37 @@ test("cancel closes suggestions and preserves form values without mutation", asy
     assert.equal(JSON.parse(calls[0].options.body).manufacturer_id, "manufacturer-1");
 });
 
+test("shotgun selection switches specifications and sends caliber/gauge data", async t => {
+    const context = await setup(t, async () => ({
+        ok: true,
+        json: async () => ({ success: true, lot: { id: "shotgun-lot" } }),
+    }), false);
+    const { document } = context;
+    const type = document.getElementById("ammunition-type");
+    assert.equal(type.value, "rifle_pistol");
+    assert.equal(document.getElementById("caliber-label").textContent, "Caliber");
+    type.value = "shotgun";
+    type.dispatchEvent(new context.dom.window.Event("change"));
+    assert.equal(document.getElementById("caliber-label").textContent, "Caliber / Gauge");
+    assert.equal(document.getElementById("grain-weight-field").hidden, true);
+    assert.equal(document.getElementById("shell-length-field").hidden, false);
+    document.getElementById("shell-length-inches").value = "2.75";
+    document.getElementById("shot-size").value = "00";
+    document.getElementById("shot-type").value = "Buckshot";
+    document.getElementById("ammunition-form").dispatchEvent(
+        new context.dom.window.Event("submit", { cancelable: true }),
+    );
+    await flush();
+    const payload = JSON.parse(context.calls[0].options.body);
+    assert.equal(payload.ammunition_type, "shotgun");
+    assert.equal(payload.caliber_id, "caliber-1");
+    assert.equal(payload.grain_weight, null);
+    assert.equal(payload.projectile_type, null);
+    assert.equal(payload.shell_length_inches, 2.75);
+    assert.equal(payload.shot_size, "00");
+    assert.equal(payload.shot_type, "Buckshot");
+});
+
 test("create new explicitly resubmits and existing-lot handoff keeps quantity out of URL", async t => {
     let mode = "suggest";
     const context = await setup(t, async (url, options, payload) => {

@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const manufacturerModalClose = document.getElementById("manufacturer-modal-close");
     const modal = document.getElementById("duplicate-ammunition-modal");
     const list = document.getElementById("duplicate-ammunition-list");
+    const ammunitionTypeInput = document.getElementById("ammunition-type");
     let pendingPayload = null;
     let manufacturerSearchTimer = null;
 
@@ -25,6 +26,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const optionalValue = (id) => document.getElementById(id).value.trim() || null;
+
+    function updateTypeFields() {
+        const shotgun = ammunitionTypeInput?.value === "shotgun";
+        for (const id of ["grain-weight-field", "projectile-type-field"]) {
+            const field = document.getElementById(id);
+            if (field) field.hidden = shotgun;
+        }
+        for (const id of ["shell-length-field", "shot-size-field", "shot-type-field"]) {
+            const field = document.getElementById(id);
+            if (field) field.hidden = !shotgun;
+        }
+        const caliberLabel = document.getElementById("caliber-label");
+        if (caliberLabel) caliberLabel.textContent = shotgun ? "Caliber / Gauge" : "Caliber";
+        const caliberPlaceholder = document.getElementById("caliber-placeholder");
+        if (caliberPlaceholder) caliberPlaceholder.textContent = shotgun ? "Select caliber / gauge" : "Select caliber";
+    }
+
+    if (ammunitionTypeInput) {
+        ammunitionTypeInput.addEventListener("change", updateTypeFields);
+        updateTypeFields();
+    }
 
     function addManufacturerOption(name, id, label = "Select manufacturer") {
         const button = document.createElement("button");
@@ -180,7 +202,12 @@ document.addEventListener("DOMContentLoaded", () => {
             item.className = "duplicate-ammunition-option";
             const details = document.createElement("div");
             const title = document.createElement("strong");
-            title.textContent = `${suggestion.brand} · ${suggestion.caliber}${suggestion.grain_weight ? ` · ${suggestion.grain_weight} gr` : ""}${suggestion.projectile_type ? ` · ${suggestion.projectile_type}` : ""}`;
+            const specs = suggestion.ammunition_type === "shotgun"
+                ? [suggestion.shell_length_inches ? `${Number(suggestion.shell_length_inches)} in` : null,
+                    suggestion.shot_size, suggestion.shot_type].filter(Boolean).join(" · ")
+                : [suggestion.grain_weight ? `${suggestion.grain_weight} gr` : null,
+                    suggestion.projectile_type].filter(Boolean).join(" · ");
+            title.textContent = `${suggestion.brand} · ${suggestion.caliber}${suggestion.ammunition_type === "shotgun" ? " · Shotgun" : ""}${specs ? ` · ${specs}` : ""}`;
             const quantity = document.createElement("p");
             quantity.textContent = `On hand: ${suggestion.quantity_on_hand.toLocaleString()} rounds · Requested: ${pendingPayload.quantity.toLocaleString()} rounds`;
             const created = document.createElement("p");
@@ -233,7 +260,11 @@ document.addEventListener("DOMContentLoaded", () => {
         errorElement.textContent = "";
         const selectedManufacturerId = manufacturerId.value;
         const caliberId = document.getElementById("caliber").value;
-        const grainText = document.getElementById("grain-weight").value.trim();
+        const ammunitionType = ammunitionTypeInput?.value || "rifle_pistol";
+        const grainText = ammunitionType === "rifle_pistol"
+            ? document.getElementById("grain-weight").value.trim() : "";
+        const shellLengthText = ammunitionType === "shotgun"
+            ? document.getElementById("shell-length-inches").value.trim() : "";
         const quantityText = document.getElementById("quantity").value.trim();
         const quantity = Number(quantityText);
         if (!selectedManufacturerId || !caliberId || !quantityText || !dateInput.value) {
@@ -249,11 +280,21 @@ document.addEventListener("DOMContentLoaded", () => {
             errorElement.textContent = "Grain weight must be greater than zero.";
             return;
         }
+        const shellLength = shellLengthText ? Number(shellLengthText) : null;
+        if (shellLength !== null && (!Number.isFinite(shellLength) || shellLength <= 0
+                || shellLength > 99.99 || !/^\d+(\.\d{1,2})?$/.test(shellLengthText))) {
+            errorElement.textContent = "Shell length must be a positive inch value with no more than two decimal places.";
+            return;
+        }
         submitAcquisition({
             manufacturer_id: selectedManufacturerId,
             caliber_id: caliberId,
+            ammunition_type: ammunitionType,
             grain_weight: grainWeight,
-            projectile_type: optionalValue("projectile-type"),
+            projectile_type: ammunitionType === "rifle_pistol" ? optionalValue("projectile-type") : null,
+            shell_length_inches: shellLength,
+            shot_size: ammunitionType === "shotgun" ? document.getElementById("shot-size").value.trim() || null : null,
+            shot_type: ammunitionType === "shotgun" ? document.getElementById("shot-type").value.trim() || null : null,
             quantity,
             acquired_date: dateInput.value,
             product_name: optionalValue("product-name"),

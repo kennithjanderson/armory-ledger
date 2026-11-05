@@ -162,11 +162,16 @@
                                     <div class="range-detail-ammo-description">
                                         {{ product.caliber.name }}
 
-                                        {% if product.grain_weight %}
+                                        {% if product.ammunition_type == 'shotgun' %}
+                                            · Shotgun
+                                            {% if product.shell_length_inches is not none %}· {{ product.shell_length_inches }} in{% endif %}
+                                            {% if product.shot_size %}· {{ product.shot_size }}{% endif %}
+                                            {% if product.shot_type %}· {{ product.shot_type }}{% endif %}
+                                        {% elif product.grain_weight %}
                                             · {{ product.grain_weight | format_number }} gr
                                         {% endif %}
 
-                                        {% if product.projectile_type %}
+                                        {% if product.ammunition_type != 'shotgun' and product.projectile_type %}
                                             · {{ product.projectile_type }}
                                         {% endif %}
                                     </div>

@@ -59,6 +59,25 @@ class ManufacturerAliasServiceTests(unittest.TestCase):
         self.assertEqual(self.db.scalars(select(Organization).where(Organization.name == "S&W")).all(), [])
         self.assertEqual(self.manufacturer.name, "Smith & Wesson")
 
+    def test_short_name_prefix_and_alias_prefix_find_existing_manufacturers(self):
+        winchester = Organization(id=uuid4(), name="Winchester")
+        self.db.add(winchester)
+        self.db.flush()
+        self.db.add(ManufacturerProfile(organization_id=winchester.id, is_selectable=True))
+        add_manufacturer_alias(
+            self.db, self.manufacturer.id, "S&W", actor_user_id=self.f.owner.id,
+        )
+        self.db.commit()
+
+        self.assertEqual(
+            find_similar_manufacturers(self.db, "Wi")[0][0].id,
+            winchester.id,
+        )
+        self.assertEqual(
+            find_similar_manufacturers(self.db, "S&")[0][0].id,
+            self.manufacturer.id,
+        )
+
     def test_alias_remove_and_readd_are_audited_and_leave_inventory_ids_unchanged(self):
         self.f.firearm.manufacturer_id = self.manufacturer.id
         self.db.commit()

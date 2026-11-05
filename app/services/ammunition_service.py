@@ -25,6 +25,36 @@ def normalize_text(value: str) -> str:
     return " ".join(value.strip().split())
 
 
+AMMUNITION_TYPES = {"rifle_pistol", "shotgun"}
+
+
+def _normalized_ammunition_specs(
+    *, ammunition_type, grain_weight, projectile_type,
+    shell_length_inches, shot_size, shot_type,
+):
+    if ammunition_type not in AMMUNITION_TYPES:
+        raise ValueError("Select a valid ammunition type.")
+    projectile_type = _optional_text(projectile_type)
+    shot_size = _optional_text(shot_size)
+    shot_type = _optional_text(shot_type)
+    if ammunition_type == "rifle_pistol":
+        if any(value is not None for value in (shell_length_inches, shot_size, shot_type)):
+            raise ValueError("Shotgun specifications are only valid for shotgun ammunition.")
+        if grain_weight is not None and grain_weight <= 0:
+            raise ValueError("Grain weight must be greater than zero.")
+        return grain_weight, projectile_type, None, None, None
+
+    if grain_weight is not None or projectile_type is not None:
+        raise ValueError("Grain weight and projectile type are only valid for Rifle/Pistol ammunition.")
+    if shell_length_inches is not None:
+        shell_length_inches = Decimal(str(shell_length_inches))
+        if shell_length_inches <= 0 or shell_length_inches > Decimal("99.99"):
+            raise ValueError("Shell length must be between 0.01 and 99.99 inches.")
+        if shell_length_inches.as_tuple().exponent < -2:
+            raise ValueError("Shell length may use no more than two decimal places.")
+    return None, None, shell_length_inches, shot_size, shot_type
+
+
 def find_duplicate_ammunition_lots(
     db: Session,
     *,
@@ -33,17 +63,33 @@ def find_duplicate_ammunition_lots(
     caliber_id: UUID,
     grain_weight: Decimal | None,
     projectile_type: str | None,
+    ammunition_type: str = "rifle_pistol",
+    shell_length_inches: Decimal | None = None,
+    shot_size: str | None = None,
+    shot_type: str | None = None,
 ) -> list[tuple[AmmoLot, int]]:
     """Find exact, owner-scoped lots that can be replenished without a lot number.
 
-    Product name and SKU are intentionally ignored: suggestions follow the four
-    ammunition characteristics used by the acquisition workflow. Whitespace-only
-    manufacturer lot numbers count as absent, and depleted lots remain eligible.
+    Product name and SKU are intentionally ignored. Matching uses the shared
+    manufacturer/caliber identity and the selected ammunition type's
+    specifications. Whitespace-only manufacturer lot numbers count as absent,
+    and depleted lots remain eligible.
     """
+    grain_weight, projectile_type, shell_length_inches, shot_size, shot_type = (
+        _normalized_ammunition_specs(
+            ammunition_type=ammunition_type,
+            grain_weight=grain_weight,
+            projectile_type=projectile_type,
+            shell_length_inches=shell_length_inches,
+            shot_size=shot_size,
+            shot_type=shot_type,
+        )
+    )
     conditions = [
         AmmoLot.owner_id == owner_id,
         AmmoLot.merged_into_lot_id.is_(None),
         AmmoProduct.caliber_id == caliber_id,
+        AmmoProduct.ammunition_type == ammunition_type,
         AmmoBrand.manufacturer_id == manufacturer_id,
         or_(AmmoLot.lot_number.is_(None), func.trim(AmmoLot.lot_number) == ""),
     ]
@@ -52,6 +98,18 @@ def find_duplicate_ammunition_lots(
     else:
         conditions.append(AmmoProduct.grain_weight == grain_weight)
 
+    for column, value in (
+        (AmmoProduct.shell_length_inches, shell_length_inches),
+        (AmmoProduct.shot_size, shot_size),
+        (AmmoProduct.shot_type, shot_type),
+    ):
+        if value is None:
+            conditions.append(column.is_(None))
+        elif column is AmmoProduct.shell_length_inches:
+            conditions.append(column == value)
+        else:
+            conditions.append(func.lower(column) == value.lower())
+
     candidates = db.scalars(
         select(AmmoLot)
         .join(AmmoProduct, AmmoProduct.id == AmmoLot.ammo_product_id)
@@ -59,6 +117,7 @@ def find_duplicate_ammunition_lots(
         .where(*conditions)
         .order_by(AmmoLot.created_at, AmmoLot.id)
     ).all()
+
     expected_projectile = normalize_text(projectile_type or "").casefold()
     matches: list[tuple[AmmoLot, int]] = []
     for lot in candidates:
@@ -78,6 +137,10 @@ def acquire_ammunition(
     caliber_id: UUID,
     grain_weight: Decimal | None,
     projectile_type: str | None,
+    ammunition_type: str = "rifle_pistol",
+    shell_length_inches: Decimal | None = None,
+    shot_size: str | None = None,
+    shot_type: str | None = None,
     quantity: int,
     acquired_date: date,
     product_name: str | None = None,
@@ -88,8 +151,16 @@ def acquire_ammunition(
     if quantity <= 0:
         raise ValueError("Quantity must be greater than zero.")
 
-    if grain_weight is not None and grain_weight <= 0:
-        raise ValueError("Grain weight must be greater than zero.")
+    grain_weight, cleaned_projectile_type, shell_length_inches, shot_size, shot_type = (
+        _normalized_ammunition_specs(
+            ammunition_type=ammunition_type,
+            grain_weight=grain_weight,
+            projectile_type=projectile_type,
+            shell_length_inches=shell_length_inches,
+            shot_size=shot_size,
+            shot_type=shot_type,
+        )
+    )
 
     caliber = db.scalar(
         select(Caliber).where(
@@ -111,12 +182,6 @@ def acquire_ammunition(
     )
     if manufacturer is None:
         raise ValueError("Selected manufacturer is invalid.")
-
-    cleaned_projectile_type = (
-        normalize_text(projectile_type)
-        if projectile_type
-        else None
-    )
 
     cleaned_product_name = (
         normalize_text(product_name)
@@ -158,6 +223,7 @@ def acquire_ammunition(
         product_conditions = [
             AmmoProduct.brand_id == brand.id,
             AmmoProduct.caliber_id == caliber.id,
+            AmmoProduct.ammunition_type == ammunition_type,
         ]
 
         if grain_weight is None:
@@ -178,6 +244,18 @@ def acquire_ammunition(
                 func.lower(AmmoProduct.projectile_type)
                 == cleaned_projectile_type.lower()
             )
+
+        for column, value in (
+            (AmmoProduct.shell_length_inches, shell_length_inches),
+            (AmmoProduct.shot_size, shot_size),
+            (AmmoProduct.shot_type, shot_type),
+        ):
+            if value is None:
+                product_conditions.append(column.is_(None))
+            elif column is AmmoProduct.shell_length_inches:
+                product_conditions.append(column == value)
+            else:
+                product_conditions.append(func.lower(column) == value.lower())
 
         if cleaned_product_name is None:
             product_conditions.append(
@@ -207,8 +285,12 @@ def acquire_ammunition(
             product = AmmoProduct(
                 brand_id=brand.id,
                 caliber_id=caliber.id,
+                ammunition_type=ammunition_type,
                 grain_weight=grain_weight,
                 projectile_type=cleaned_projectile_type,
+                shell_length_inches=shell_length_inches,
+                shot_size=shot_size,
+                shot_type=shot_type,
                 product_name=cleaned_product_name,
                 manufacturer_sku=cleaned_manufacturer_sku,
             )
@@ -270,6 +352,10 @@ def update_ammunition(
     lot_number: str | None,
     notes: str | None,
     acquired_date: date | None,
+    ammunition_type: str | None = None,
+    shell_length_inches: Decimal | None = None,
+    shot_size: str | None = None,
+    shot_type: str | None = None,
 ) -> AmmoLot:
     from app.services.ammo_inventory_service import lock_owned_lots
 
@@ -292,10 +378,29 @@ def update_ammunition(
     if caliber is None:
         raise ValueError("Invalid caliber.")
 
-    if grain_weight is not None and grain_weight <= 0:
-        raise ValueError("Grain weight must be greater than zero.")
+    if ammunition_type is None:
+        # Older cached clients do not send the newly introduced category fields.
+        # Preserve the current product type and its specifications in that case.
+        ammunition_type = current_product.ammunition_type
+        if ammunition_type == "shotgun":
+            grain_weight = None
+            projectile_type = None
+            shell_length_inches = current_product.shell_length_inches
+            shot_size = current_product.shot_size
+            shot_type = current_product.shot_type
+        else:
+            shell_length_inches = shot_size = shot_type = None
 
-    projectile_type = _optional_text(projectile_type)
+    grain_weight, projectile_type, shell_length_inches, shot_size, shot_type = (
+        _normalized_ammunition_specs(
+            ammunition_type=ammunition_type,
+            grain_weight=grain_weight,
+            projectile_type=projectile_type,
+            shell_length_inches=shell_length_inches,
+            shot_size=shot_size,
+            shot_type=shot_type,
+        )
+    )
     product_name = _optional_text(product_name)
     manufacturer_sku = _optional_text(manufacturer_sku)
     lot_number = _optional_text(lot_number)
@@ -329,6 +434,11 @@ def update_ammunition(
         str(caliber_id),
     )
     record_change(
+        "ammunition_type",
+        current_product.ammunition_type,
+        ammunition_type,
+    )
+    record_change(
         "grain_weight",
         current_product.grain_weight,
         grain_weight,
@@ -338,6 +448,9 @@ def update_ammunition(
         current_product.projectile_type,
         projectile_type,
     )
+    record_change("shell_length_inches", current_product.shell_length_inches, shell_length_inches)
+    record_change("shot_size", current_product.shot_size, shot_size)
+    record_change("shot_type", current_product.shot_type, shot_type)
     record_change(
         "product_name",
         current_product.product_name,
@@ -364,6 +477,7 @@ def update_ammunition(
     product_conditions = [
         AmmoProduct.brand_id == current_product.brand_id,
         AmmoProduct.caliber_id == caliber_id,
+        AmmoProduct.ammunition_type == ammunition_type,
     ]
 
     if grain_weight is None:
@@ -373,6 +487,8 @@ def update_ammunition(
 
     for column, value in (
         (AmmoProduct.projectile_type, projectile_type),
+        (AmmoProduct.shot_size, shot_size),
+        (AmmoProduct.shot_type, shot_type),
         (AmmoProduct.product_name, product_name),
         (AmmoProduct.manufacturer_sku, manufacturer_sku),
     ):
@@ -383,6 +499,11 @@ def update_ammunition(
                 func.lower(column) == value.lower()
             )
 
+    if shell_length_inches is None:
+        product_conditions.append(AmmoProduct.shell_length_inches.is_(None))
+    else:
+        product_conditions.append(AmmoProduct.shell_length_inches == shell_length_inches)
+
     target_product = db.scalar(
         select(AmmoProduct).where(*product_conditions).limit(1)
     )
@@ -391,8 +512,12 @@ def update_ammunition(
         target_product = AmmoProduct(
             brand_id=current_product.brand_id,
             caliber_id=caliber_id,
+            ammunition_type=ammunition_type,
             grain_weight=grain_weight,
             projectile_type=projectile_type,
+            shell_length_inches=shell_length_inches,
+            shot_size=shot_size,
+            shot_type=shot_type,
             product_name=product_name,
             manufacturer_sku=manufacturer_sku,
         )

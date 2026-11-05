@@ -415,3 +415,23 @@ descriptions. Accessories require Firearms RO; Shooting Log requires Firearms
 and Ammunition RO. Shared log sessions with cross-owner firearm or ammunition
 references are omitted. Mixed-owner range accounting and all shared write actions
 remain deferred.
+
+## Shotgun ammunition — v0.1.6-dev.3 implementation direction
+
+- Use the existing shared `Caliber` reference for shotgun gauge; the form label
+  reads “Caliber / Gauge” when Shotgun is selected.
+- Store a required ammunition category on `AmmoProduct`. Existing products are
+  classified as Rifle/Pistol by migration without changing their identity or
+  inventory history.
+- Keep rifle/pistol grain weight and projectile type separate from shotgun shell
+  length, shot size, and shot type. Database and service validation reject
+  cross-category specifications.
+- Store shell length as a positive decimal number of inches with two decimal
+  places. Shot size and shot type are normalized, bounded user-entered text; no
+  shared shot-size/type catalog or payload-weight field is introduced.
+- Shotgun specification fields can be unknown. The existing shared Caliber
+  selection remains required. Manufacturer/product fields, acquisition ledger,
+  lot alerts, sharing projection, and range usage continue to use existing
+  relationships and owner-isolation rules.
+- Duplicate suggestions and lot-merge compatibility include the ammunition
+  category and its type-specific product specifications.

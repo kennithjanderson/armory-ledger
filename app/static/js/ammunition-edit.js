@@ -8,6 +8,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const saveButton = form.querySelector('button[type="submit"]');
     const lotId = form.dataset.lotId;
+    const ammunitionTypeInput = document.getElementById("ammunition-type");
+
+    function updateTypeFields() {
+        const shotgun = ammunitionTypeInput?.value === "shotgun";
+        for (const id of ["grain-weight-field", "projectile-type-field"]) {
+            const field = document.getElementById(id);
+            if (field) field.hidden = shotgun;
+        }
+        for (const id of ["shell-length-field", "shot-size-field", "shot-type-field"]) {
+            const field = document.getElementById(id);
+            if (field) field.hidden = !shotgun;
+        }
+        const caliberLabel = document.getElementById("caliber-label");
+        if (caliberLabel) caliberLabel.textContent = shotgun ? "Caliber / Gauge" : "Caliber";
+        const caliberPlaceholder = document.getElementById("caliber-placeholder");
+        if (caliberPlaceholder) caliberPlaceholder.textContent = shotgun ? "Select caliber / gauge" : "Select caliber";
+    }
+
+    if (ammunitionTypeInput) {
+        ammunitionTypeInput.addEventListener("change", updateTypeFields);
+        updateTypeFields();
+    }
 
     saveButton.disabled = false;
 
@@ -23,12 +45,20 @@ document.addEventListener("DOMContentLoaded", () => {
         errorElement.textContent = "";
 
         const caliberId = document.getElementById("caliber_id").value;
-        const grainRaw = optionalValue("grain_weight");
+        const ammunitionType = ammunitionTypeInput?.value || null;
+        const grainRaw = ammunitionType === "shotgun" ? null : optionalValue("grain_weight");
+        const shellLengthRaw = ammunitionType === "shotgun"
+            ? optionalValue("shell_length_inches") : null;
+        const shellLength = shellLengthRaw === null ? null : Number(shellLengthRaw);
 
         const payload = {
             caliber_id: caliberId,
+            ammunition_type: ammunitionType,
             grain_weight: grainRaw === null ? null : Number(grainRaw),
-            projectile_type: optionalValue("projectile_type"),
+            projectile_type: ammunitionType === "shotgun" ? null : optionalValue("projectile_type"),
+            shell_length_inches: shellLength,
+            shot_size: ammunitionType === "shotgun" ? optionalValue("shot_size") : null,
+            shot_type: ammunitionType === "shotgun" ? optionalValue("shot_type") : null,
             product_name: optionalValue("product_name"),
             manufacturer_sku: optionalValue("manufacturer_sku"),
             lot_number: optionalValue("lot_number"),
@@ -45,6 +75,12 @@ document.addEventListener("DOMContentLoaded", () => {
         ) {
             errorElement.textContent =
                 "Grain weight must be greater than zero.";
+            errorElement.hidden = false;
+            return;
+        }
+        if (shellLength !== null && (!Number.isFinite(shellLength) || shellLength <= 0
+                || shellLength > 99.99 || !/^\d+(\.\d{1,2})?$/.test(shellLengthRaw))) {
+            errorElement.textContent = "Shell length must be a positive inch value with no more than two decimal places.";
             errorElement.hidden = false;
             return;
         }

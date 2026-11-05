@@ -34,7 +34,7 @@ from app.models.user import User
 
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.services.ammo_inventory_service import (
     get_physical_inventory,
@@ -66,9 +66,14 @@ def _group_lots_by_manufacturer(lots: list[AmmoLot]) -> list[dict]:
     def lot_key(lot: AmmoLot):
         product = lot.ammo_product
         return (
+            product.ammunition_type,
             product.grain_weight is None,
             product.grain_weight or Decimal("0"),
             (product.projectile_type or "").casefold(),
+            product.shell_length_inches is None,
+            product.shell_length_inches or Decimal("0"),
+            (product.shot_size or "").casefold(),
+            (product.shot_type or "").casefold(),
             (lot.lot_number or "").casefold(),
             str(lot.id),
         )
@@ -88,6 +93,7 @@ def _group_lots_by_manufacturer(lots: list[AmmoLot]) -> list[dict]:
 class AmmunitionAcquisitionRequest(BaseModel):
     manufacturer_id: UUID
     caliber_id: UUID
+    ammunition_type: Literal["rifle_pistol", "shotgun"] = "rifle_pistol"
     grain_weight: Decimal | None = Field(
         default=None,
         gt=0,
@@ -96,6 +102,9 @@ class AmmunitionAcquisitionRequest(BaseModel):
         default=None,
         max_length=100,
     )
+    shell_length_inches: Decimal | None = Field(default=None, gt=0, max_digits=4, decimal_places=2)
+    shot_size: str | None = Field(default=None, max_length=32)
+    shot_type: str | None = Field(default=None, max_length=64)
     quantity: int = Field(
         gt=0,
     )
@@ -115,15 +124,51 @@ class AmmunitionAcquisitionRequest(BaseModel):
     notes: str | None = None
     create_separate_lot: bool = False
 
+    @model_validator(mode="after")
+    def validate_type_specific_fields(self):
+        _validate_ammunition_type_fields(
+            self.ammunition_type, self.grain_weight, self.projectile_type,
+            self.shell_length_inches, self.shot_size, self.shot_type,
+        )
+        return self
+
 class AmmunitionUpdateRequest(BaseModel):
     caliber_id: UUID
+    ammunition_type: Literal["rifle_pistol", "shotgun"] | None = None
     grain_weight: Decimal | None = Field(default=None, gt=0)
     projectile_type: str | None = Field(default=None, max_length=100)
+    shell_length_inches: Decimal | None = Field(default=None, gt=0, max_digits=4, decimal_places=2)
+    shot_size: str | None = Field(default=None, max_length=32)
+    shot_type: str | None = Field(default=None, max_length=64)
     product_name: str | None = Field(default=None, max_length=255)
     manufacturer_sku: str | None = Field(default=None, max_length=100)
     lot_number: str | None = Field(default=None, max_length=255)
     notes: str | None = None
     acquired_date: date | None = None
+
+    @model_validator(mode="after")
+    def validate_type_specific_fields(self):
+        if self.ammunition_type is not None:
+            _validate_ammunition_type_fields(
+                self.ammunition_type, self.grain_weight, self.projectile_type,
+                self.shell_length_inches, self.shot_size, self.shot_type,
+            )
+        return self
+
+
+def _validate_ammunition_type_fields(
+    ammunition_type, grain_weight, projectile_type,
+    shell_length_inches, shot_size, shot_type,
+):
+    projectile_present = bool(projectile_type and projectile_type.strip())
+    shotgun_fields_present = any(
+        value is not None and (not isinstance(value, str) or value.strip())
+        for value in (shell_length_inches, shot_size, shot_type)
+    )
+    if ammunition_type == "rifle_pistol" and shotgun_fields_present:
+        raise ValueError("Shotgun specifications are only valid for shotgun ammunition.")
+    if ammunition_type == "shotgun" and (grain_weight is not None or projectile_present):
+        raise ValueError("Grain weight and projectile type are only valid for Rifle/Pistol ammunition.")
 
 class AmmunitionActivityRequest(BaseModel):
     transaction_type: AmmoTransactionType
@@ -160,6 +205,10 @@ async def ammunition_list(
             AmmoBrand.name.asc(),
             AmmoProduct.grain_weight.asc().nulls_last(),
             AmmoProduct.projectile_type.asc().nulls_last(),
+            AmmoProduct.ammunition_type.asc(),
+            AmmoProduct.shell_length_inches.asc().nulls_last(),
+            AmmoProduct.shot_size.asc().nulls_last(),
+            AmmoProduct.shot_type.asc().nulls_last(),
             AmmoLot.id.asc(),
         )
     ).unique().all()
@@ -212,6 +261,10 @@ async def ammunition_list(
                 AmmoProduct.brand_id,
                 AmmoProduct.grain_weight.asc().nulls_last(),
                 AmmoProduct.projectile_type.asc().nulls_last(),
+                AmmoProduct.ammunition_type.asc(),
+                AmmoProduct.shell_length_inches.asc().nulls_last(),
+                AmmoProduct.shot_size.asc().nulls_last(),
+                AmmoProduct.shot_type.asc().nulls_last(),
                 AmmoLot.created_at,
                 AmmoLot.id,
             )
@@ -734,6 +787,10 @@ async def ammunition_acquire(
             caliber_id=payload.caliber_id,
             grain_weight=payload.grain_weight,
             projectile_type=payload.projectile_type,
+            ammunition_type=payload.ammunition_type,
+            shell_length_inches=payload.shell_length_inches,
+            shot_size=payload.shot_size,
+            shot_type=payload.shot_type,
         )
         if matches:
             return {
@@ -749,6 +806,13 @@ async def ammunition_acquire(
                             else None
                         ),
                         "projectile_type": lot.ammo_product.projectile_type,
+                        "ammunition_type": lot.ammo_product.ammunition_type,
+                        "shell_length_inches": (
+                            str(lot.ammo_product.shell_length_inches)
+                            if lot.ammo_product.shell_length_inches is not None else None
+                        ),
+                        "shot_size": lot.ammo_product.shot_size,
+                        "shot_type": lot.ammo_product.shot_type,
                         "quantity_on_hand": quantity_on_hand,
                         "created_at": lot.created_at.isoformat(),
                     }
@@ -763,6 +827,10 @@ async def ammunition_acquire(
             caliber_id=payload.caliber_id,
             grain_weight=payload.grain_weight,
             projectile_type=payload.projectile_type,
+            ammunition_type=payload.ammunition_type,
+            shell_length_inches=payload.shell_length_inches,
+            shot_size=payload.shot_size,
+            shot_type=payload.shot_type,
             quantity=payload.quantity,
             acquired_date=payload.acquired_date,
             product_name=payload.product_name,
@@ -804,6 +872,10 @@ async def ammunition_update(
             lot_number=payload.lot_number,
             notes=payload.notes,
             acquired_date=payload.acquired_date,
+            ammunition_type=payload.ammunition_type,
+            shell_length_inches=payload.shell_length_inches,
+            shot_size=payload.shot_size,
+            shot_type=payload.shot_type,
         )
     except LookupError:
         raise HTTPException(

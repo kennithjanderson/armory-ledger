@@ -1,10 +1,12 @@
 # Armory Ledger Architecture
 
-Baseline reviewed: 2026-11-04 against v0.1.6-dev.2 source on
-`develop/v0.1.6`, based on parent commit `d3ba8a89d3e1`. The last verified
-development database head is `12ef7a4b9c31`, applied during the 2026-10-27
-development rebuild. This describes the reviewed development source and database
-state, not any production deployment. See
+Baseline reviewed: 2026-11-05 against the v0.1.6-dev.3 working tree on
+`develop/v0.1.6`, based on the completed dev.2 commit
+`e69746116568a50976c231486a61c51d70501338`. The last verified development
+database head is `12ef7a4b9c31`, applied during the 2026-10-27 development
+rebuild. Proposed revision `b61a4e70c2d9` is present in source but has not been
+applied. This describes development source and verified database state, not any
+production deployment. See
 [implementation status](IMPLEMENTATION_STATUS.md),
 [decisions](DECISIONS.md), and [roadmap](ROADMAP.md) for limitations and plans.
 
@@ -152,7 +154,7 @@ timestamps, and JSONB for audit changes.
 | Shared calibers | `CaliberAlias` points to `Caliber`; firearms and ammunition products reference calibers; alias changes have an actor-attributed trail, while canonical-name audit records store reference type/UUID, actor and old/new labels |
 | Firearms | `Firearm` references owner, optional manufacturer organization, optional caliber |
 | Accessories | `Accessory` references owner, optional organization, optional firearm |
-| Ammunition | `Organization → AmmoBrand → AmmoProduct → AmmoLot → AmmoInventoryTransaction` |
+| Ammunition | `Organization → AmmoBrand → AmmoProduct → AmmoLot → AmmoInventoryTransaction`; products use the shared Caliber reference and carry Rifle/Pistol or Shotgun specifications |
 | Range | `RangeSession → RangeSessionFirearm → RangeSessionAmmoUsage`; associations reference firearms; usage may reference a lot and inventory transaction |
 | Auditing | `AuditEvent` references owner and actor; entity UUID/type are generic, without an entity-table FK |
 | Sharing foundation | `InventoryShare` links an owner to an optional recipient UUID and email snapshot; `InventoryShareAuditEvent` records invitation/grant changes. Each record carries separate Firearms, Ammunition, Accessories and Shooting Log access levels. |
@@ -201,6 +203,17 @@ acquisition API accepts a selectable manufacturer UUID and stores its canonical
 name in `AmmoBrand`, so arbitrary typed text cannot silently create a second
 manufacturer spelling. Grain weight, projectile type, product name, and SKU stay
 on the ammunition product.
+
+In the v0.1.6-dev.3 source, each product also has an `ammunition_type` of
+`rifle_pistol` or `shotgun`. Shotgun gauge reuses the required shared Caliber
+reference; shell length is stored as positive `Numeric(4,2)` inches, while shot
+size and shot type are bounded text. A product check keeps shell/shot fields out
+of Rifle/Pistol products and grain/projectile fields out of Shotgun products.
+Existing products receive the Rifle/Pistol default through revision
+`b61a4e70c2d9`; that revision has not been applied to the development database.
+Duplicate suggestions and merge compatibility distinguish category and
+type-specific specifications. Range selection still matches the shared
+caliber/gauge UUID and displays the correct specification set.
 
 ### Ammunition inventory
 
@@ -289,7 +302,11 @@ The source revision chain, read from files without executing Alembic, is:
 → d914b7ce203a notifications and email outbox
 → a47c91e2d563 restore notification preferences
 → 6ec8a2f145bd ammunition notifications
-→ d2c87ab9415e administrator-managed manufacturer aliases (development head)
+→ d2c87ab9415e administrator-managed manufacturer aliases
+→ e8a1f3c0d64b caliber alias administration
+→ 480378f66895 canonical reference-name audit
+→ 12ef7a4b9c31 inventory sharing (last verified applied development head)
+→ b61a4e70c2d9 shotgun ammunition support (source only; not applied)
 ```
 
 The old [schema plan](v0.1.2-schema-plan.md) predates the last two migration files.

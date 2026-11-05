@@ -400,7 +400,7 @@ an editable spelling review; and update-available emails preserve an absolute
 release-notes URL. The owner confirmed the spelling review and new backup name.
 The checkpoint is complete.
 
-### v0.1.6-dev.3 — shotgun ammunition support in development
+### v0.1.6-dev.3 — shotgun ammunition support (complete)
 
 The owner wants shotgun ammunition support included in v0.1.6 without interrupting
 the current sharing work. Keep the existing rifle/pistol ammunition form as the
@@ -412,12 +412,14 @@ quantity, notes, and lot-level notifications remain shared inventory data where
 applicable.
 
 The owner confirmed that shotgun gauge reuses the shared Caliber dropdown and
-reference. The implementation stores ammunition category (`rifle_pistol` or
-`shotgun`) and keeps type-specific product specifications separate. Shotgun shell
-length is a positive decimal value in inches (up to two decimal places); shot size
-and shot type are user-entered text. No payload-weight field is included in this
-slice. Shell length, shot size, and shot type may remain unknown; the shared
-Caliber/Gauge selection stays required, like the current caliber field.
+reference. Manufacturer search now surfaces canonical-name and alias prefix
+matches from short input. The implementation stores ammunition category
+(`rifle_pistol` or `shotgun`) and keeps type-specific product specifications
+separate. Shotgun shell length is a positive decimal value in inches (up to two
+decimal places); shot size and shot type are user-entered text. No payload-weight
+field is included in this slice. Shell length, shot size, and shot type may remain
+unknown; the shared Caliber/Gauge selection stays required, like the current
+caliber field.
 
 The migration defaults every existing product to Rifle/Pistol without changing
 product IDs, lots, transactions, audit history, or lot notification settings.
@@ -427,8 +429,10 @@ compatibility include category and the relevant product specifications; range
 selection continues to filter by the shared caliber/gauge ID and displays the
 correct type-specific details. Existing inventory accounting is preserved.
 
-Browser acceptance remains pending before this can be called a verified
-development checkpoint.
+The owner confirmed browser acceptance for shotgun creation, same-caliber
+Shooting Log selection, and manufacturer matching after typing two characters
+on 2026-11-05. The feature checkpoint is complete as
+`bd49ad24b2f4d11adf8674dbebe461d72b977c42`.
 
 ### v0.1.7 inventory transfers — design pending
 

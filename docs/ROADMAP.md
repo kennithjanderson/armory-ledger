@@ -434,21 +434,23 @@ Shooting Log selection, and manufacturer matching after typing two characters
 on 2026-11-05. The feature checkpoint is complete as
 `bd49ad24b2f4d11adf8674dbebe461d72b977c42`.
 
-### v0.1.7 inventory transfers — design pending
+### v0.1.7 accessory management and inventory transfers — planned
 
-User-to-user transfers and transfer-request notifications remain unimplemented.
-Define their relationship to sharing, transfer acceptance, ownership changes,
-history/provenance retention, and cancellation before specifying the release.
+On 2026-11-09, the owner assigned accessory improvements and transfer workflows
+to v0.1.7. This carries forward the existing user-to-user inventory transfer and
+transfer-request notification work, and adds firearm accessory acquisition,
+compatibility, and bundle handling. Detailed design and implementation remain
+pending.
 
-#### Accessory compatibility and firearm bundles — proposed (2026-11-09)
+#### Accessory acquisition and compatibility
 
-The owner proposes extending the future firearm acquisition and transfer flows
-to account for accessories supplied with or compatible with a firearm. This is
-not assigned to a development checkpoint yet. Today an accessory can be linked
-to one firearm as installed, or given a storage location; it cannot represent
-compatibility with several firearms independently of installation or storage.
+Today an accessory can be linked to one firearm as installed, or given a storage
+location; it cannot represent compatibility with several firearms independently
+of installation or storage. The v0.1.7 plan is to extend firearm acquisition and
+transfer flows to account for accessories supplied with or compatible with a
+firearm.
 
-Proposed behavior:
+Planned behavior:
 
 - When adding a firearm, optionally add its included accessories as separate
   owned accessory records. Identify their provenance in the accessory record,
@@ -470,8 +472,9 @@ Proposed behavior:
 Before implementation, define how compatibility and “included with” provenance
 are stored and displayed, how quantities can be split between transfer and
 retention, and how sale/transfer events preserve ownership, audit history, and
-inventory history atomically. This proposal extends the v0.1.7 transfer design;
-it does not specify shared write access or alter v0.1.6 read-only sharing.
+inventory history atomically. Define transfer acceptance, cancellation, and the
+relationship to existing sharing grants. This work does not specify shared write
+access or alter v0.1.6 read-only sharing.
 
 Firearm maintenance notifications have no assigned release. Live identity-provider
 revocation integration and multi-host operational coordination are not implemented.

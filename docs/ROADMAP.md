@@ -440,5 +440,38 @@ User-to-user transfers and transfer-request notifications remain unimplemented.
 Define their relationship to sharing, transfer acceptance, ownership changes,
 history/provenance retention, and cancellation before specifying the release.
 
+#### Accessory compatibility and firearm bundles — proposed (2026-11-09)
+
+The owner proposes extending the future firearm acquisition and transfer flows
+to account for accessories supplied with or compatible with a firearm. This is
+not assigned to a development checkpoint yet. Today an accessory can be linked
+to one firearm as installed, or given a storage location; it cannot represent
+compatibility with several firearms independently of installation or storage.
+
+Proposed behavior:
+
+- When adding a firearm, optionally add its included accessories as separate
+  owned accessory records. Identify their provenance in the accessory record,
+  such as “Included with Canik Mete SFT.” A hard case may be tracked when useful;
+  routine items such as cleaning brushes need not be recorded.
+- Track compatibility as a relationship to one or more firearm records. For
+  example, one magazine can be compatible with both a Bushmaster M4 and an
+  AD15. Compatibility must not imply that an accessory is installed on a
+  firearm.
+- Rework accessory assignment/presentation so physical storage or installation
+  and firearm compatibility are represented separately. The current
+  Installed-on-firearm / Stored-at-location choice does not cover magazines and
+  holsters well.
+- When a firearm is transferred or marked sold, allow the owner to explicitly
+  select compatible accessories to transfer or mark sold with it. Compatibility
+  alone must not move an accessory; accessories the owner keeps remain in their
+  inventory.
+
+Before implementation, define how compatibility and “included with” provenance
+are stored and displayed, how quantities can be split between transfer and
+retention, and how sale/transfer events preserve ownership, audit history, and
+inventory history atomically. This proposal extends the v0.1.7 transfer design;
+it does not specify shared write access or alter v0.1.6 read-only sharing.
+
 Firearm maintenance notifications have no assigned release. Live identity-provider
 revocation integration and multi-host operational coordination are not implemented.

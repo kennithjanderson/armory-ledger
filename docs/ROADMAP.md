@@ -117,6 +117,11 @@ background treatments:
   shaped as if it is blowing in the wind. It should not look like a flat CSS
   block flag and should not animate.
 
+The owner's visual reference is a close view of sewn flag fabric: visible
+stitching, deep natural folds, soft highlights and shadows, and dark navy, ivory,
+and rich red cloth. Use that photographic fabric treatment as the art direction
+for the Freedom option.
+
 Before implementation, decide how the per-user selection is stored and applied,
 and ensure foreground text, controls, and focus indicators remain legible on both
 backgrounds. No release or development checkpoint is assigned yet.

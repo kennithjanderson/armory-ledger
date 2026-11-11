@@ -106,6 +106,21 @@ and owner-isolation tests. Do not expose private audit JSON through admin pages.
 - Review local release-script directory/environment targeting before using it;
   it combines testing, deployment-like operations and publishing.
 
+## User-selectable backgrounds — proposed, release unassigned
+
+Requested on 2026-11-11. Offer a user-changeable choice between two static
+background treatments:
+
+- **Standard:** retain the site's existing canvas look and color language, with
+  an option for deeper, powder-stained canvas tones.
+- **Freedom:** use a static, realistic U.S. flag rendered as textured canvas and
+  shaped as if it is blowing in the wind. It should not look like a flat CSS
+  block flag and should not animate.
+
+Before implementation, decide how the per-user selection is stored and applied,
+and ensure foreground text, controls, and focus indicators remain legible on both
+backgrounds. No release or development checkpoint is assigned yet.
+
 ## Deferred work and preserved boundaries
 
 - No manufacturer ownership redesign. Manufacturers/calibers remain global;

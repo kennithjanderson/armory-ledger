@@ -479,10 +479,11 @@ access or alter v0.1.6 read-only sharing.
 
 #### User-selectable backgrounds
 
-The owner requests a per-user choice between two static background treatments:
+The owner requests a per-user choice between three static background options:
 
-- **Standard:** retain the site's existing canvas look and color language, with
-  an option for deeper, powder-stained canvas tones.
+- **Standard:** keep the existing canvas background and colors as they are.
+- **Powder-stained:** use a deeper, darker canvas palette inspired by powder
+  stains.
 - **Freedom:** use a static, realistic U.S. flag rendered as textured canvas and
   shaped as if it is blowing in the wind. It should not look like a flat CSS
   block flag and should not animate.

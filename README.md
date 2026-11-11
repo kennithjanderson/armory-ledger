@@ -7,22 +7,25 @@ backups.
 
 ## Features
 
-The v0.1.4 release includes:
+Armory Ledger includes:
 
-- Firearm, ammunition, accessory, and range-session records, with ownership
-  isolation between application users.
-- Optional firearm serial numbers and USD purchase prices.
-- Ammunition activity history, caliber-filtered range entries, and Shooting Log
-  activity types.
-- Ammunition lot merging that preserves transaction and range history.
-- Shared manufacturer and caliber reference data, plus read-only admin views.
+- Firearm, ammunition, accessory, and range-session records, isolated by owner.
+  Firearms support optional serial numbers and USD purchase prices.
+- Rifle/pistol and shotgun ammunition records, ammunition activity history,
+  caliber-filtered range entries, and Shooting Log activity types.
+- Duplicate ammunition suggestions and lot merging that preserves transaction
+  and range history.
+- Shared manufacturer and caliber references, including administrator-managed
+  aliases and canonical names.
+- Owner-approved, per-section read-only sharing of firearms, ammunition,
+  accessories, and Shooting Log records. Shared views omit sensitive fields;
+  shared write access is not available.
 - OpenID Connect authentication, role-protected administration, and scheduled
   server announcements.
 - Whole-instance encrypted backups, restore safeguards, backup health reporting,
-  scheduling, and automatic-backup retention.
-- An in-app notification center and optional system email notifications.
-- Admin-only notices when the published GHCR `latest` image contains a newer
-  application version.
+  scheduling, automatic-backup retention, and persistent local backup storage.
+- An in-app notification center and optional email notifications, including
+  per-lot ammunition thresholds and administrator-only system notices.
 
 See the [changelog](app/content/changelog.json) and
 [v0.1.4 operations guide](docs/V0.1.4-OPERATIONS.md) for release details and
@@ -134,9 +137,10 @@ protected off-host copy of important archives and the matching encryption key.
 - Administrators can create and download whole-instance backups for recovery.
   Those archives contain all users' private records, so grant Armory Admin only
   to trusted installation operators.
-- Cross-user inventory sharing is not implemented. Any future sharing feature
-  must require authorization from the inventory owner and preserve owner-controlled
-  permissions.
+- Cross-user sharing is available only after the owner invites a recipient and
+  that recipient accepts. Shared records are read-only, section-specific, and
+  omit sensitive fields; sharing does not add records to the recipient's own
+  inventory. Shared write access is not implemented.
 - A person controlling the host, database, Docker daemon, or backups may have
   infrastructure-level access beyond application permissions.
 - Operators are responsible for protecting secrets and backups and for complying

@@ -1,6 +1,7 @@
 [
   {
     "version": "0.1.6",
+    "date": "2026-11-12",
     "added": [
       "Track shotgun ammunition with shell length, shot size, and shot type while preserving the existing Rifle/Pistol fields and inventory accounting.",
       "Accepted inventory shares provide separate, read-only views of firearms, ammunition, accessories, and Shooting Log entries, with sensitive fields hidden and section dependencies enforced."

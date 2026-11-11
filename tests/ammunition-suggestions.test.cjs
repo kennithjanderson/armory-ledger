@@ -17,6 +17,13 @@ async function setup(t, fetchResponse, submit = true) {
     const dom = new JSDOM(markup, { url: "https://example.test/ammunition/new" });
     t.after(() => dom.window.close());
     const document = dom.window.document;
+    const domContentLoaded = new Promise(resolve => {
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", resolve, { once: true });
+        } else {
+            resolve();
+        }
+    });
     document.getElementById("manufacturer-search").value = "Example Maker";
     document.getElementById("manufacturer-id").value = "manufacturer-1";
     document.getElementById("caliber").innerHTML = '<option value="caliber-1">9mm</option>';
@@ -40,7 +47,10 @@ async function setup(t, fetchResponse, submit = true) {
         clearTimeout,
         console,
     });
-    document.dispatchEvent(new dom.window.Event("DOMContentLoaded"));
+    if (document.readyState !== "loading") {
+        document.dispatchEvent(new dom.window.Event("DOMContentLoaded"));
+    }
+    await domContentLoaded;
     if (submit) {
         document.getElementById("ammunition-form").dispatchEvent(
             new dom.window.Event("submit", { cancelable: true }),

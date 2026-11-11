@@ -106,26 +106,6 @@ and owner-isolation tests. Do not expose private audit JSON through admin pages.
 - Review local release-script directory/environment targeting before using it;
   it combines testing, deployment-like operations and publishing.
 
-## User-selectable backgrounds — proposed, release unassigned
-
-Requested on 2026-11-11. Offer a user-changeable choice between two static
-background treatments:
-
-- **Standard:** retain the site's existing canvas look and color language, with
-  an option for deeper, powder-stained canvas tones.
-- **Freedom:** use a static, realistic U.S. flag rendered as textured canvas and
-  shaped as if it is blowing in the wind. It should not look like a flat CSS
-  block flag and should not animate.
-
-The owner's visual reference is a close view of sewn flag fabric: visible
-stitching, deep natural folds, soft highlights and shadows, and dark navy, ivory,
-and rich red cloth. Use that photographic fabric treatment as the art direction
-for the Freedom option.
-
-Before implementation, decide how the per-user selection is stored and applied,
-and ensure foreground text, controls, and focus indicators remain legible on both
-backgrounds. No release or development checkpoint is assigned yet.
-
 ## Deferred work and preserved boundaries
 
 - No manufacturer ownership redesign. Manufacturers/calibers remain global;
@@ -457,10 +437,11 @@ on 2026-11-05. The feature checkpoint is complete as
 ### v0.1.7 accessory management and inventory transfers — planned
 
 On 2026-11-09, the owner assigned accessory improvements and transfer workflows
-to v0.1.7. This carries forward the existing user-to-user inventory transfer and
-transfer-request notification work, and adds firearm accessory acquisition,
-compatibility, and bundle handling. Detailed design and implementation remain
-pending.
+to v0.1.7. On 2026-11-11, the owner also assigned user-selectable backgrounds to
+this release. This carries forward the existing user-to-user inventory transfer
+and transfer-request notification work, and adds firearm accessory acquisition,
+compatibility, bundle handling, and visual customization. Detailed design and
+implementation remain pending.
 
 #### Accessory acquisition and compatibility
 
@@ -495,6 +476,23 @@ retention, and how sale/transfer events preserve ownership, audit history, and
 inventory history atomically. Define transfer acceptance, cancellation, and the
 relationship to existing sharing grants. This work does not specify shared write
 access or alter v0.1.6 read-only sharing.
+
+#### User-selectable backgrounds
+
+The owner requests a per-user choice between two static background treatments:
+
+- **Standard:** retain the site's existing canvas look and color language, with
+  an option for deeper, powder-stained canvas tones.
+- **Freedom:** use a static, realistic U.S. flag rendered as textured canvas and
+  shaped as if it is blowing in the wind. It should not look like a flat CSS
+  block flag and should not animate.
+
+The visual reference is a close view of sewn flag fabric: visible stitching,
+deep natural folds, soft highlights and shadows, and dark navy, ivory, and rich
+red cloth. Use that photographic fabric treatment as the art direction for the
+Freedom option. Before implementation, decide how the per-user selection is
+stored and applied, and ensure text, controls, and focus indicators remain
+legible on both backgrounds.
 
 Firearm maintenance notifications have no assigned release. Live identity-provider
 revocation integration and multi-host operational coordination are not implemented.
